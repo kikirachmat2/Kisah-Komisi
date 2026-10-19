@@ -4,7 +4,6 @@ const THREADS_API_BASE = 'https://graph.threads.net/v1.0';
  * Mempublikasikan satu post ke Threads (Maksimal 500 karakter per post)
  */
 async function publishTextPost(userId, accessToken, text, replyToId = null) {
-  // Potong aman di 490 karakter jika terlewat batas
   const safeText = text.length > 490 ? text.substring(0, 485) + '...' : text;
 
   const createContainerUrl = `${THREADS_API_BASE}/${userId}/threads`;
@@ -48,7 +47,7 @@ async function publishTextPost(userId, accessToken, text, replyToId = null) {
 }
 
 /**
- * Publikasikan seluruh cerita sebagai Thread Bersambung (Serial Post 1/N, 2/N ... dst)
+ * Publikasikan seluruh cerita sebagai Thread Bersambung murni (tanpa angka pecahan dan tanpa emot)
  */
 async function publishStoryToThreads(userId, accessToken, story) {
   const parts = story.slides;
@@ -56,30 +55,25 @@ async function publishStoryToThreads(userId, accessToken, story) {
 
   console.log(`[Threads] Memulai penerbitan thread serial (${totalParts} parts)...`);
 
-  // PART 1 (Induk Utama Post)
-  const part1Header = `🧵 [1/${totalParts}] ${story.title.toUpperCase()}\n\n`;
-  const part1Body = parts[0];
-  const post1Text = (part1Header + part1Body).length > 480 
-    ? part1Header + part1Body.substring(0, 480 - part1Header.length) + '...' 
-    : part1Header + part1Body;
+  // PART 1 (Induk Utama Post) - Murni tulisan mengalir
+  const post1Text = parts[0].length > 480 
+    ? parts[0].substring(0, 475) + '...' 
+    : parts[0];
 
   const rootPostId = await publishTextPost(userId, accessToken, post1Text);
-  console.log(`[Threads] Post 1/${totalParts} (ROOT) terbit ID: ${rootPostId}`);
+  console.log(`[Threads] Post 1 (ROOT) terbit ID: ${rootPostId}`);
 
-  let lastPostId = rootPostId;
-
-  // Seluruh kelanjutan part (2 sampai 8) selalu di-reply langsung ke rootPostId
+  // Seluruh kelanjutan part (2 sampai selesai) selalu di-reply langsung ke rootPostId
   for (let i = 1; i < totalParts; i++) {
     // Delay 5 detik agar Meta container selesai terindeks
     await new Promise(r => setTimeout(r, 5000));
 
-    const partHeader = `[${i + 1}/${totalParts}]\n`;
-    const fullText = partHeader + parts[i];
+    const fullText = parts[i];
     const safePartText = fullText.length > 480 ? fullText.substring(0, 475) + '...' : fullText;
 
     try {
       const currentReplyId = await publishTextPost(userId, accessToken, safePartText, rootPostId);
-      console.log(`[Threads] Post ${i + 1}/${totalParts} terbit ID: ${currentReplyId}`);
+      console.log(`[Threads] Reply part ${i + 1} terbit ID: ${currentReplyId}`);
     } catch (err) {
       console.warn(`[Threads] Gagal menerbitkan part ${i + 1}:`, err.message);
     }
