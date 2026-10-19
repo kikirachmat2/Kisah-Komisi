@@ -206,5 +206,22 @@ module.exports = {
       db.prepare(`UPDATE product_bank SET times_used = times_used + 1 WHERE id = ?`).run(prod.id);
     }
     return prod;
+  },
+
+  getAllProducts: () => {
+    return db.prepare(`SELECT * FROM product_bank WHERE active = 1 ORDER BY id ASC`).all();
+  },
+
+  addProduct: (name, affiliateUrl, category = 'Rekomendasi') => {
+    const stmt = db.prepare(`
+      INSERT INTO product_bank (category, name, description, affiliate_url)
+      VALUES (?, ?, ?, ?)
+    `);
+    const info = stmt.run(category, name, 'Produk affiliate rekomendasi', affiliateUrl);
+    return info.lastInsertRowid;
+  },
+
+  clearProducts: () => {
+    return db.prepare(`DELETE FROM product_bank`).run();
   }
 };

@@ -41,9 +41,10 @@ Buatkan SATU CERITA PANJANG yang sangat seru, kocak, dramatis, atau bikin penasa
 ATURAN GAYA PENULISAN SANGAT PENTING:
 1. JANGAN PAKAI EMOTIKON APAPUN! Tulis murni kata-kata selayaknya ketikan curhat orang biasa.
 2. JANGAN TULIS ANGKA PENOMORAN SEPERTI "[1/8]", "(1/5)", ATAU SEJENISNYA! Setiap slide harus langsung berisi kalimat cerita mengalir.
-3. CERITA HARUS 100% MURNI CERITA! JANGAN HUBUNGKAN ISI CERITA DENGAN PRODUK APAPUN! Karakter di cerita dilarang dipaksa beli atau pakai produk.
-4. Gaya bahasa: Santai, lu-gw / aku-kamu, ceplas-ceplos anak muda Indonesia, POV orang pertama ("aku" atau "gw"), penuh detail kejadian nyata, emosional.
-5. Cerita dibagi menjadi 6 Bagian bersambung:
+3. PANJANG SETIAP PART MAKSIMAL 350 KARAKTER! WAJIB SELESAIKAN KALIMAT DENGAN TANDA TITIK (.). Jangan menggantung di tengah kalimat.
+4. CERITA HARUS 100% MURNI CERITA! JANGAN HUBUNGKAN ISI CERITA DENGAN PRODUK APAPUN! Karakter di cerita dilarang dipaksa beli atau pakai produk.
+5. Gaya bahasa: Santai, lu-gw / aku-kamu, ceplas-ceplos anak muda Indonesia, POV orang pertama ("aku" atau "gw"), penuh detail kejadian nyata, emosional.
+6. Cerita dibagi menjadi 6 Bagian bersambung (masing-masing 250 - 350 karakter):
    - Part 1: Hook pembuka santai tapi memikat (misal: "Waktu itu jaman kuliah terdamparlah aku di kontrakan temen...", "Ini cerita yang ga pernah gw ceritain ke siapa-siapa...")
    - Part 2, 3: Kronologi awal dan kejadian aneh / lucu / tegang.
    - Part 4: Bagian cerita yang lagi seru-serunya / puncak masalah.

@@ -68,20 +68,62 @@ async function publishTextPost(userId, accessToken, text, replyToId = null) {
 }
 
 /**
+ * Memecah teks panjang secara cerdas per kalimat utuh (maksimal maxLen karakter)
+ * Agar tidak ada kata atau kalimat yang terpotong di tengah jalan.
+ */
+function splitBySentence(text, maxLen = 450) {
+  if (text.length <= maxLen) return [text];
+
+  const sentences = text.match(/[^.!?]+[.!?]+(\s+|$)|[^.!?]+$/g) || [text];
+  const chunks = [];
+  let current = '';
+
+  for (const sentence of sentences) {
+    if ((current + sentence).length <= maxLen) {
+      current += sentence;
+    } else {
+      if (current.trim()) chunks.push(current.trim());
+      // Jika satu kalimat saja lebih panjang dari maxLen, terpaksa potong per kata
+      if (sentence.length > maxLen) {
+        const words = sentence.split(' ');
+        let wordChunk = '';
+        for (const w of words) {
+          if ((wordChunk + ' ' + w).length <= maxLen) {
+            wordChunk += (wordChunk ? ' ' : '') + w;
+          } else {
+            if (wordChunk.trim()) chunks.push(wordChunk.trim());
+            wordChunk = w;
+          }
+        }
+        current = wordChunk;
+      } else {
+        current = sentence;
+      }
+    }
+  }
+
+  if (current.trim()) chunks.push(current.trim());
+  return chunks;
+}
+
+/**
  * Publikasikan seluruh cerita sebagai Thread Bersambung murni (tanpa angka pecahan dan tanpa emot)
  */
 async function publishStoryToThreads(userId, accessToken, story) {
-  const parts = story.slides;
+  // Pecah semua slide secara cerdas agar tidak terpotong mid-sentence
+  const rawParts = story.slides;
+  const parts = [];
+
+  for (const p of rawParts) {
+    const splitted = splitBySentence(p, 450);
+    parts.push(...splitted);
+  }
+
   const totalParts = parts.length;
+  console.log(`[Threads] Memulai penerbitan thread serial (${totalParts} parts cerdas)...`);
 
-  console.log(`[Threads] Memulai penerbitan thread serial (${totalParts} parts)...`);
-
-  // PART 1 (Induk Utama Post) - Murni tulisan mengalir
-  const post1Text = parts[0].length > 480 
-    ? parts[0].substring(0, 475) + '...' 
-    : parts[0];
-
-  const rootPostId = await publishTextPost(userId, accessToken, post1Text);
+  // PART 1 (Induk Utama Post) - Murni tulisan mengalir utuh
+  const rootPostId = await publishTextPost(userId, accessToken, parts[0]);
   console.log(`[Threads] Post 1 (ROOT) terbit ID: ${rootPostId}`);
 
   // Seluruh kelanjutan part (2 sampai selesai) selalu di-reply langsung ke rootPostId
@@ -89,11 +131,8 @@ async function publishStoryToThreads(userId, accessToken, story) {
     // Delay 6 detik agar reply container Meta siap
     await new Promise(r => setTimeout(r, 6000));
 
-    const fullText = parts[i];
-    const safePartText = fullText.length > 480 ? fullText.substring(0, 475) + '...' : fullText;
-
     try {
-      const currentReplyId = await publishTextPost(userId, accessToken, safePartText, rootPostId);
+      const currentReplyId = await publishTextPost(userId, accessToken, parts[i], rootPostId);
       console.log(`[Threads] Reply part ${i + 1} terbit ID: ${currentReplyId}`);
     } catch (err) {
       console.warn(`[Threads] Gagal menerbitkan part ${i + 1}:`, err.message);
@@ -105,5 +144,6 @@ async function publishStoryToThreads(userId, accessToken, story) {
 
 module.exports = {
   publishTextPost,
-  publishStoryToThreads
+  publishStoryToThreads,
+  splitBySentence
 };

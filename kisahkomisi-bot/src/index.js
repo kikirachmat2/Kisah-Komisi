@@ -51,10 +51,13 @@ bot.start((ctx) => {
   const name = ctx.from?.first_name || 'Kawan';
   ctx.replyWithMarkdown(
     `👋 Halo *${name}*! Selamat datang di *Kisah Komisi Autopilot Engine*.\n\n` +
-    `🤖 *Kontrol Otomatisasi Threads & Komisi:*\n` +
-    `• \`/bikin_cerita\` : AI otomatis buat 1 cerita menfess + produk Shopee\n` +
-    `• \`/stok\` : Cek berapa cerita yang ada di antrean tayang\n` +
-    `• \`/post_sekarang\` : Ambil 1 cerita antrean & langsung post ke Threads\n\n` +
+    `🤖 *Kontrol Otomatisasi Threads:*\n` +
+    `• \`/bikin_cerita\` : AI buat 1 cerita menfess baru\n` +
+    `• \`/stok\` : Cek stok antrean tayang (12:15 & 19:45 WIB)\n` +
+    `• \`/post_sekarang\` : Langsung terbitkan 1 cerita antrean ke Threads sekarang\n\n` +
+    `🛍️ *Manajemen Link Shopee Affiliate:*\n` +
+    `• \`/list_produk\` : Lihat semua link affiliate yang aktif\n` +
+    `• \`/tambah_produk <Nama> | <Link>\` : Tambahkan link affiliate Shopee punyamu\n\n` +
     `💰 *Pencatatan Keuangan:*\n` +
     `• \`/catat <proyek> | <nominal> | [klien]\` : Catat komisi manual\n` +
     `• \`/rekap\` : Lihat ringkasan pendapatan\n` +
@@ -116,6 +119,58 @@ bot.command('stok', (ctx) => {
   } catch (err) {
     console.error('Error getStok:', err);
     ctx.reply('❌ Gagal memeriksa stok antrean.');
+  }
+});
+
+// Command: /list_produk
+bot.command('list_produk', (ctx) => {
+  try {
+    const products = db.getAllProducts();
+    if (products.length === 0) {
+      return ctx.reply('⚠️ Belum ada produk affiliate di database. Gunakan /tambah_produk.');
+    }
+    let msg = `🛍️ *Daftar Produk Affiliate Shopee di Database:*\n\n`;
+    products.forEach((p, idx) => {
+      msg += `${idx + 1}. *${p.name}*\n🔗 [Link Produk](${p.affiliate_url})\n\n`;
+    });
+    msg += `_Tambahkan link baru dengan cara:_\n\`/tambah_produk Nama Barang | https://s.shopee.co.id/xxx\``;
+    ctx.replyWithMarkdown(msg, { disable_web_page_preview: true });
+  } catch (err) {
+    console.error('Error list_produk:', err);
+    ctx.reply('❌ Gagal mengambil daftar produk.');
+  }
+});
+
+// Command: /tambah_produk <Nama Produk> | <Link Affiliate>
+bot.command('tambah_produk', (ctx) => {
+  const text = ctx.message.text.replace('/tambah_produk', '').trim();
+  if (!text.includes('|')) {
+    return ctx.replyWithMarkdown(
+      '⚠️ *Format salah!*\n\n' +
+      'Gunakan format:\n' +
+      '`/tambah_produk Nama Produk | Link Shopee Affiliate`\n\n' +
+      'Contoh:\n' +
+      '`/tambah_produk Sandal Slop Empuk Pria Wanita | https://s.shopee.co.id/abcxyz`'
+    );
+  }
+
+  const [name, link] = text.split('|').map(s => s.trim());
+  if (!name || !link) {
+    return ctx.reply('⚠️ Nama produk dan link affiliate tidak boleh kosong!');
+  }
+
+  try {
+    const newId = db.addProduct(name, link);
+    ctx.replyWithMarkdown(
+      `✅ *Produk Affiliate Berhasil Ditambahkan!*\n\n` +
+      `🆔 *ID*: #${newId}\n` +
+      `📦 *Nama*: ${name}\n` +
+      `🔗 *Link*: ${link}\n\n` +
+      `Produk ini akan otomatis diputar AI sebagai iklan selingan di cerita-cerita berikutnya!`
+    );
+  } catch (err) {
+    console.error('Error tambah_produk:', err);
+    ctx.reply(`❌ Gagal menambah produk: ${err.message}`);
   }
 });
 
