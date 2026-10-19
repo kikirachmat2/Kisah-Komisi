@@ -63,25 +63,7 @@ function initSchema() {
     CREATE INDEX IF NOT EXISTS idx_stories_schedule ON stories(scheduled_for);
   `);
 
-  // Seed default evergreen products jika tabel masih kosong
-  const count = db.prepare('SELECT count(*) as count FROM product_bank').get().count;
-  if (count === 0) {
-    const insertProd = db.prepare(`
-      INSERT INTO product_bank (category, name, description, affiliate_url)
-      VALUES (?, ?, ?, ?)
-    `);
-    const initialProducts = [
-      ['Kamar & Kosan', 'Aroma Diffuser Ultrasonic Humidifier', 'Pengharum kamar estetik + lampu tidur', 'https://s.shopee.co.id/7V4uX9QkLp'],
-      ['Kamar & Kosan', 'Lampu Tidur LED Akrilik Estetik', 'Lampu meja kamar minimalis hangat', 'https://s.shopee.co.id/7V4uX9QkLp'],
-      ['Kerja & Meja', 'Organizer Meja Transparan Minimalis', 'Tempat alat tulis & skincare rapi', 'https://s.shopee.co.id/7V4uX9QkLp'],
-      ['Relaksasi & Wangi', 'Pewangi Pakaian Fabric Mist Tahan Lama', 'Semprotan baju wangi seharian', 'https://s.shopee.co.id/7V4uX9QkLp'],
-      ['Kesehatan & Gaya Hidup', 'Tumbler Botol Minum Motivasi 2 Liter', 'Botol penanda minum seharian', 'https://s.shopee.co.id/7V4uX9QkLp'],
-      ['Elektronik & Gadget', 'TWS Earphone Bluetooth Noise Cancelling', 'Peredam bising untuk kerja dan belajar', 'https://s.shopee.co.id/7V4uX9QkLp'],
-      ['Skincare & Selfcare', 'Acne Spot Care Patch Hidrokoloid', 'Plester jerawat transparan cepat kempis', 'https://s.shopee.co.id/7V4uX9QkLp']
-    ];
-
-    initialProducts.forEach(prod => insertProd.run(...prod));
-  }
+  // Tabel product_bank murni dikelola lewat /tambah_produk
 }
 
 initSchema();
