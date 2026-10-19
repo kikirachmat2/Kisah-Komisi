@@ -3,15 +3,16 @@ const db = require('./database');
 const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
 
 const TOPICS = [
-  'Kisah Menfess Kosan (Teman Sekamar Toxic / Misteri / Hemat Ekstrem)',
-  'Kisah Menfess Percintaan & Hubungan (Greenflag vs Redflag / Kejutan Lucu)',
-  'Kisah Menfess Dunia Kerja & Kantor (Lembur / Bos Aneh / Rekan Kerja Kocak)',
-  'Kisah Menfess Perjuangan Hidup & Self Healing (Dari Titik Terendah Menuju Sukses)',
-  'Kisah Menfess Keluarga & Mertua (Drama Relatable / Cerita Mengharukan)'
+  'Cerita Anak Kontrakan / Kosan (Drama Sekamar, Kejadian Aneh Jam 2 Malem, Cinta Lokasi)',
+  'Cerita Kantor & Dunia Kerja (Drama Magang, Bos Narsis, Teman Muka Dua)',
+  'Cerita Romansa & Percintaan (Clbk Gagal, Kencan Pertama Zonk, Selingkuh Ketahuan)',
+  'Cerita Menfess Keluarga & Mertua (Drama Hajatan, Warisan Kocak, Perbedaan Sudut Pandang)',
+  'Cerita Horror Komedi / Kejadian Absurd Tak Terduga di Perantauan'
 ];
 
 /**
- * Generate 1 cerita menfess 12 slide menggunakan Gemini AI
+ * Generate serial thread cerita viral gaya Threads Indonesia (murni cerita seru)
+ * Iklan produk diselipkan sebagai sponsor break yang jujur & santai di tengah thread.
  */
 async function generateStory(forcedTopic = null) {
   if (!GEMINI_API_KEY) {
@@ -19,41 +20,34 @@ async function generateStory(forcedTopic = null) {
   }
 
   const topic = forcedTopic || TOPICS[Math.floor(Math.random() * TOPICS.length)];
-  const product = db.getRandomProduct(topic);
+  const product = db.getRandomProduct();
 
   const prompt = `
-Kamu adalah content creator viral Threads dan penulis cerita menfess Indonesia nomor 1.
-Buatkan 1 cerita menfess viral yang sangat emosional, relatable, dan bikin penasaran (gaya bahasa Threads/Twitter Indonesia santai: "gw", "lu", "anjir", "sumpah", "sender").
+Kamu adalah pencerita menfess viral nomor 1 di Threads Indonesia (seperti akun @nobondandrise).
+Buatkan SATU CERITA PANJANG yang sangat seru, kocak, dramatis, atau bikin penasaran pembaca sampai akhir.
 
-Ketentuan Format Ketat:
-1. Cerita terdiri dari tepat 12 Slide untuk format Carousel Threads.
-2. Panjang teks per slide adalah 2-4 kalimat padat yang mudah dibaca dalam 5 detik.
-3. Struktur Slide:
-   - Slide 1: Hook Pembuka yang bikin berhenti scroll (misal: "Sumpah gw baru sadar temen sekamar gw nyimpen ini di lemarinya...", "Nyesel banget baru tau sekarang...", "Cerita ini ga pernah gw ceritain ke siapa-siapa...")
-   - Slide 2 s/d 5: Kronologi masalah, ketegangan, atau konflik cerita yang makin memuncak.
-   - Slide 6: Momen solusi/kebiasaan baru di mana karakter mulai menggunakan atau membutuhkan barang ini: "${product ? product.name : 'Aroma Diffuser'}". Sebutkan fungsinya secara natural dalam cerita tanpa terlihat seperti iklan!
-   - Slide 7: Rekomendasi/spill produk secara halus (Soft Selling). Katakan betapa barang ini menyelamatkan situasi karakter. Beri info: "(Link produknya gw taruh di komentar pertama ya guys!)".
-   - Slide 8 s/d 11: Lanjutan plot cerita, klimaks, dan ending yang memuaskan atau ada plot twist tak terduga.
-   - Slide 12: Pertanyaan penutup ke audiens (Call-to-Action) untuk memicu ratusan komentar (contoh: "Kalian ada yang pernah punya pengalaman sama kayak gw ga? Cerita di bawah dong...").
+ATURAN PALING PENTING:
+1. CERITA HARUS 100% MURNI CERITA! JANGAN HUBUNGKAN ISI CERITA DENGAN PRODUK APAPUN! Karakter di cerita dilarang dipaksa beli atau pakai produk.
+2. Gaya bahasa: Santai, lu-gw, ceplas-ceplos anak muda Indonesia, POV orang pertama ("aku" atau "gw"), penuh detail lucu/bikin gregetan, emosional.
+3. Cerita dibagi menjadi 7 Bagian/Post bersambung (Post 1 sampai Post 7).
+   - Post 1: Hook pembuka yang kuat (misal: "Waktu itu jaman kuliah di kontrakan...", "Cerita ini ga pernah gw ceritain...", "Sumpah ini pengalaman paling absurd...")
+   - Post 2, 3, 4: Perkembangan cerita, ketegangan, kejadian lucu/kacau yang makin seru.
+   - Post 5: Bagian cerita yang lagi gantung/seru-serunya.
+   - Post 6: Kelanjutan cerita menuju klimaks dan penyelesaian.
+   - Post 7: Ending cerita yang memuaskan + pertanyaan interaksi santai ke audiens.
 
-Format output WAJIB HANYA berupa JSON murni tanpa markdown triple backtick, dengan struktur:
+Format output WAJIB HANYA berupa JSON murni tanpa markdown:
 {
-  "title": "Judul Cerita Pendek Menarik",
+  "title": "Judul Cerita Hook Menarik",
   "topic": "${topic}",
-  "product_name": "${product ? product.name : 'Produk Rekomendasi'}",
-  "slides": [
-    "Teks Slide 1...",
-    "Teks Slide 2...",
-    "Teks Slide 3...",
-    "Teks Slide 4...",
-    "Teks Slide 5...",
-    "Teks Slide 6...",
-    "Teks Slide 7...",
-    "Teks Slide 8...",
-    "Teks Slide 9...",
-    "Teks Slide 10...",
-    "Teks Slide 11...",
-    "Teks Slide 12..."
+  "story_parts": [
+    "Teks Post 1...",
+    "Teks Post 2...",
+    "Teks Post 3...",
+    "Teks Post 4...",
+    "Teks Post 5...",
+    "Teks Post 6...",
+    "Teks Post 7..."
   ]
 }
 `;
@@ -67,7 +61,7 @@ Format output WAJIB HANYA berupa JSON murni tanpa markdown triple backtick, deng
       contents: [{ parts: [{ text: prompt }] }],
       generationConfig: {
         responseMimeType: 'application/json',
-        temperature: 0.85
+        temperature: 0.9
       }
     })
   });
@@ -86,9 +80,27 @@ Format output WAJIB HANYA berupa JSON murni tanpa markdown triple backtick, deng
   const cleanJson = rawText.replace(/```json/g, '').replace(/```/g, '').trim();
   const parsed = JSON.parse(cleanJson);
 
+  // Format iklan selingan lewat (sponsor break) yang santai di tengah-tengah thread
+  const adIntermezzo = `☕ [IKLAN LEWAT BENTAR YA GES]\n\nSelingan bentar mumpung inget, kemarin banyak banget yang nanya racun barang estetik & fungsional ini:\n👉 *${product ? product.name : 'Barang Viral'}*\nLagi ada promo diskon di toko resminya: ${product ? product.affiliate_url : 'https://s.shopee.co.id/'}\n\nOke lanjut ceritanya ke bawah ya 👇👇`;
+
+  // Sisipkan iklan di antara bagian 4 dan 5 (atau jadikan part tersendiri)
+  const fullThreadParts = [
+    parsed.story_parts[0],
+    parsed.story_parts[1],
+    parsed.story_parts[2],
+    parsed.story_parts[3],
+    adIntermezzo, // IKLAN LEWAT MURNI
+    parsed.story_parts[4],
+    parsed.story_parts[5],
+    parsed.story_parts[6]
+  ];
+
   return {
-    ...parsed,
-    product_url: product ? product.affiliate_url : 'https://s.shopee.co.id/'
+    title: parsed.title,
+    topic: parsed.topic,
+    product_name: product ? product.name : 'Produk Rekomendasi',
+    product_url: product ? product.affiliate_url : 'https://s.shopee.co.id/',
+    slides: fullThreadParts
   };
 }
 
