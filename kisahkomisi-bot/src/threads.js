@@ -27,23 +27,44 @@ async function publishTextPost(userId, accessToken, text, replyToId = null) {
     throw new Error(`Gagal membuat container Threads: ${JSON.stringify(containerData)}`);
   }
 
-  // Publish container
-  const publishUrl = `${THREADS_API_BASE}/${userId}/threads_publish`;
-  const publishRes = await fetch(publishUrl, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      creation_id: containerData.id,
-      access_token: accessToken
-    })
-  });
+  // Tunggu sebentar agar container terdaftar di Meta backend
+  await new Promise(r => setTimeout(r, 2000));
 
-  const publishData = await publishRes.json();
-  if (!publishData.id) {
-    throw new Error(`Gagal mem-publish postingan Threads: ${JSON.stringify(publishData)}`);
+  // Publish container (dengan retry jika status container belum READY)
+  const publishUrl = `${THREADS_API_BASE}/${userId}/threads_publish`;
+  let publishedId = null;
+  let lastError = null;
+
+  for (let attempt = 1; attempt <= 4; attempt++) {
+    try {
+      const publishRes = await fetch(publishUrl, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          creation_id: containerData.id,
+          access_token: accessToken
+        })
+      });
+
+      const publishData = await publishRes.json();
+      if (publishData.id) {
+        publishedId = publishData.id;
+        break;
+      }
+      lastError = publishData;
+    } catch (err) {
+      lastError = err.message;
+    }
+
+    // Tunggu 3 detik sebelum retry publish container
+    await new Promise(r => setTimeout(r, 3000));
   }
 
-  return publishData.id;
+  if (!publishedId) {
+    throw new Error(`Gagal mem-publish postingan Threads: ${JSON.stringify(lastError)}`);
+  }
+
+  return publishedId;
 }
 
 /**
@@ -65,8 +86,8 @@ async function publishStoryToThreads(userId, accessToken, story) {
 
   // Seluruh kelanjutan part (2 sampai selesai) selalu di-reply langsung ke rootPostId
   for (let i = 1; i < totalParts; i++) {
-    // Delay 5 detik agar Meta container selesai terindeks
-    await new Promise(r => setTimeout(r, 5000));
+    // Delay 6 detik agar reply container Meta siap
+    await new Promise(r => setTimeout(r, 6000));
 
     const fullText = parts[i];
     const safePartText = fullText.length > 480 ? fullText.substring(0, 475) + '...' : fullText;

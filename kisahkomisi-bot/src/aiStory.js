@@ -10,6 +10,18 @@ const TOPICS = [
   'Cerita Horror Komedi / Kejadian Absurd Tak Terduga di Perantauan'
 ];
 
+// Filter untuk membersihkan penomoran pecahan dan emotikon jika AI masih menyelipkannya
+function sanitizeText(str) {
+  if (!str) return '';
+  return str
+    // Hapus penomoran seperti [1/8], (1/8), 1/8, [Part 1], Part 1:, dll di awal kalimat
+    .replace(/^(\[|\()?\s*(part\s*)?\d+\s*[\/\-]\s*\d+\s*(\]|\))?\s*[:\-]?\s*/gi, '')
+    .replace(/^(\[|\()?\s*part\s*\d+\s*(\]|\))?\s*[:\-]?\s*/gi, '')
+    // Hapus emoji Unicode
+    .replace(/[\u{1F600}-\u{1F64F}\u{1F300}-\u{1F5FF}\u{1F680}-\u{1F6FF}\u{1F700}-\u{1F77F}\u{1F780}-\u{1F7FF}\u{1F800}-\u{1F8FF}\u{1F900}-\u{1F9FF}\u{1FA00}-\u{1FA6F}\u{1FA70}-\u{1FAFF}\u{2600}-\u{26FF}\u{2700}-\u{27BF}]/gu, '')
+    .trim();
+}
+
 /**
  * Generate serial thread cerita viral gaya Threads Indonesia (murni cerita seru)
  * Tanpa emotikon berlebihan, mengalir murni selayaknya ketikan curhat orang biasa.
@@ -27,8 +39,8 @@ Kamu adalah pencerita menfess viral nomor 1 di Threads Indonesia (seperti akun @
 Buatkan SATU CERITA PANJANG yang sangat seru, kocak, dramatis, atau bikin penasaran pembaca sampai akhir.
 
 ATURAN GAYA PENULISAN SANGAT PENTING:
-1. JANGAN PAKAI BANYAK EMOTIKON! Tulis selayaknya orang curhat biasa di Twitter / Threads.
-2. JANGAN TULIS ANGKA PENOMORAN SEPERTI "[1/8]", "(1/5)", ATAU SEJENISNYA! Tulis langsung teks ceritanya mengalir.
+1. JANGAN PAKAI EMOTIKON APAPUN! Tulis murni kata-kata selayaknya ketikan curhat orang biasa.
+2. JANGAN TULIS ANGKA PENOMORAN SEPERTI "[1/8]", "(1/5)", ATAU SEJENISNYA! Setiap slide harus langsung berisi kalimat cerita mengalir.
 3. CERITA HARUS 100% MURNI CERITA! JANGAN HUBUNGKAN ISI CERITA DENGAN PRODUK APAPUN! Karakter di cerita dilarang dipaksa beli atau pakai produk.
 4. Gaya bahasa: Santai, lu-gw / aku-kamu, ceplas-ceplos anak muda Indonesia, POV orang pertama ("aku" atau "gw"), penuh detail kejadian nyata, emosional.
 5. Cerita dibagi menjadi 6 Bagian bersambung:
@@ -53,26 +65,37 @@ Format output WAJIB HANYA berupa JSON murni tanpa markdown:
 }
 `;
 
-  const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${GEMINI_API_KEY}`;
-  
-  const response = await fetch(url, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      contents: [{ parts: [{ text: prompt }] }],
-      generationConfig: {
-        responseMimeType: 'application/json',
-        temperature: 0.9
-      }
-    })
-  });
+  const models = ['gemini-2.5-flash', 'gemini-3-flash-preview', 'gemini-3.5-flash', 'gemini-flash-latest'];
+  let data = null;
 
-  if (!response.ok) {
-    const errText = await response.text();
-    throw new Error(`Gemini API Error (${response.status}): ${errText}`);
+  for (const model of models) {
+    try {
+      const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${GEMINI_API_KEY}`;
+      const response = await fetch(url, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          contents: [{ parts: [{ text: prompt }] }],
+          generationConfig: {
+            responseMimeType: 'application/json',
+            temperature: 0.9
+          }
+        })
+      });
+
+      if (response.ok) {
+        data = await response.json();
+        break;
+      }
+      console.warn(`[AI] Model ${model} sibuk (${response.status}), mencoba model berikutnya...`);
+    } catch (e) {
+      console.warn(`[AI] Gagal request ${model}:`, e.message);
+    }
   }
 
-  const data = await response.json();
+  if (!data) {
+    throw new Error('Semua model Gemini sedang sibuk, silakan coba beberapa saat lagi.');
+  }
   const rawText = data.candidates?.[0]?.content?.parts?.[0]?.text;
   if (!rawText) {
     throw new Error('Respon Gemini kosong.');
@@ -81,22 +104,24 @@ Format output WAJIB HANYA berupa JSON murni tanpa markdown:
   const cleanJson = rawText.replace(/```json/g, '').replace(/```/g, '').trim();
   const parsed = JSON.parse(cleanJson);
 
+  const cleanParts = parsed.story_parts.map(p => sanitizeText(p));
+
   // Format iklan selingan murni tanpa emot norak
   const adIntermezzo = `Btw selingan bentar ya, kemarin banyak yang nanya rekomendasi ${product ? product.name : 'barang ini'} belinya di mana, aku belinya di toko ini mumpung lagi diskon:\n${product ? product.affiliate_url : 'https://s.shopee.co.id/'}\n\nLanjut ceritanya ke bawah...`;
 
   // Sisipkan iklan murni di tengah-tengah thread
   const fullThreadParts = [
-    parsed.story_parts[0],
-    parsed.story_parts[1],
-    parsed.story_parts[2],
+    cleanParts[0],
+    cleanParts[1],
+    cleanParts[2],
     adIntermezzo, // Iklan lewat santai
-    parsed.story_parts[3],
-    parsed.story_parts[4],
-    parsed.story_parts[5]
+    cleanParts[3],
+    cleanParts[4],
+    cleanParts[5]
   ];
 
   return {
-    title: parsed.title,
+    title: sanitizeText(parsed.title),
     topic: parsed.topic,
     product_name: product ? product.name : 'Produk Rekomendasi',
     product_url: product ? product.affiliate_url : 'https://s.shopee.co.id/',
