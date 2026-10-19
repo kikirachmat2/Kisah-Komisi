@@ -1,6 +1,9 @@
 require('dotenv').config();
 const { Telegraf } = require('telegraf');
+const cron = require('node-cron');
 const db = require('./database');
+const { generateStory } = require('./aiStory');
+const { publishStoryToThreads } = require('./threads');
 
 const token = process.env.BOT_TOKEN;
 
@@ -47,189 +50,224 @@ function formatRupiah(number) {
 bot.start((ctx) => {
   const name = ctx.from?.first_name || 'Kawan';
   ctx.replyWithMarkdown(
-    `👋 Halo *${name}*! Selamat datang di *Kisah Komisi Bot*.\n\n` +
-    `Bot ini membantu kamu mencatat komisi proyek, status pembayaran, dan melihat ringkasan keuanganmu.\n\n` +
-    `📌 *Daftar Perintah:*\n` +
-    `• \`/catat <proyek> | <nominal> | [klien] | [catatan]\` : Catat komisi baru\n` +
-    `• \`/rekap\` : Lihat ringkasan komisi (Pending & Paid)\n` +
-    `• \`/riwayat\` : Lihat 10 catatan komisi terakhir\n` +
-    `• \`/lunas <id_komisi>\` : Tandai komisi sudah lunas\n` +
-    `• \`/batal <id_komisi>\` : Tandai komisi dibatalkan\n` +
-    `• \`/help\` : Bantuan penggunaan`
+    `👋 Halo *${name}*! Selamat datang di *Kisah Komisi Autopilot Engine*.\n\n` +
+    `🤖 *Kontrol Otomatisasi Threads & Komisi:*\n` +
+    `• \`/bikin_cerita\` : AI otomatis buat 1 cerita menfess + produk Shopee\n` +
+    `• \`/stok\` : Cek berapa cerita yang ada di antrean tayang\n` +
+    `• \`/post_sekarang\` : Ambil 1 cerita antrean & langsung post ke Threads\n\n` +
+    `💰 *Pencatatan Keuangan:*\n` +
+    `• \`/catat <proyek> | <nominal> | [klien]\` : Catat komisi manual\n` +
+    `• \`/rekap\` : Lihat ringkasan pendapatan\n` +
+    `• \`/help\` : Bantuan lengkap`
   );
 });
 
-// Command: /help
-bot.help((ctx) => {
-  ctx.replyWithMarkdown(
-    `📖 *Panduan Penggunaan Kisah Komisi Bot*\n\n` +
-    `*1. Mencatat Komisi:*\n` +
-    `Gunakan format dengan pemisah tanda pipa (\`|\`):\n` +
-    `\`/catat Web Company | 2500000 | PT Maju Jaya | DP 50%\`\n\n` +
-    `*2. Rekapitulasi:*\n` +
-    `Ketik \`/rekap\` untuk melihat total pendapatan dan komisi yang masih menggantung.\n\n` +
-    `*3. Update Status:*\n` +
-    `Ketik \`/lunas 1\` untuk menandai komisi #1 sebagai sudah dibayar.`
-  );
+// Command: /bikin_cerita
+bot.command('bikin_cerita', async (ctx) => {
+  await ctx.reply('⏳ Sedang memproses cerita menfess viral dengan Gemini AI...');
+  try {
+    const story = await generateStory();
+    const id = db.addStoryToQueue({
+      title: story.title,
+      topic: story.topic,
+      slides: story.slides,
+      productName: story.product_name,
+      productUrl: story.product_url,
+      scheduledFor: new Date().toISOString()
+    });
+
+    let preview = `✅ *Cerita Baru Berhasil Dibuat & Masuk Antrean!*\n\n`;
+    preview += `🆔 *ID Antrean*: #${id}\n`;
+    preview += `📖 *Judul*: ${story.title}\n`;
+    preview += `🏷️ *Topik*: ${story.topic}\n`;
+    preview += `🛍️ *Produk*: ${story.product_name}\n`;
+    preview += `🔗 *Link Affiliate*: ${story.product_url}\n\n`;
+    preview += `*Contoh Slide 1 (Hook):*\n_"${story.slides[0]}"_\n\n`;
+    preview += `*Contoh Slide 7 (Soft Selling):*\n_"${story.slides[6]}"_\n\n`;
+    preview += `Gunakan \`/post_sekarang\` jika ingin langsung menerbitkan ke Threads sekarang!`;
+
+    ctx.replyWithMarkdown(preview);
+  } catch (err) {
+    console.error('Error bikin_cerita:', err);
+    ctx.reply(`❌ Gagal membuat cerita: ${err.message}`);
+  }
+});
+
+// Command: /stok
+bot.command('stok', (ctx) => {
+  try {
+    const count = db.getQueuedStoriesCount();
+    const upcoming = db.getUpcomingStories(5);
+
+    let msg = `📦 *Status Antrean Stok Cerita:*\n`;
+    msg += `Total Cerita Menunggu: *${count} Cerita*\n\n`;
+
+    if (upcoming.length > 0) {
+      msg += `📋 *5 Cerita Terdekat yang Siap Tayang:*\n`;
+      upcoming.forEach(s => {
+        msg += `• *#${s.id}* - ${s.title} (${s.product_name || '-'})\n`;
+      });
+      msg += `\n⏰ Jadwal Tayang Otomatis:\n• Siang: 12:15 WIB\n• Malam: 19:45 WIB`;
+    } else {
+      msg += `_Antrean kosong. Ketik \`/bikin_cerita\` untuk membuat stok baru!_`;
+    }
+
+    ctx.replyWithMarkdown(msg);
+  } catch (err) {
+    console.error('Error getStok:', err);
+    ctx.reply('❌ Gagal memeriksa stok antrean.');
+  }
+});
+
+// Command: /post_sekarang (Trigger Manual)
+bot.command('post_sekarang', async (ctx) => {
+  const userId = process.env.THREADS_USER_ID;
+  const token = process.env.THREADS_ACCESS_TOKEN;
+
+  if (!userId || !token) {
+    return ctx.reply('⚠️ Kredensial Threads API belum lengkap di server!');
+  }
+
+  const story = db.getNextQueuedStory();
+  if (!story) {
+    return ctx.reply('⚠️ Tidak ada cerita di antrean! Ketik /bikin_cerita dulu.');
+  }
+
+  await ctx.reply(`🚀 Sedang mem-publish cerita: "${story.title}" ke akun Threads @kisahkomisi...`);
+
+  try {
+    const parsedSlides = JSON.parse(story.slides_json);
+    const postId = await publishStoryToThreads(userId, token, {
+      title: story.title,
+      slides: parsedSlides,
+      product_name: story.product_name,
+      product_url: story.product_url
+    });
+
+    db.markStoryPublished(story.id, postId);
+
+    ctx.replyWithMarkdown(
+      `🎉 *BERHASIL TAYANG DI THREADS!*\n\n` +
+      `📖 *Judul*: ${story.title}\n` +
+      `🆔 *Threads Post ID*: \`${postId}\`\n` +
+      `🛒 *Produk & Link Shopee*: Otomatis terpasang di komentar pertama!\n\n` +
+      `Cek langsung di aplikasi Threads Anda: *@kisahkomisi*`
+    );
+  } catch (err) {
+    console.error('Error post_sekarang:', err);
+    db.markStoryFailed(story.id, err.message);
+    ctx.reply(`❌ Gagal mem-publish ke Threads: ${err.message}`);
+  }
 });
 
 // Command: /catat
 bot.command('catat', (ctx) => {
   const text = ctx.message.text.replace('/catat', '').trim();
   if (!text) {
-    return ctx.reply(
-      '⚠️ Format salah!\nContoh: /catat Desain Logo | 500000 | Toko Kopi | Revisi 2x'
-    );
+    return ctx.reply('⚠️ Format: /catat Proyek | 500000 | Klien');
   }
 
   const parts = text.split('|').map(p => p.trim());
   const projectName = parts[0];
-  const amountStr = parts[1];
+  const amount = Number(parts[1]?.replace(/[^0-9]/g, ''));
   const clientName = parts[2] || '-';
-  const notes = parts[3] || '';
 
-  const cleanAmount = amountStr ? amountStr.replace(/[^0-9]/g, '') : null;
-  const amount = Number(cleanAmount);
-
-  if (!projectName || !amount || isNaN(amount) || amount <= 0) {
-    return ctx.reply('⚠️ Harap masukkan nama proyek dan nominal angka yang valid!');
+  if (!projectName || !amount || isNaN(amount)) {
+    return ctx.reply('⚠️ Masukkan nama proyek dan nominal yang valid!');
   }
 
-  try {
-    const id = db.addCommission({
-      userId: ctx.from.id,
-      username: ctx.from.username || ctx.from.first_name,
-      projectName,
-      clientName,
-      amount,
-      notes
-    });
+  const id = db.addCommission({
+    userId: ctx.from.id,
+    username: ctx.from.username || ctx.from.first_name,
+    projectName,
+    clientName,
+    amount
+  });
 
-    ctx.replyWithMarkdown(
-      `✅ *Komisi Berhasil Dicatat!*\n\n` +
-      `🆔 *ID*: #${id}\n` +
-      `📁 *Proyek*: ${projectName}\n` +
-      `💰 *Nominal*: ${formatRupiah(amount)}\n` +
-      `👤 *Klien*: ${clientName}\n` +
-      `📝 *Catatan*: ${notes || '-'}\n` +
-      `📊 *Status*: ⏳ Pending`
-    );
-  } catch (err) {
-    console.error('Error addCommission:', err);
-    ctx.reply('❌ Terjadi kesalahan saat menyimpan data komisi.');
-  }
+  ctx.replyWithMarkdown(`✅ *Komisi #${id} Dicatat:* ${projectName} (${formatRupiah(amount)})`);
 });
 
 // Command: /rekap
 bot.command('rekap', (ctx) => {
-  try {
-    const summary = db.getSummaryByUser(ctx.from.id);
-    if (!summary || summary.length === 0) {
-      return ctx.reply('Belum ada data komisi yang tercatat. Gunakan /catat untuk mulai!');
+  const summary = db.getSummaryByUser(ctx.from.id);
+  let total = 0;
+  summary.forEach(s => total += s.total_amount);
+  ctx.replyWithMarkdown(`📊 *Rekap Komisi:* Total *${formatRupiah(total)}*`);
+});
+
+// ==========================================
+// ⏰ AUTO SCHEDULER (CRON JOB)
+// Jam Siang (12:15 WIB = 05:15 UTC)
+// Jam Malam (19:45 WIB = 12:45 UTC)
+// ==========================================
+async function executeScheduledPosting(label) {
+  console.log(`[Scheduler] Memulai auto-posting untuk slot ${label}...`);
+  const userId = process.env.THREADS_USER_ID;
+  const token = process.env.THREADS_ACCESS_TOKEN;
+
+  if (!userId || !token) {
+    console.warn('[Scheduler] Threads credentials missing.');
+    return;
+  }
+
+  let story = db.getNextQueuedStory();
+  // Jika stok habis, minta AI bikin 1 cerita secara on-the-fly!
+  if (!story) {
+    console.log('[Scheduler] Stok kosong! Men-generate cerita darurat via Gemini...');
+    try {
+      const generated = await generateStory();
+      const id = db.addStoryToQueue({
+        title: generated.title,
+        topic: generated.topic,
+        slides: generated.slides,
+        productName: generated.product_name,
+        productUrl: generated.product_url,
+        scheduledFor: new Date().toISOString()
+      });
+      story = db.getNextQueuedStory();
+    } catch (e) {
+      console.error('[Scheduler] Gagal generate cerita darurat:', e);
+      return;
     }
-
-    let pendingTotal = 0;
-    let pendingCount = 0;
-    let paidTotal = 0;
-    let paidCount = 0;
-
-    summary.forEach(row => {
-      if (row.status === 'pending') {
-        pendingTotal = row.total_amount;
-        pendingCount = row.count;
-      } else if (row.status === 'paid') {
-        paidTotal = row.total_amount;
-        paidCount = row.count;
-      }
-    });
-
-    ctx.replyWithMarkdown(
-      `📊 *Rekapitulasi Kisah Komisi Kamu*\n\n` +
-      `⏳ *Belum Lunas (Pending):*\n` +
-      `• Total: *${formatRupiah(pendingTotal)}* (${pendingCount} proyek)\n\n` +
-      `✅ *Sudah Diterima (Paid):*\n` +
-      `• Total: *${formatRupiah(paidTotal)}* (${paidCount} proyek)\n\n` +
-      `💵 *Grand Total Keseluruhan:* *${formatRupiah(pendingTotal + paidTotal)}*`
-    );
-  } catch (err) {
-    console.error('Error getSummary:', err);
-    ctx.reply('❌ Gagal mengambil rekapitulasi data.');
   }
-});
 
-// Command: /riwayat
-bot.command('riwayat', (ctx) => {
-  try {
-    const items = db.getCommissionsByUser(ctx.from.id, 10);
-    if (!items || items.length === 0) {
-      return ctx.reply('Belum ada riwayat komisi.');
+  if (story) {
+    try {
+      const slides = JSON.parse(story.slides_json);
+      const postId = await publishStoryToThreads(userId, token, {
+        title: story.title,
+        slides: slides,
+        product_name: story.product_name,
+        product_url: story.product_url
+      });
+      db.markStoryPublished(story.id, postId);
+      console.log(`[Scheduler] Sukses posting slot ${label} (Post ID: ${postId})`);
+    } catch (err) {
+      console.error(`[Scheduler] Gagal posting slot ${label}:`, err);
+      db.markStoryFailed(story.id, err.message);
     }
-
-    let message = `📋 *10 Catatan Komisi Terakhir:*\n\n`;
-    items.forEach(item => {
-      const statusIcon = item.status === 'paid' ? '✅ Lunas' : item.status === 'pending' ? '⏳ Pending' : '❌ Batal';
-      message += `• *#${item.id}* - ${item.project_name}\n`;
-      message += `  ${formatRupiah(item.amount)} [${statusIcon}]\n`;
-      message += `  Klien: ${item.client_name || '-'} | Tgl: ${item.created_at.split(' ')[0]}\n\n`;
-    });
-
-    ctx.replyWithMarkdown(message);
-  } catch (err) {
-    console.error('Error getRiwayat:', err);
-    ctx.reply('❌ Gagal mengambil riwayat komisi.');
   }
-});
+}
 
-// Command: /lunas <id>
-bot.command('lunas', (ctx) => {
-  const parts = ctx.message.text.split(' ');
-  const id = parseInt(parts[1], 10);
-  if (!id) {
-    return ctx.reply('⚠️ Harap masukkan ID komisi. Contoh: /lunas 1');
-  }
+// 12:15 WIB (05:15 UTC di server)
+cron.schedule('15 5 * * *', () => executeScheduledPosting('SIANG 12:15 WIB'));
 
-  const success = db.updateCommissionStatus(id, ctx.from.id, 'paid');
-  if (success) {
-    ctx.reply(`✅ Komisi #${id} berhasil diupdate menjadi: SUDAH LUNAS 🎉`);
-  } else {
-    ctx.reply(`❌ Komisi #${id} tidak ditemukan atau bukan milik akun Anda.`);
-  }
-});
+// 19:45 WIB (12:45 UTC di server)
+cron.schedule('45 12 * * *', () => executeScheduledPosting('MALAM 19:45 WIB'));
 
-// Command: /batal <id>
-bot.command('batal', (ctx) => {
-  const parts = ctx.message.text.split(' ');
-  const id = parseInt(parts[1], 10);
-  if (!id) {
-    return ctx.reply('⚠️ Harap masukkan ID komisi. Contoh: /batal 1');
-  }
-
-  const success = db.updateCommissionStatus(id, ctx.from.id, 'cancelled');
-  if (success) {
-    ctx.reply(`⚠️ Komisi #${id} telah ditandai DIBATALKAN.`);
-  } else {
-    ctx.reply(`❌ Komisi #${id} tidak ditemukan atau bukan milik akun Anda.`);
-  }
-});
-
-// Start bot
+// Start Bot
 bot.launch().then(() => {
-  console.log('🚀 Kisah Komisi Telegram Bot berhasil berjalan!');
+  console.log('🚀 Kisah Komisi Autopilot Engine AKTIF!');
 }).catch(err => {
-  console.error('FATAL: Gagal menjalankan Telegram Bot:', err);
+  console.error('FATAL:', err);
   process.exit(1);
 });
 
-// Graceful shutdown untuk PM2 & SQLite WAL flush
+// Graceful shutdown
 function gracefulShutdown(signal) {
-  console.log(`\nMenangkap sinyal ${signal}. Menutup bot dan database dengan aman...`);
+  console.log(`Menangkap ${signal}, menutup dengan aman...`);
   bot.stop(signal);
-  try {
-    db.db.close();
-    console.log('Database connection closed cleanly.');
-  } catch (e) {
-    console.error('Error closing database:', e);
-  }
+  try { db.db.close(); } catch (e) {}
   process.exit(0);
 }
 

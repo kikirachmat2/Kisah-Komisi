@@ -33,17 +33,62 @@ function initSchema() {
       updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
     );
 
+    CREATE TABLE IF NOT EXISTS stories (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      title TEXT NOT NULL,
+      topic TEXT,
+      slides_json TEXT NOT NULL,
+      product_name TEXT,
+      product_url TEXT,
+      scheduled_for DATETIME,
+      published_at DATETIME,
+      threads_media_id TEXT,
+      status TEXT CHECK(status IN ('draft', 'queued', 'published', 'failed')) DEFAULT 'queued',
+      error_message TEXT,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+    );
+
+    CREATE TABLE IF NOT EXISTS product_bank (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      category TEXT NOT NULL,
+      name TEXT NOT NULL,
+      description TEXT,
+      affiliate_url TEXT NOT NULL,
+      active INTEGER DEFAULT 1,
+      times_used INTEGER DEFAULT 0
+    );
+
     CREATE INDEX IF NOT EXISTS idx_commissions_user ON commissions(telegram_user_id);
-    CREATE INDEX IF NOT EXISTS idx_commissions_status ON commissions(status);
-    CREATE INDEX IF NOT EXISTS idx_commissions_created_at ON commissions(created_at);
+    CREATE INDEX IF NOT EXISTS idx_stories_status ON stories(status);
+    CREATE INDEX IF NOT EXISTS idx_stories_schedule ON stories(scheduled_for);
   `);
+
+  // Seed default evergreen products jika tabel masih kosong
+  const count = db.prepare('SELECT count(*) as count FROM product_bank').get().count;
+  if (count === 0) {
+    const insertProd = db.prepare(`
+      INSERT INTO product_bank (category, name, description, affiliate_url)
+      VALUES (?, ?, ?, ?)
+    `);
+    const initialProducts = [
+      ['Kamar & Kosan', 'Aroma Diffuser Ultrasonic Humidifier', 'Pengharum kamar estetik + lampu tidur', 'https://s.shopee.co.id/7V4uX9QkLp'],
+      ['Kamar & Kosan', 'Lampu Tidur LED Akrilik Estetik', 'Lampu meja kamar minimalis hangat', 'https://s.shopee.co.id/7V4uX9QkLp'],
+      ['Kerja & Meja', 'Organizer Meja Transparan Minimalis', 'Tempat alat tulis & skincare rapi', 'https://s.shopee.co.id/7V4uX9QkLp'],
+      ['Relaksasi & Wangi', 'Pewangi Pakaian Fabric Mist Tahan Lama', 'Semprotan baju wangi seharian', 'https://s.shopee.co.id/7V4uX9QkLp'],
+      ['Kesehatan & Gaya Hidup', 'Tumbler Botol Minum Motivasi 2 Liter', 'Botol penanda minum seharian', 'https://s.shopee.co.id/7V4uX9QkLp'],
+      ['Elektronik & Gadget', 'TWS Earphone Bluetooth Noise Cancelling', 'Peredam bising untuk kerja dan belajar', 'https://s.shopee.co.id/7V4uX9QkLp'],
+      ['Skincare & Selfcare', 'Acne Spot Care Patch Hidrokoloid', 'Plester jerawat transparan cepat kempis', 'https://s.shopee.co.id/7V4uX9QkLp']
+    ];
+
+    initialProducts.forEach(prod => insertProd.run(...prod));
+  }
 }
 
 initSchema();
 
 module.exports = {
   db,
-  // Helper queries
+  // Komisi helpers
   addCommission: (data) => {
     const stmt = db.prepare(`
       INSERT INTO commissions (telegram_user_id, username, project_name, client_name, amount, status, notes)
@@ -82,13 +127,84 @@ module.exports = {
     `).all(String(userId));
   },
 
-  updateCommissionStatus: (id, userId, status) => {
+  // Stories helpers
+  addStoryToQueue: (story) => {
     const stmt = db.prepare(`
-      UPDATE commissions 
-      SET status = ?, updated_at = CURRENT_TIMESTAMP 
-      WHERE id = ? AND telegram_user_id = ?
+      INSERT INTO stories (title, topic, slides_json, product_name, product_url, scheduled_for, status)
+      VALUES (?, ?, ?, ?, ?, ?, 'queued')
     `);
-    const info = stmt.run(status, id, String(userId));
-    return info.changes > 0;
+    const info = stmt.run(
+      story.title,
+      story.topic || 'Umum',
+      JSON.stringify(story.slides),
+      story.productName || null,
+      story.productUrl || null,
+      story.scheduledFor
+    );
+    return info.lastInsertRowid;
+  },
+
+  getQueuedStoriesCount: () => {
+    return db.prepare(`SELECT count(*) as count FROM stories WHERE status = 'queued'`).get().count;
+  },
+
+  getNextQueuedStory: () => {
+    return db.prepare(`
+      SELECT * FROM stories 
+      WHERE status = 'queued' 
+      ORDER BY scheduled_for ASC, id ASC 
+      LIMIT 1
+    `).get();
+  },
+
+  getUpcomingStories: (limit = 5) => {
+    return db.prepare(`
+      SELECT id, title, topic, product_name, scheduled_for, status 
+      FROM stories 
+      WHERE status = 'queued' 
+      ORDER BY scheduled_for ASC 
+      LIMIT ?
+    `).all(limit);
+  },
+
+  markStoryPublished: (id, threadsMediaId) => {
+    return db.prepare(`
+      UPDATE stories 
+      SET status = 'published', published_at = CURRENT_TIMESTAMP, threads_media_id = ? 
+      WHERE id = ?
+    `).run(threadsMediaId, id);
+  },
+
+  markStoryFailed: (id, errorMessage) => {
+    return db.prepare(`
+      UPDATE stories 
+      SET status = 'failed', error_message = ? 
+      WHERE id = ?
+    `).run(errorMessage, id);
+  },
+
+  // Product bank helper
+  getRandomProduct: (topic) => {
+    let prod = null;
+    if (topic) {
+      prod = db.prepare(`
+        SELECT * FROM product_bank 
+        WHERE active = 1 AND category LIKE ? 
+        ORDER BY times_used ASC, RANDOM() 
+        LIMIT 1
+      `).get(`%${topic}%`);
+    }
+    if (!prod) {
+      prod = db.prepare(`
+        SELECT * FROM product_bank 
+        WHERE active = 1 
+        ORDER BY times_used ASC, RANDOM() 
+        LIMIT 1
+      `).get();
+    }
+    if (prod) {
+      db.prepare(`UPDATE product_bank SET times_used = times_used + 1 WHERE id = ?`).run(prod.id);
+    }
+    return prod;
   }
 };
