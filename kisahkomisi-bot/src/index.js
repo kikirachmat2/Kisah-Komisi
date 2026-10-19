@@ -11,19 +11,25 @@ if (!token) {
 
 const bot = new Telegraf(token);
 
-// Middleware whitelist user opsional
+// Middleware whitelist user opsional (mendukung user ID angka maupun username @iki021)
 const allowedUsers = (process.env.ALLOWED_USERS || '')
   .split(',')
-  .map(s => s.trim())
+  .map(s => s.trim().replace(/^@/, '').toLowerCase())
   .filter(Boolean);
 
 if (allowedUsers.length > 0) {
   bot.use(async (ctx, next) => {
     const fromId = ctx.from ? String(ctx.from.id) : null;
-    if (fromId && allowedUsers.includes(fromId)) {
+    const username = ctx.from && ctx.from.username ? ctx.from.username.toLowerCase() : null;
+    
+    const isAllowed = 
+      (fromId && allowedUsers.includes(fromId.toLowerCase())) || 
+      (username && allowedUsers.includes(username));
+
+    if (isAllowed) {
       return next();
     }
-    console.warn(`[Security] Unauthorized access attempt from ID: ${fromId} (${ctx.from?.username || 'anonymous'})`);
+    console.warn(`[Security] Unauthorized access attempt from ID: ${fromId} (@${ctx.from?.username || 'no_username'})`);
     return ctx.reply('⚠️ Maaf, Anda tidak memiliki akses ke bot Kisah Komisi ini.');
   });
 }
