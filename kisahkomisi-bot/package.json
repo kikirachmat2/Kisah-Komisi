@@ -1,0 +1,23 @@
+{
+  "name": "kisahkomisi-bot",
+  "version": "1.0.0",
+  "description": "Telegram Bot untuk pencatatan dan pelaporan Kisah Komisi",
+  "main": "src/index.js",
+  "scripts": {
+    "start": "node src/index.js",
+    "dev": "node --watch src/index.js"
+  },
+  "keywords": [
+    "telegram",
+    "bot",
+    "telegraf",
+    "sqlite"
+  ],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "better-sqlite3": "^11.8.1",
+    "dotenv": "^16.4.7",
+    "telegraf": "^4.16.3"
+  }
+}
