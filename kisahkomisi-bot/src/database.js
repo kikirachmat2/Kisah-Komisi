@@ -96,10 +96,23 @@ function initSchema() {
       created_at DATETIME DEFAULT CURRENT_TIMESTAMP
     );
 
+    CREATE TABLE IF NOT EXISTS auto_replies (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      threads_media_id TEXT NOT NULL,
+      comment_id TEXT UNIQUE NOT NULL,
+      author_username TEXT NOT NULL,
+      comment_text TEXT NOT NULL,
+      reply_text TEXT NOT NULL,
+      reply_media_id TEXT,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+    );
+
     CREATE INDEX IF NOT EXISTS idx_commissions_user ON commissions(telegram_user_id);
     CREATE INDEX IF NOT EXISTS idx_stories_status ON stories(status);
     CREATE INDEX IF NOT EXISTS idx_stories_schedule ON stories(scheduled_for);
     CREATE INDEX IF NOT EXISTS idx_story_insights_story ON story_insights(story_id);
+    CREATE INDEX IF NOT EXISTS idx_auto_replies_comment ON auto_replies(comment_id);
+    CREATE INDEX IF NOT EXISTS idx_auto_replies_media ON auto_replies(threads_media_id);
   `);
 
   // Migrasi aman untuk kolom qc_score dan qc_notes jika belum ada
@@ -365,6 +378,48 @@ module.exports = {
 
   getLatestStrategyLog: () => {
     return db.prepare(`SELECT * FROM strategy_logs ORDER BY id DESC LIMIT 1`).get();
+  },
+
+  // Auto-Reply Helpers
+  isCommentReplied: (commentId) => {
+    const row = db.prepare(`SELECT id FROM auto_replies WHERE comment_id = ?`).get(commentId);
+    return !!row;
+  },
+
+  logAutoReply: ({ threadsMediaId, commentId, authorUsername, commentText, replyText, replyMediaId }) => {
+    return db.prepare(`
+      INSERT INTO auto_replies (threads_media_id, comment_id, author_username, comment_text, reply_text, reply_media_id)
+      VALUES (?, ?, ?, ?, ?, ?)
+    `).run(threadsMediaId, commentId, authorUsername, commentText, replyText, replyMediaId || null);
+  },
+
+  getDailyAutoReplyCount: () => {
+    const row = db.prepare(`
+      SELECT COUNT(*) as cnt 
+      FROM auto_replies 
+      WHERE created_at >= datetime('now', '-24 hours')
+    `).get();
+    return row ? row.cnt : 0;
+  },
+
+  getAutoReplyCountForMedia: (mediaId) => {
+    const row = db.prepare(`
+      SELECT COUNT(*) as cnt 
+      FROM auto_replies 
+      WHERE threads_media_id = ?
+    `).get(mediaId);
+    return row ? row.cnt : 0;
+  },
+
+  // Database maintenance: checkpoint WAL to prevent file bloat on VPS
+  runMaintenance: () => {
+    try {
+      db.pragma('wal_checkpoint(TRUNCATE)');
+      return true;
+    } catch (e) {
+      console.warn('[DB] Maintenance warning:', e.message);
+      return false;
+    }
   },
 
   getDbPath: () => dbPath

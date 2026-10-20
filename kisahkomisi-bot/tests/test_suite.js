@@ -78,7 +78,27 @@ async function runTests() {
     console.log(`[Slide ${i + 1}] (${slide.length} chars):\n${slide.substring(0, 120)}...\n`);
   });
 
-  console.log('🎉 === ALL TESTS PASSED SUCCESSFULLY! === 🎉');
+  // TEST 6: Auto-Reply Engine Guardrails & DB helpers
+  console.log('\n[Test 6] Testing Auto-Reply Engine & Guardrails...');
+  const { isCommentSafe } = require('../src/autoReplyEngine');
+  assert(isCommentSafe('Sumpah relate banget cerita ini, nyesek abis!') === true, 'Safe comment allowed');
+  assert(isCommentSafe('Ini bot ya? Dasar robot jelek') === false, 'Bot accusation rejected');
+  assert(isCommentSafe('Mau judi slot gacor hari ini') === false, 'Spam comment rejected');
+  assert(isCommentSafe('Dasar tolol goblok') === false, 'Toxic comment rejected');
+
+  db.logAutoReply({
+    threadsMediaId: 'mock_test_media',
+    commentId: 'mock_test_comment_' + Date.now(),
+    authorUsername: 'test_user',
+    commentText: 'Relate banget',
+    replyText: 'Wkwk bener banget kan!',
+    replyMediaId: 'mock_reply_id'
+  });
+  const dailyCount = db.getDailyAutoReplyCount();
+  assert(dailyCount > 0, 'Daily auto reply count should be incremented');
+  console.log('  ✓ Auto-Reply Guardrails & DB Tracking: 100% Verified');
+
+  console.log('\n🎉 === ALL TESTS PASSED SUCCESSFULLY! === 🎉');
 }
 
 runTests().catch(err => {

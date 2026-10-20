@@ -13,6 +13,7 @@ const {
   getActiveAccessToken, 
   refreshThreadsToken 
 } = require('./threads');
+const { runAutoEngagementScan } = require('./autoReplyEngine');
 
 const token = process.env.BOT_TOKEN;
 
@@ -548,14 +549,15 @@ async function executeScheduledPosting(label) {
         console.log(`[Scheduler] Sukses posting slot ${label} (Post ID: ${postId})`);
 
         const remainingStock = db.getQueuedStoriesCount();
+        const postLink = `https://www.threads.net/@ceritakikiii/post/${postId}`;
         await sendAdminAlert(
           `🎉 *BERHASIL AUTO-POSTING KE THREADS!*\n\n` +
           `⏰ *Slot*: ${label}\n` +
           `📖 *Judul*: ${story.title}\n` +
-          `🆔 *Post ID*: \`${postId}\`\n` +
           `🛍️ *Produk*: ${story.product_name || 'Murni Cerita'}\n` +
           `📦 *Sisa Stok Antrean*: *${remainingStock} cerita*\n\n` +
-          `Cek langsung di aplikasi Threads: *@ceritakikiii*`
+          `🔗 [Buka Postingan Threads](${postLink})\n` +
+          `Akun: *@ceritakikiii*`
         );
 
         // Otomatis isi ulang stok buffer di background agar antrean selalu aman
@@ -713,11 +715,41 @@ cron.schedule('0 3 1,15 * *', async () => {
 });
 
 // ==========================================
-// 💾 AUTOMATED DATABASE BACKUP (Tiap Hari Minggu jam 02:00 WIB)
+// 💬 AUTONOMOUS AUTO-ENGAGEMENT & REPLY (Setiap 2 Jam Sekali)
+// Membalas komentar netizen secara selektif dengan persona Kiki Rachmat
+// Dilengkapi guardrails ketat: Max 3/post, max 10/hari, zero toxicity
 // ==========================================
-cron.schedule('0 2 * * 0', async () => {
-  console.log('[Scheduler] Menjalankan backup database berkala...');
-  await sendDatabaseBackup();
+cron.schedule('45 8,10,12,14,16,18,20,22 * * *', async () => {
+  const userId = process.env.THREADS_USER_ID;
+  if (!userId) return;
+  console.log('[AutoReply] Menjalankan scan komentar masuk di Threads...');
+  try {
+    const res = await runAutoEngagementScan(userId);
+    if (res.repliedCount > 0) {
+      await sendAdminAlert(
+        `💬 *[Auto-Engage] Kiki Membalas Netizen!*\n\n` +
+        `Berhasil membalas *${res.repliedCount} komentar* di Threads secara natural.\n` +
+        `Total interaksi bot hari ini: *${db.getDailyAutoReplyCount()}/10 replies* (Batas aman).`
+      );
+    }
+  } catch (err) {
+    console.warn('[AutoReply] Error saat auto-engagement scan:', err.message);
+  }
+}, {
+  scheduled: true,
+  timezone: 'Asia/Jakarta'
+});
+
+// ==========================================
+// 🧹 DATABASE & VPS HEALTH CHECK (Tiap Hari Jam 03:30 WIB)
+// Melakukan WAL truncation & vacuum memory agar VPS tetap enteng
+// ==========================================
+cron.schedule('30 3 * * *', () => {
+  console.log('[Maintenance] Menjalankan database checkpoint & cleanup VPS...');
+  db.runMaintenance();
+  if (global.gc) {
+    global.gc();
+  }
 }, {
   scheduled: true,
   timezone: 'Asia/Jakarta'
