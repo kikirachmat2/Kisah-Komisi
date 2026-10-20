@@ -3,7 +3,7 @@ const { Telegraf } = require('telegraf');
 const cron = require('node-cron');
 const db = require('./database');
 const { generateStory } = require('./aiStory');
-const { publishStoryToThreads } = require('./threads');
+const { publishStoryToThreads, getPublishingLimit } = require('./threads');
 
 const token = process.env.BOT_TOKEN;
 
@@ -54,7 +54,8 @@ bot.start((ctx) => {
     `🤖 *Kontrol Otomatisasi Threads:*\n` +
     `• \`/bikin_cerita\` : AI buat 1 cerita menfess baru\n` +
     `• \`/stok\` : Cek stok antrean tayang (12:15 & 19:45 WIB)\n` +
-    `• \`/post_sekarang\` : Langsung terbitkan 1 cerita antrean ke Threads sekarang\n\n` +
+    `• \`/post_sekarang\` : Langsung terbitkan 1 cerita antrean ke Threads sekarang\n` +
+    `• \`/cek_limit\` : Cek sisa kuota posting & replies Meta Threads Anda\n\n` +
     `🛍️ *Manajemen Link Shopee Affiliate:*\n` +
     `• \`/list_produk\` : Lihat semua link affiliate yang aktif\n` +
     `• \`/tambah_produk <Nama> | <Link>\` : Tambahkan link affiliate Shopee punyamu\n\n` +
@@ -83,10 +84,14 @@ bot.command('bikin_cerita', async (ctx) => {
     preview += `🆔 *ID Antrean*: #${id}\n`;
     preview += `📖 *Judul*: ${story.title}\n`;
     preview += `🏷️ *Topik*: ${story.topic}\n`;
-    preview += `🛍️ *Produk*: ${story.product_name}\n`;
-    preview += `🔗 *Link Affiliate*: ${story.product_url}\n\n`;
-    preview += `*Contoh Slide 1 (Hook):*\n_"${story.slides[0]}"_\n\n`;
-    preview += `*Contoh Slide 7 (Soft Selling):*\n_"${story.slides[6]}"_\n\n`;
+    if (story.product_name) {
+      preview += `🛍️ *Produk*: ${story.product_name}\n`;
+      preview += `🔗 *Link*: ${story.product_url}\n`;
+    } else {
+      preview += `🛍️ *Produk*: _Murni Cerita (Tanpa Iklan)_\n`;
+    }
+    preview += `\n*Post Utama (Hook):*\n_"${story.slides[0]}"_\n\n`;
+    preview += `*Total Bagian*: ${story.slides.length} Bagian (1 Post Utama + ${story.slides.length - 1} Replies)\n\n`;
     preview += `Gunakan \`/post_sekarang\` jika ingin langsung menerbitkan ke Threads sekarang!`;
 
     ctx.replyWithMarkdown(preview);
@@ -119,6 +124,36 @@ bot.command('stok', (ctx) => {
   } catch (err) {
     console.error('Error getStok:', err);
     ctx.reply('❌ Gagal memeriksa stok antrean.');
+  }
+});
+
+// Command: /cek_limit
+bot.command('cek_limit', async (ctx) => {
+  const userId = process.env.THREADS_USER_ID;
+  const token = process.env.THREADS_ACCESS_TOKEN;
+  if (!userId || !token) {
+    return ctx.reply('⚠️ Kredensial Threads API belum lengkap di file .env!');
+  }
+
+  try {
+    const limits = await getPublishingLimit(userId, token);
+    const data = limits.data?.[0];
+    if (!data) {
+      return ctx.reply('❌ Gagal membaca limit Threads: ' + JSON.stringify(limits));
+    }
+    const postUsed = data.quota_usage || 0;
+    const postMax = data.config?.quota_total || 250;
+    const replyUsed = data.reply_quota_usage || 0;
+    const replyMax = data.reply_config?.quota_total || 1000;
+
+    let msg = `📊 *Status Kuota Meta Threads API (Rolling 24 Jam):*\n\n`;
+    msg += `📝 *Post Utama (Feed)*:\n• Terpakai: *${postUsed}* dari max ${postMax}\n• Sisa Slot: *${postMax - postUsed} post*\n\n`;
+    msg += `💬 *Replies (Lanjutan Cerita)*:\n• Terpakai: *${replyUsed}* dari max ${replyMax}\n• Sisa Slot: *${replyMax - replyUsed} replies*\n\n`;
+    msg += `_Aturan Meta: 1 cerita hanya menghabiskan 1 slot Post Utama, sedangkan seluruh lanjutannya masuk ke kuota Replies._`;
+    ctx.replyWithMarkdown(msg);
+  } catch (err) {
+    console.error('Error cek_limit:', err);
+    ctx.reply(`❌ Gagal mengambil limit Threads: ${err.message}`);
   }
 });
 

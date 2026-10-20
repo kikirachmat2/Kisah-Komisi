@@ -107,25 +107,25 @@ Format output WAJIB HANYA berupa JSON murni tanpa markdown:
 
   const cleanParts = parsed.story_parts.map(p => sanitizeText(p));
 
-  // Format iklan selingan murni tanpa emot norak
-  const adIntermezzo = `Btw selingan bentar ya, kemarin banyak yang nanya rekomendasi ${product ? product.name : 'barang ini'} belinya di mana, aku belinya di toko ini mumpung lagi diskon:\n${product ? product.affiliate_url : 'https://s.shopee.co.id/'}\n\nLanjut ceritanya ke bawah...`;
-
-  // Sisipkan iklan murni di tengah-tengah thread
+  // Sisipkan iklan murni di tengah-tengah thread HANYA JIKA ada produk aktif di database
   const fullThreadParts = [
     cleanParts[0],
     cleanParts[1],
-    cleanParts[2],
-    adIntermezzo, // Iklan lewat santai
-    cleanParts[3],
-    cleanParts[4],
-    cleanParts[5]
+    cleanParts[2]
   ];
+
+  if (product && product.affiliate_url) {
+    const adIntermezzo = `Btw selingan bentar ya, kemarin banyak yang nanya rekomendasi ${product.name} belinya di mana, aku belinya di toko ini mumpung lagi diskon:\n${product.affiliate_url}\n\nLanjut ceritanya ke bawah...`;
+    fullThreadParts.push(adIntermezzo);
+  }
+
+  fullThreadParts.push(cleanParts[3], cleanParts[4], cleanParts[5]);
 
   return {
     title: sanitizeText(parsed.title),
     topic: parsed.topic,
-    product_name: product ? product.name : 'Produk Rekomendasi',
-    product_url: product ? product.affiliate_url : 'https://s.shopee.co.id/',
+    product_name: product ? product.name : null,
+    product_url: product ? product.affiliate_url : null,
     slides: fullThreadParts
   };
 }

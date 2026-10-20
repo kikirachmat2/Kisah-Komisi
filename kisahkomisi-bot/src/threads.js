@@ -1,9 +1,35 @@
 const THREADS_API_BASE = 'https://graph.threads.net/v1.0';
 
 /**
- * Mempublikasikan satu post ke Threads (Maksimal 500 karakter per post)
+ * Menunggu container Threads berstatus 'FINISHED' di server Meta
+ * Status yang mungkin: IN_PROGRESS, FINISHED, ERROR, EXPIRED
+ */
+async function waitForContainerFinished(containerId, accessToken, maxAttempts = 15) {
+  const statusUrl = `${THREADS_API_BASE}/${containerId}?fields=status,error_message&access_token=${accessToken}`;
+  for (let i = 0; i < maxAttempts; i++) {
+    try {
+      const res = await fetch(statusUrl);
+      const data = await res.json();
+      if (data.status === 'FINISHED') {
+        return true;
+      }
+      if (data.status === 'ERROR') {
+        throw new Error(`Container processing error: ${data.error_message || JSON.stringify(data)}`);
+      }
+    } catch (e) {
+      // Abaikan temporary error saat polling
+    }
+    await new Promise(r => setTimeout(r, 1500));
+  }
+  return false;
+}
+
+/**
+ * Mempublikasikan satu post ke Threads (Batas resmi Meta: Maksimal 500 karakter per post/reply)
+ * Jika replyToId diisi, post akan menjadi REPLY di bawah post tersebut (tidak mengotori feed profil).
  */
 async function publishTextPost(userId, accessToken, text, replyToId = null) {
+  // Hard limit 500 karakter Meta Threads, jaga aman di max 480 karakter
   const safeText = text.length > 490 ? text.substring(0, 485) + '...' : text;
 
   const createContainerUrl = `${THREADS_API_BASE}/${userId}/threads`;
@@ -27,10 +53,10 @@ async function publishTextPost(userId, accessToken, text, replyToId = null) {
     throw new Error(`Gagal membuat container Threads: ${JSON.stringify(containerData)}`);
   }
 
-  // Tunggu sebentar agar container terdaftar di Meta backend
-  await new Promise(r => setTimeout(r, 2000));
+  // Tunggu container selesai diproses oleh Meta (status === 'FINISHED')
+  await waitForContainerFinished(containerData.id, accessToken);
 
-  // Publish container (dengan retry jika status container belum READY)
+  // Publish container
   const publishUrl = `${THREADS_API_BASE}/${userId}/threads_publish`;
   let publishedId = null;
   let lastError = null;
@@ -56,8 +82,8 @@ async function publishTextPost(userId, accessToken, text, replyToId = null) {
       lastError = err.message;
     }
 
-    // Tunggu 3 detik sebelum retry publish container
-    await new Promise(r => setTimeout(r, 3000));
+    // Jeda 2 detik jika container masih antre
+    await new Promise(r => setTimeout(r, 2000));
   }
 
   if (!publishedId) {
@@ -68,10 +94,19 @@ async function publishTextPost(userId, accessToken, text, replyToId = null) {
 }
 
 /**
- * Memecah teks panjang secara cerdas per kalimat utuh (maksimal maxLen karakter)
- * Agar tidak ada kata atau kalimat yang terpotong di tengah jalan.
+ * Cek kuota publikasi akun Threads dari Meta API (Limit: 250 post baru & 1.000 reply per 24 jam)
  */
-function splitBySentence(text, maxLen = 450) {
+async function getPublishingLimit(userId, accessToken) {
+  const url = `${THREADS_API_BASE}/${userId}/threads_publishing_limit?fields=quota_usage,config,reply_quota_usage,reply_config&access_token=${accessToken}`;
+  const res = await fetch(url);
+  return await res.json();
+}
+
+/**
+ * Memecah teks panjang secara cerdas per kalimat utuh (maksimal maxLen karakter)
+ * Menjamin tidak ada kalimat atau kata yang terpotong di tengah jalan.
+ */
+function splitBySentence(text, maxLen = 420) {
   if (text.length <= maxLen) return [text];
 
   const sentences = text.match(/[^.!?]+[.!?]+(\s+|$)|[^.!?]+$/g) || [text];
@@ -83,7 +118,6 @@ function splitBySentence(text, maxLen = 450) {
       current += sentence;
     } else {
       if (current.trim()) chunks.push(current.trim());
-      // Jika satu kalimat saja lebih panjang dari maxLen, terpaksa potong per kata
       if (sentence.length > maxLen) {
         const words = sentence.split(' ');
         let wordChunk = '';
@@ -107,35 +141,39 @@ function splitBySentence(text, maxLen = 450) {
 }
 
 /**
- * Publikasikan seluruh cerita sebagai Thread Bersambung murni (tanpa angka pecahan dan tanpa emot)
+ * Publikasikan seluruh cerita sebagai struktur Thread resmi:
+ * 1. Post Utama (Root Post) -> HANYA 1 POST UTAMA yang tampil di feed profil akun
+ * 2. Seluruh part lanjutan diterbitkan sebagai REPLIES di bawah Post Utama tersebut
  */
 async function publishStoryToThreads(userId, accessToken, story) {
-  // Pecah semua slide secara cerdas agar tidak terpotong mid-sentence
+  // Pecah semua slide secara cerdas agar aman di bawah limit 500 karakter Meta
   const rawParts = story.slides;
   const parts = [];
 
   for (const p of rawParts) {
-    const splitted = splitBySentence(p, 450);
+    const splitted = splitBySentence(p, 420);
     parts.push(...splitted);
   }
 
   const totalParts = parts.length;
-  console.log(`[Threads] Memulai penerbitan thread serial (${totalParts} parts cerdas)...`);
+  console.log(`[Threads] Memulai publikasi thread (${totalParts} parts)...`);
 
-  // PART 1 (Induk Utama Post) - Murni tulisan mengalir utuh
+  // PART 1: Post Utama (Root) - Satu-satunya post yang tampil di tab "Threads" feed akun
   const rootPostId = await publishTextPost(userId, accessToken, parts[0]);
-  console.log(`[Threads] Post 1 (ROOT) terbit ID: ${rootPostId}`);
+  console.log(`[Threads] Post Utama (ROOT) terbit ID: ${rootPostId}`);
 
-  // Seluruh kelanjutan part (2 sampai selesai) selalu di-reply langsung ke rootPostId
+  // PART 2 s/d SELESAI: Masuk sebagai REPLIES langsung di bawah rootPostId
+  const replyIds = [];
   for (let i = 1; i < totalParts; i++) {
-    // Delay 6 detik agar reply container Meta siap
-    await new Promise(r => setTimeout(r, 6000));
+    // Jeda 5 detik antar reply agar server Meta mengindeks dengan rapi
+    await new Promise(r => setTimeout(r, 5000));
 
     try {
       const currentReplyId = await publishTextPost(userId, accessToken, parts[i], rootPostId);
-      console.log(`[Threads] Reply part ${i + 1} terbit ID: ${currentReplyId}`);
+      replyIds.push(currentReplyId);
+      console.log(`[Threads] Reply part ${i + 1}/${totalParts} terbit ID: ${currentReplyId}`);
     } catch (err) {
-      console.warn(`[Threads] Gagal menerbitkan part ${i + 1}:`, err.message);
+      console.warn(`[Threads] Gagal menerbitkan reply part ${i + 1}:`, err.message);
     }
   }
 
@@ -145,5 +183,6 @@ async function publishStoryToThreads(userId, accessToken, story) {
 module.exports = {
   publishTextPost,
   publishStoryToThreads,
-  splitBySentence
+  splitBySentence,
+  getPublishingLimit
 };
