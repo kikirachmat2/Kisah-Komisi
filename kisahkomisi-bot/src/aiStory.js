@@ -124,7 +124,7 @@ Format output WAJIB HANYA berupa JSON murni tanpa markdown:
 }
 `;
 
-  const models = ['gemini-2.5-flash', 'gemini-3-flash-preview', 'gemini-3.5-flash', 'gemini-flash-latest'];
+  const models = ['gemini-2.5-flash', 'gemini-3-flash-preview'];
   let data = null;
 
   for (const model of models) {
@@ -133,6 +133,7 @@ Format output WAJIB HANYA berupa JSON murni tanpa markdown:
       const response = await fetch(url, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
+        signal: AbortSignal.timeout(25000),
         body: JSON.stringify({
           contents: [{ parts: [{ text: prompt }] }],
           generationConfig: {
@@ -154,7 +155,7 @@ Format output WAJIB HANYA berupa JSON murni tanpa markdown:
 
   let rawText = data?.candidates?.[0]?.content?.parts?.[0]?.text;
 
-  // Fallback ke Groq LPU jika semua model Gemini sedang 429/sibuk
+  // Fallback ke Groq LPU jika semua model Gemini sedang 429/500/timeout
   if (!rawText && process.env.GROQ_API_KEY) {
     try {
       console.log('[AI] Menggunakan Groq LPU sebagai fallback generator cerita...');
@@ -164,6 +165,7 @@ Format output WAJIB HANYA berupa JSON murni tanpa markdown:
           'Authorization': `Bearer ${process.env.GROQ_API_KEY}`,
           'Content-Type': 'application/json'
         },
+        signal: AbortSignal.timeout(25000),
         body: JSON.stringify({
           model: 'openai/gpt-oss-120b',
           messages: [{ role: 'user', content: prompt + '\n\nKeluarkan HANYA JSON persis sesuai format.' }],
@@ -190,6 +192,7 @@ Format output WAJIB HANYA berupa JSON murni tanpa markdown:
           'Authorization': `Bearer ${process.env.OPENROUTER_API_KEY}`,
           'Content-Type': 'application/json'
         },
+        signal: AbortSignal.timeout(25000),
         body: JSON.stringify({
           model: 'nvidia/nemotron-3.5-lightning:free',
           messages: [{ role: 'user', content: prompt + '\n\nKeluarkan HANYA JSON persis sesuai format.' }],

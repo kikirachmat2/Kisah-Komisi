@@ -60,6 +60,7 @@ Syarat Lolos (approved = true): total_score >= 7.5. Jika di bawah 7.5, set appro
           'Authorization': `Bearer ${GROQ_API_KEY}`,
           'Content-Type': 'application/json'
         },
+        signal: AbortSignal.timeout(8000),
         body: JSON.stringify({
           model: 'openai/gpt-oss-120b',
           messages: [{ role: 'user', content: evaluationPrompt }],
@@ -96,6 +97,7 @@ Syarat Lolos (approved = true): total_score >= 7.5. Jika di bawah 7.5, set appro
           'Authorization': `Bearer ${OPENROUTER_API_KEY}`,
           'Content-Type': 'application/json'
         },
+        signal: AbortSignal.timeout(8000),
         body: JSON.stringify({
           model: 'nvidia/nemotron-3.5-lightning:free',
           messages: [{ role: 'user', content: evaluationPrompt + '\n\nBalas HANYA string JSON.' }],
