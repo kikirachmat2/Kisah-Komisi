@@ -64,9 +64,42 @@ function initSchema() {
       updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
     );
 
+    CREATE TABLE IF NOT EXISTS story_insights (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      story_id INTEGER UNIQUE,
+      threads_media_id TEXT,
+      views INTEGER DEFAULT 0,
+      likes INTEGER DEFAULT 0,
+      replies INTEGER DEFAULT 0,
+      reposts INTEGER DEFAULT 0,
+      quotes INTEGER DEFAULT 0,
+      updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+    );
+
+    CREATE TABLE IF NOT EXISTS account_insights (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      snapshot_date DATE UNIQUE,
+      views INTEGER DEFAULT 0,
+      likes INTEGER DEFAULT 0,
+      replies INTEGER DEFAULT 0,
+      reposts INTEGER DEFAULT 0,
+      quotes INTEGER DEFAULT 0,
+      raw_json TEXT,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+    );
+
+    CREATE TABLE IF NOT EXISTS strategy_logs (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      summary TEXT NOT NULL,
+      recommendations TEXT NOT NULL,
+      top_topics TEXT,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+    );
+
     CREATE INDEX IF NOT EXISTS idx_commissions_user ON commissions(telegram_user_id);
     CREATE INDEX IF NOT EXISTS idx_stories_status ON stories(status);
     CREATE INDEX IF NOT EXISTS idx_stories_schedule ON stories(scheduled_for);
+    CREATE INDEX IF NOT EXISTS idx_story_insights_story ON story_insights(story_id);
   `);
 
   // Migrasi aman untuk kolom qc_score dan qc_notes jika belum ada
@@ -234,6 +267,94 @@ module.exports = {
       VALUES (?, ?, CURRENT_TIMESTAMP)
       ON CONFLICT(key) DO UPDATE SET value = excluded.value, updated_at = CURRENT_TIMESTAMP
     `).run(key, String(value));
+  },
+
+  // Insights & Analytics Helpers
+  upsertStoryInsight: (storyId, mediaId, metrics) => {
+    return db.prepare(`
+      INSERT INTO story_insights (story_id, threads_media_id, views, likes, replies, reposts, quotes, updated_at)
+      VALUES (?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)
+      ON CONFLICT(story_id) DO UPDATE SET
+        views = excluded.views,
+        likes = excluded.likes,
+        replies = excluded.replies,
+        reposts = excluded.reposts,
+        quotes = excluded.quotes,
+        updated_at = CURRENT_TIMESTAMP
+    `).run(
+      storyId,
+      mediaId,
+      Number(metrics.views || 0),
+      Number(metrics.likes || 0),
+      Number(metrics.replies || 0),
+      Number(metrics.reposts || 0),
+      Number(metrics.quotes || 0)
+    );
+  },
+
+  upsertAccountInsight: (snapshotDate, metrics, rawJson = null) => {
+    return db.prepare(`
+      INSERT INTO account_insights (snapshot_date, views, likes, replies, reposts, quotes, raw_json, created_at)
+      VALUES (?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)
+      ON CONFLICT(snapshot_date) DO UPDATE SET
+        views = excluded.views,
+        likes = excluded.likes,
+        replies = excluded.replies,
+        reposts = excluded.reposts,
+        quotes = excluded.quotes,
+        raw_json = excluded.raw_json
+    `).run(
+      snapshotDate,
+      Number(metrics.views || 0),
+      Number(metrics.likes || 0),
+      Number(metrics.replies || 0),
+      Number(metrics.reposts || 0),
+      Number(metrics.quotes || 0),
+      rawJson ? JSON.stringify(rawJson) : null
+    );
+  },
+
+  getLatestAccountInsight: () => {
+    return db.prepare(`SELECT * FROM account_insights ORDER BY snapshot_date DESC LIMIT 1`).get();
+  },
+
+  getAccountInsightsHistory: (limit = 7) => {
+    return db.prepare(`SELECT * FROM account_insights ORDER BY snapshot_date DESC LIMIT ?`).all(limit);
+  },
+
+  getTopPerformingStories: (limit = 5) => {
+    return db.prepare(`
+      SELECT s.id, s.title, s.topic, s.product_name, s.published_at,
+             COALESCE(i.views, 0) as views,
+             COALESCE(i.likes, 0) as likes,
+             COALESCE(i.replies, 0) as replies,
+             COALESCE(i.reposts, 0) as reposts
+      FROM stories s
+      LEFT JOIN story_insights i ON s.id = i.story_id
+      WHERE s.status = 'published' AND s.threads_media_id IS NOT NULL
+      ORDER BY views DESC, likes DESC, s.id DESC
+      LIMIT ?
+    `).all(limit);
+  },
+
+  getAllPublishedStoriesWithMediaId: () => {
+    return db.prepare(`
+      SELECT id, title, topic, product_name, threads_media_id, published_at
+      FROM stories 
+      WHERE status = 'published' AND threads_media_id IS NOT NULL
+      ORDER BY id DESC
+    `).all();
+  },
+
+  recordStrategyLog: (summary, recommendations, topTopics = null) => {
+    return db.prepare(`
+      INSERT INTO strategy_logs (summary, recommendations, top_topics)
+      VALUES (?, ?, ?)
+    `).run(summary, recommendations, topTopics ? JSON.stringify(topTopics) : null);
+  },
+
+  getLatestStrategyLog: () => {
+    return db.prepare(`SELECT * FROM strategy_logs ORDER BY id DESC LIMIT 1`).get();
   },
 
   getDbPath: () => dbPath

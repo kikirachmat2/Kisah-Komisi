@@ -229,11 +229,41 @@ async function publishStoryToThreads(userId, accessToken, story) {
   return rootPostId;
 }
 
+/**
+ * Mengambil insight performa akun Threads secara keseluruhan (views, likes, replies, reposts, quotes)
+ */
+async function getAccountInsights(userId, accessToken) {
+  const tokenToUse = getActiveAccessToken() || accessToken;
+  const url = `https://graph.threads.net/v1.0/${userId}/threads_insights?metric=views,likes,replies,reposts,quotes&access_token=${tokenToUse}`;
+  const res = await fetch(url);
+  if (!res.ok) {
+    const errText = await res.text();
+    throw new Error(`Gagal mengambil account insights: HTTP ${res.status} - ${errText}`);
+  }
+  return await res.json();
+}
+
+/**
+ * Mengambil insight performa satu post / thread tertentu
+ */
+async function getMediaInsights(mediaId, accessToken) {
+  const tokenToUse = getActiveAccessToken() || accessToken;
+  const url = `https://graph.threads.net/v1.0/${mediaId}/insights?metric=views,likes,replies,reposts,quotes&access_token=${tokenToUse}`;
+  const res = await fetch(url);
+  if (!res.ok) {
+    const errText = await res.text();
+    throw new Error(`Gagal mengambil media insights: HTTP ${res.status} - ${errText}`);
+  }
+  return await res.json();
+}
+
 module.exports = {
   publishTextPost,
   publishStoryToThreads,
   splitBySentence,
   getPublishingLimit,
   getActiveAccessToken,
-  refreshThreadsToken
+  refreshThreadsToken,
+  getAccountInsights,
+  getMediaInsights
 };

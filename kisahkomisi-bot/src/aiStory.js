@@ -93,10 +93,25 @@ async function generateStory(forcedTopic = null) {
     throw new Error('GEMINI_API_KEY belum diset di .env');
   }
 
-  // Pilih produk affiliate aktif terlebih dahulu agar suasana cerita bisa diselaraskan
-  const product = db.getRandomProduct();
-  const themeHint = product ? getThematicVibe(product.category) : 'kehidupan sehari-hari anak muda';
-  const topic = forcedTopic || TOPICS[Math.floor(Math.random() * TOPICS.length)];
+  // Pilih topik (Adaptasi Cerdas: 60% prioritaskan topik dengan performa tertinggi dari AI Strategist)
+  let topic = forcedTopic;
+  if (!topic) {
+    const priorityJson = db.getSetting('PRIORITY_TOPICS');
+    if (priorityJson && Math.random() < 0.6) {
+      try {
+        const priorities = JSON.parse(priorityJson);
+        if (Array.isArray(priorities) && priorities.length > 0) {
+          const chosenPriority = priorities[Math.floor(Math.random() * priorities.length)];
+          const matched = TOPICS.find(t => t.toLowerCase().includes(chosenPriority.toLowerCase()));
+          topic = matched || chosenPriority;
+        }
+      } catch (e) {}
+    }
+    if (!topic) {
+      topic = TOPICS[Math.floor(Math.random() * TOPICS.length)];
+    }
+  }
+
   const tone = TONES[Math.floor(Math.random() * TONES.length)];
   const perspective = PERSPECTIVES[Math.floor(Math.random() * PERSPECTIVES.length)];
 

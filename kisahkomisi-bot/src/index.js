@@ -6,6 +6,7 @@ const cron = require('node-cron');
 const db = require('./database');
 const { generateStory } = require('./aiStory');
 const { replenishStockBuffer, produceCuratedStory, auditAffiliateLinks } = require('./editorialBoard');
+const { trackAllInsights, analyzePerformanceAndStrategize, generateInsightReportMarkdown } = require('./growthEngine');
 const { 
   publishStoryToThreads, 
   getPublishingLimit, 
@@ -109,6 +110,7 @@ function renderHelpMenu(name = 'Kawan') {
   return (
     `👋 Halo *${name}*! Selamat datang di *Kisah Komisi Autopilot Engine*.\n\n` +
     `🤖 *Kontrol Otomatisasi Threads:*\n` +
+    `• \`/insight\` : Cek analitik penayangan & strategi AI terkini\n` +
     `• \`/bikin_cerita\` : AI buat 1 cerita menfess viral (Lolos Kurasi QC)\n` +
     `• \`/isi_stok\` : Trigger otomatis isi buffer stok (Target 9 cerita / 3 hari)\n` +
     `• \`/stok\` : Cek status buffer stok (07:30, 12:30, & 20:00 WIB)\n` +
@@ -272,6 +274,20 @@ bot.command('stok', (ctx) => {
   } catch (err) {
     console.error('Error getStok:', err);
     ctx.reply('❌ Gagal memeriksa stok antrean.');
+  }
+});
+
+// Command: /insight & /statistik
+bot.command(['insight', 'statistik'], async (ctx) => {
+  await ctx.reply('⏳ Menarik data analitik terbaru langsung dari Meta Threads API...');
+  try {
+    await trackAllInsights();
+    await analyzePerformanceAndStrategize();
+    const report = await generateInsightReportMarkdown();
+    ctx.replyWithMarkdown(report);
+  } catch (err) {
+    console.error('Error command insight:', err);
+    ctx.reply(`❌ Gagal mengambil insight Threads: ${err.message}`);
   }
 });
 
@@ -568,6 +584,22 @@ cron.schedule('0 21 * * *', async () => {
     }
   } catch (err) {
     console.error('[Patrol] Gagal audit link:', err.message);
+  }
+});
+
+// ==========================================
+// 📊 DAILY INSIGHT SYNC & STRATEGY DIGEST (Setiap Malam jam 21:00 WIB / 14:00 UTC)
+// Menarik analitik Meta Threads & menyusun rekomendasi strategi konten otomatis
+// ==========================================
+cron.schedule('0 14 * * *', async () => {
+  console.log('[Scheduler] Menjalankan sinkronisasi insight & evaluasi strategi harian...');
+  try {
+    await trackAllInsights();
+    await analyzePerformanceAndStrategize();
+    const report = await generateInsightReportMarkdown();
+    await sendAdminAlert(report);
+  } catch (err) {
+    console.error('[Scheduler] Gagal sync insights harian:', err.message);
   }
 });
 
