@@ -392,8 +392,15 @@ bot.command('tambah_produk', (ctx) => {
   }
 });
 
+// Flag mutex untuk mencegah balapan (race condition) antar postingan
+let isPostingInProgress = false;
+
 // Command: /post_sekarang (Trigger Manual)
 bot.command('post_sekarang', async (ctx) => {
+  if (isPostingInProgress) {
+    return ctx.reply('⏳ Sedang ada proses posting lain yang berjalan di background. Mohon tunggu.');
+  }
+
   const userId = process.env.THREADS_USER_ID;
   const token = getActiveAccessToken();
 
@@ -406,6 +413,7 @@ bot.command('post_sekarang', async (ctx) => {
     return ctx.reply('⚠️ Tidak ada cerita di antrean! Ketik /bikin_cerita dulu.');
   }
 
+  isPostingInProgress = true;
   await ctx.reply(`🚀 Sedang mem-publish cerita: "${story.title}" ke akun Threads @kisahkomisi...`);
 
   try {
@@ -427,10 +435,15 @@ bot.command('post_sekarang', async (ctx) => {
       `🛒 *Struktur*: 1 Post Utama + ${parsedSlides.length - 1} Replies Berantai\n\n` +
       `Cek langsung di aplikasi Threads Anda: *@kisahkomisi*`
     );
+
+    // Isi ulang stok di background
+    replenishStockBuffer(9).catch(e => console.warn('[ManualPost] Auto-replenish error:', e.message));
   } catch (err) {
     console.error('Error post_sekarang:', err);
     db.markStoryFailed(story.id, err.message);
     ctx.reply(`❌ Gagal mem-publish ke Threads: ${err.message}`);
+  } finally {
+    isPostingInProgress = false;
   }
 });
 
@@ -471,8 +484,7 @@ bot.command('rekap', (ctx) => {
 
 // ==========================================
 // ⏰ AUTO SCHEDULER DENGAN ANTI-BOT JITTER
-// Jam Siang (12:15 WIB = 05:15 UTC)
-// Jam Malam (19:45 WIB = 12:45 UTC)
+// Slot Pagi 07:30, Siang 12:30, Malam 20:00 WIB
 // ==========================================
 async function executeScheduledPosting(label) {
   // Tambahkan jitter acak antara 1 s/d 10 menit agar tidak terbaca bot oleh filter Meta
@@ -482,75 +494,116 @@ async function executeScheduledPosting(label) {
   
   await new Promise(r => setTimeout(r, jitterMs));
 
-  console.log(`[Scheduler] Memulai auto-posting untuk slot ${label}...`);
-  const userId = process.env.THREADS_USER_ID;
-  const token = getActiveAccessToken();
-
-  if (!userId || !token) {
-    console.warn('[Scheduler] Threads credentials missing.');
-    await sendAdminAlert(`⚠️ *[Scheduler] Gagal Posting (${label})*: Kredensial Threads API belum lengkap di server.`);
-    return;
+  if (isPostingInProgress) {
+    console.warn(`[Scheduler] Sedang ada proses posting lain, menunda slot ${label} selama 30 detik...`);
+    await new Promise(r => setTimeout(r, 30000));
   }
 
-  let story = db.getNextQueuedStory();
-  // Jika stok habis, minta AI bikin 1 cerita terkurasi secara on-the-fly!
-  if (!story) {
-    console.log('[Scheduler] Stok kosong! Men-generate cerita darurat via Creator Gemini + QC Groq...');
-    try {
-      const generated = await produceCuratedStory();
-      const id = db.addStoryToQueue({
-        title: generated.title,
-        topic: generated.topic,
-        slides: generated.slides,
-        productName: generated.product_name,
-        productUrl: generated.product_url,
-        scheduledFor: new Date().toISOString(),
-        qcScore: generated.qcScore,
-        qcNotes: generated.qcNotes
-      });
-      story = db.getNextQueuedStory();
-    } catch (e) {
-      console.error('[Scheduler] Gagal generate cerita darurat:', e);
-      await sendAdminAlert(`🚨 *[Scheduler] Error (${label})*: Stok cerita kosong dan gagal auto-generate cerita via AI: ${e.message}`);
+  isPostingInProgress = true;
+  try {
+    console.log(`[Scheduler] Memulai auto-posting untuk slot ${label}...`);
+    const userId = process.env.THREADS_USER_ID;
+    const token = getActiveAccessToken();
+
+    if (!userId || !token) {
+      console.warn('[Scheduler] Threads credentials missing.');
+      await sendAdminAlert(`⚠️ *[Scheduler] Gagal Posting (${label})*: Kredensial Threads API belum lengkap di server.`);
       return;
     }
-  }
 
-  if (story) {
-    try {
-      const slides = JSON.parse(story.slides_json);
-      const postId = await publishStoryToThreads(userId, token, {
-        title: story.title,
-        slides: slides,
-        product_name: story.product_name,
-        product_url: story.product_url
-      });
-      db.markStoryPublished(story.id, postId);
-      console.log(`[Scheduler] Sukses posting slot ${label} (Post ID: ${postId})`);
-
-      const remainingStock = db.getQueuedStoriesCount();
-      await sendAdminAlert(
-        `🎉 *BERHASIL AUTO-POSTING KE THREADS!*\n\n` +
-        `⏰ *Slot*: ${label}\n` +
-        `📖 *Judul*: ${story.title}\n` +
-        `🆔 *Post ID*: \`${postId}\`\n` +
-        `🛍️ *Produk*: ${story.product_name || 'Murni Cerita'}\n` +
-        `📦 *Sisa Stok Antrean*: *${remainingStock} cerita*\n\n` +
-        `Cek langsung di aplikasi Threads: *@kisahkomisi*`
-      );
-
-      // Otomatis isi ulang stok buffer di background agar antrean selalu aman
-      replenishStockBuffer(9).catch(e => console.warn('[Scheduler] Auto-replenish error:', e.message));
-    } catch (err) {
-      console.error(`[Scheduler] Gagal posting slot ${label}:`, err);
-      db.markStoryFailed(story.id, err.message);
-      await sendAdminAlert(
-        `🚨 *GAGAL AUTO-POSTING KE THREADS!*\n\n` +
-        `⏰ *Slot*: ${label}\n` +
-        `📖 *Judul*: ${story.title}\n` +
-        `❌ *Error*: ${err.message}`
-      );
+    let story = db.getNextQueuedStory();
+    // Jika stok habis, minta AI bikin 1 cerita terkurasi secara on-the-fly!
+    if (!story) {
+      console.log('[Scheduler] Stok kosong! Men-generate cerita darurat via Creator Gemini + QC Groq...');
+      try {
+        const generated = await produceCuratedStory();
+        db.addStoryToQueue({
+          title: generated.title,
+          topic: generated.topic,
+          slides: generated.slides,
+          productName: generated.product_name,
+          productUrl: generated.product_url,
+          scheduledFor: new Date().toISOString(),
+          qcScore: generated.qcScore,
+          qcNotes: generated.qcNotes
+        });
+        story = db.getNextQueuedStory();
+      } catch (e) {
+        console.error('[Scheduler] Gagal generate cerita darurat:', e);
+        await sendAdminAlert(`🚨 *[Scheduler] Error (${label})*: Stok cerita kosong dan gagal auto-generate cerita via AI: ${e.message}`);
+        return;
+      }
     }
+
+    if (story) {
+      try {
+        const slides = JSON.parse(story.slides_json);
+        const postId = await publishStoryToThreads(userId, token, {
+          title: story.title,
+          slides: slides,
+          product_name: story.product_name,
+          product_url: story.product_url
+        });
+        db.markStoryPublished(story.id, postId);
+        console.log(`[Scheduler] Sukses posting slot ${label} (Post ID: ${postId})`);
+
+        const remainingStock = db.getQueuedStoriesCount();
+        await sendAdminAlert(
+          `🎉 *BERHASIL AUTO-POSTING KE THREADS!*\n\n` +
+          `⏰ *Slot*: ${label}\n` +
+          `📖 *Judul*: ${story.title}\n` +
+          `🆔 *Post ID*: \`${postId}\`\n` +
+          `🛍️ *Produk*: ${story.product_name || 'Murni Cerita'}\n` +
+          `📦 *Sisa Stok Antrean*: *${remainingStock} cerita*\n\n` +
+          `Cek langsung di aplikasi Threads: *@kisahkomisi*`
+        );
+
+        // Otomatis isi ulang stok buffer di background agar antrean selalu aman
+        replenishStockBuffer(9).catch(e => console.warn('[Scheduler] Auto-replenish error:', e.message));
+      } catch (err) {
+        console.error(`[Scheduler] Gagal posting cerita #${story.id} (${story.title}) slot ${label}:`, err.message);
+        db.markStoryFailed(story.id, err.message);
+
+        // Coba 1x pemulihan otomatis dengan cerita berikutnya di antrean
+        const fallbackStory = db.getNextQueuedStory();
+        if (fallbackStory) {
+          console.log(`[Scheduler] Mencoba mempublikasikan cerita cadangan #${fallbackStory.id} ("${fallbackStory.title}")...`);
+          try {
+            const fallbackSlides = JSON.parse(fallbackStory.slides_json);
+            const fallbackPostId = await publishStoryToThreads(userId, token, {
+              title: fallbackStory.title,
+              slides: fallbackSlides,
+              product_name: fallbackStory.product_name,
+              product_url: fallbackStory.product_url
+            });
+            db.markStoryPublished(fallbackStory.id, fallbackPostId);
+            console.log(`[Scheduler] Cerita cadangan #${fallbackStory.id} sukses terbit (Post ID: ${fallbackPostId})`);
+            
+            await sendAdminAlert(
+              `🎉 *AUTO-POSTING BERHASIL (RECOVERY CADANGAN)!*\n\n` +
+              `⏰ *Slot*: ${label}\n` +
+              `📖 *Judul*: ${fallbackStory.title}\n` +
+              `🆔 *Post ID*: \`${fallbackPostId}\`\n\n` +
+              `_Catatan: Cerita utama sebelumnya gagal (${err.message}) dan telah digantikan otomatis oleh antrean berikutnya._`
+            );
+            replenishStockBuffer(9).catch(e => console.warn('[Scheduler] Auto-replenish error:', e.message));
+            return;
+          } catch (fErr) {
+            console.error('[Scheduler] Cerita cadangan juga gagal:', fErr.message);
+            db.markStoryFailed(fallbackStory.id, fErr.message);
+          }
+        }
+
+        await sendAdminAlert(
+          `🚨 *GAGAL AUTO-POSTING KE THREADS!*\n\n` +
+          `⏰ *Slot*: ${label}\n` +
+          `📖 *Judul*: ${story.title}\n` +
+          `❌ *Error*: ${err.message}`
+        );
+      }
+    }
+  } finally {
+    isPostingInProgress = false;
   }
 }
 

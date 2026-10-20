@@ -346,6 +346,16 @@ module.exports = {
     `).all();
   },
 
+  getRecentPublishedStories: (limit = 25) => {
+    return db.prepare(`
+      SELECT id, title, topic, product_name, threads_media_id, published_at
+      FROM stories 
+      WHERE status = 'published' AND threads_media_id IS NOT NULL
+      ORDER BY id DESC
+      LIMIT ?
+    `).all(limit);
+  },
+
   recordStrategyLog: (summary, recommendations, topTopics = null) => {
     return db.prepare(`
       INSERT INTO strategy_logs (summary, recommendations, top_topics)

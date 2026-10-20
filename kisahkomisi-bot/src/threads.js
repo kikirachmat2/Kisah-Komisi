@@ -82,19 +82,41 @@ async function publishTextPost(userId, accessToken, text, replyToId = null) {
     payload.reply_to_id = replyToId;
   }
 
-  const containerRes = await fetch(createContainerUrl, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(payload)
-  });
+  // Percobaan pembuatan container dengan retry bertingkat (3 kali)
+  let containerData = null;
+  let lastContainerErr = null;
 
-  const containerData = await containerRes.json();
-  if (!containerData.id) {
-    throw new Error(`Gagal membuat container Threads: ${JSON.stringify(containerData)}`);
+  for (let cAttempt = 1; cAttempt <= 3; cAttempt++) {
+    try {
+      const containerRes = await fetch(createContainerUrl, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        signal: AbortSignal.timeout(15000),
+        body: JSON.stringify(payload)
+      });
+
+      const resJson = await containerRes.json();
+      if (resJson.id) {
+        containerData = resJson;
+        break;
+      }
+      lastContainerErr = resJson;
+    } catch (err) {
+      lastContainerErr = err.message;
+    }
+    // Jeda sejenak sebelum retry container
+    await new Promise(r => setTimeout(r, 2000 * cAttempt));
+  }
+
+  if (!containerData?.id) {
+    throw new Error(`Gagal membuat container Threads setelah 3 percobaan: ${JSON.stringify(lastContainerErr)}`);
   }
 
   // Tunggu container selesai diproses oleh Meta (status === 'FINISHED')
-  await waitForContainerFinished(containerData.id, tokenToUse);
+  const isFinished = await waitForContainerFinished(containerData.id, tokenToUse);
+  if (!isFinished) {
+    throw new Error(`Threads container ${containerData.id} tidak selesai diproses oleh Meta (status timeout/expired).`);
+  }
 
   // Publish container
   const publishUrl = `${THREADS_API_BASE}/${userId}/threads_publish`;

@@ -48,8 +48,8 @@ async function trackAllInsights() {
     results.errors.push(`Account: ${err.message}`);
   }
 
-  // 2. Ambil & Simpan Post Insights untuk semua cerita yang sudah tayang
-  const publishedStories = db.getAllPublishedStoriesWithMediaId();
+  // 2. Ambil & Simpan Post Insights untuk 25 cerita terbaru yang sudah tayang
+  const publishedStories = db.getRecentPublishedStories ? db.getRecentPublishedStories(25) : db.getAllPublishedStoriesWithMediaId();
   for (const story of publishedStories) {
     try {
       const rawPost = await getMediaInsights(story.threads_media_id, token);

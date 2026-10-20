@@ -259,6 +259,28 @@ async function auditAffiliateLinks() {
         db.db.prepare('UPDATE product_bank SET active = 0 WHERE id = ?').run(prod.id);
         deactivated.push(prod.name);
         console.warn(`[AffiliatePatrol] Produk "${prod.name}" dinonaktifkan karena link error: ${finalUrl}`);
+
+        // Bersihkan cerita antrean yang masih mengantongi link produk rusak ini
+        try {
+          const queuedWithProd = db.db.prepare(`
+            SELECT id, slides_json FROM stories 
+            WHERE status = 'queued' AND product_name = ?
+          `).all(prod.name);
+
+          for (const qs of queuedWithProd) {
+            const rawSlides = JSON.parse(qs.slides_json);
+            // Buang slide yang berisi tautan affiliate rusak
+            const cleanSlides = rawSlides.filter(s => !s.includes(prod.affiliate_url) && !s.includes('belinya di mana'));
+            db.db.prepare(`
+              UPDATE stories 
+              SET slides_json = ?, product_name = NULL, product_url = NULL 
+              WHERE id = ?
+            `).run(JSON.stringify(cleanSlides), qs.id);
+            console.log(`[AffiliatePatrol] Menghapus tautan rusak dari cerita antrean #${qs.id}`);
+          }
+        } catch (cleanErr) {
+          console.warn('[AffiliatePatrol] Gagal membersihkan antrean:', cleanErr.message);
+        }
       }
     } catch (e) {
       // Abaikan jika hanya timeout sementara agar tidak salah menonaktifkan
