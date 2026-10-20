@@ -58,7 +58,7 @@ prodDb.close();
 
 console.log(`\n======================================================`);
 console.log(`   🚀 SIMULASI OPERASI PENUH 1 MINGGU (7 HARI / 14 SLOT)`);
-console.log(`   Akun: @kisahkomisi | Produk Aktif: ${realProducts.length} Produk`);
+console.log(`   Akun: @ceritakikiii | Produk Aktif: ${realProducts.length} Produk`);
 console.log(`======================================================\n`);
 
 async function runWeeklySimulation() {
@@ -140,7 +140,7 @@ async function runWeeklySimulation() {
       });
 
       // Pastikan ada link Shopee terpasang dan memiliki sub_id tracking
-      const hasShopeeLink = parts.some(p => p.includes('shopee.co.id') && p.includes('sub_id1=threads_kisahkomisi'));
+      const hasShopeeLink = parts.some(p => p.includes('shopee.co.id') && p.includes('sub_id1=threads_ceritakiki'));
       assert(hasShopeeLink, `Harus ada 1 slide intermezzo dengan link affiliate bertag sub_id1`);
 
       // 5. SIMULASI PUBLISHING BERANTAI RESMI META ("Add to thread")

@@ -24,7 +24,7 @@ const TOPICS = [
 ];
 
 // Menambahkan sub_id tracking ke link Shopee Affiliate secara aman
-function appendSubId(urlStr, subId = 'threads_kisahkomisi') {
+function appendSubId(urlStr, subId = 'threads_ceritakiki') {
   if (!urlStr) return urlStr;
   try {
     const u = new URL(urlStr);
@@ -120,8 +120,9 @@ async function generateStory(forcedTopic = null) {
   const perspective = PERSPECTIVES[Math.floor(Math.random() * PERSPECTIVES.length)];
 
   const prompt = `
-Kamu adalah jurnalis naratif & kreator konten anonim nomor 1 di Threads Indonesia (sekelas akun viral @nobondandrise).
-Tulislah SATU KISAH NYATA / CURHATAN MENFESS yang sangat mencengkeram, manusiawi, mengaduk emosi, dan mustahil dilewati tanpa dibaca sampai tuntas.
+Kamu adalah kurator cerita naratif di akun Threads @ceritakikiii (Kiki Rachmat).
+Bio akun: "In this economy mau nulis cerita orang-orang aja lah".
+Tulislah SATU KISAH NYATA / CURHATAN MENFESS yang sangat mencengkeram, manusiawi, mengaduk emosi, dan mustahil dilewati tanpa dibaca sampai tuntas seolah-olah kamu menceritakan ulang kisah nyata kiriman orang/pengalaman relatable.
 
 TOPIK SPESIFIK:
 ${topic}
@@ -280,7 +281,7 @@ Format output WAJIB HANYA berupa JSON murni tanpa markdown:
 
   let trackedProductUrl = null;
   if (product && product.affiliate_url) {
-    trackedProductUrl = appendSubId(product.affiliate_url, 'threads_kisahkomisi');
+    trackedProductUrl = appendSubId(product.affiliate_url, 'threads_ceritakiki');
     const adIntermezzo = `Btw selingan bentar ya, kemarin banyak yang nanya rekomendasi ${product.name} belinya di mana, aku belinya di toko ini mumpung lagi diskon:\n${trackedProductUrl}\n\nLanjut ceritanya ke bawah...`;
     fullThreadParts.push(adIntermezzo);
   }

@@ -11,13 +11,13 @@ async function runTests() {
   // TEST 1: appendSubId
   console.log('[Test 1] Testing appendSubId...');
   const url1 = 'https://s.shopee.co.id/2AwoQ0tZfG';
-  const tracked1 = appendSubId(url1, 'threads_kisahkomisi');
-  assert(tracked1.includes('sub_id1=threads_kisahkomisi'), 'URL 1 should contain sub_id1');
+  const tracked1 = appendSubId(url1, 'threads_ceritakiki');
+  assert(tracked1.includes('sub_id1=threads_ceritakiki'), 'URL 1 should contain sub_id1');
   console.log('  ✓ URL tanpa query:', tracked1);
 
   const url2 = 'https://shopee.co.id/product/123?utm_source=ig';
-  const tracked2 = appendSubId(url2, 'threads_kisahkomisi');
-  assert(tracked2.includes('utm_source=ig') && tracked2.includes('sub_id1=threads_kisahkomisi'), 'URL 2 should preserve existing query and add sub_id1');
+  const tracked2 = appendSubId(url2, 'threads_ceritakiki');
+  assert(tracked2.includes('utm_source=ig') && tracked2.includes('sub_id1=threads_ceritakiki'), 'URL 2 should preserve existing query and add sub_id1');
   assert(!tracked2.includes('??'), 'URL 2 should not have double question marks');
   console.log('  ✓ URL dengan query:', tracked2);
 

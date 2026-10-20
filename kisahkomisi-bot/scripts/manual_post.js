@@ -52,13 +52,13 @@ async function main() {
     }
   }
 
-  console.log(`🚀 [Threads] Mulai mempublikasikan cerita #${storyId} ke akun @kisahkomisi...`);
+  console.log(`🚀 [Threads] Mulai mempublikasikan cerita #${storyId} ke akun @ceritakikiii...`);
   const rootPostId = await publishStoryToThreads(userId, token, story);
 
   db.markStoryPublished(storyId, rootPostId);
 
   console.log(`\n🎉 [SUKSES TAYANG] Root Post ID: ${rootPostId}`);
-  console.log(`🔗 Cek live di Threads: https://www.threads.net/@kisahkomisi/post/${rootPostId}`);
+  console.log(`🔗 Cek live di Threads: https://www.threads.net/@ceritakikiii/post/${rootPostId}`);
 }
 
 main().catch(err => {
