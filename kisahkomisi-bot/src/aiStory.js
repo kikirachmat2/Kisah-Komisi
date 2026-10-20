@@ -120,44 +120,53 @@ async function generateStory(forcedTopic = null) {
   const perspective = PERSPECTIVES[Math.floor(Math.random() * PERSPECTIVES.length)];
 
   const prompt = `
-Kamu adalah pencerita menfess viral nomor 1 di Threads Indonesia (seperti akun @nobondandrise).
-Buatkan SATU CERITA PANJANG yang sangat seru, emosional, bikin geregetan, atau bikin penasaran pembaca sampai akhir.
+Kamu adalah jurnalis naratif & kreator konten anonim nomor 1 di Threads Indonesia (sekelas akun viral @nobondandrise).
+Tulislah SATU KISAH NYATA / CURHATAN MENFESS yang sangat mencengkeram, manusiawi, mengaduk emosi, dan mustahil dilewati tanpa dibaca sampai tuntas.
 
-TOPIK CERITA:
+TOPIK SPESIFIK:
 ${topic}
 
-NUANSA/LATAR CERITA:
-Relate dengan ${themeHint}.
+LATAR / NUANSA KEHIDUPAN:
+Relate erat dengan ${themeHint}.
 
-GAYA TONE & SUDUT PANDANG:
+GAYA TONE & PERSPEKTIF:
 - Nuansa Cerita: ${tone}
 - Sudut Pandang: ${perspective}
 
-ATURAN GAYA PENULISAN SANGAT PENTING:
-1. JANGAN PAKAI EMOTIKON APAPUN! Tulis 100% murni kata-kata teks selayaknya ketikan curhat orang biasa di Threads.
-2. JANGAN TULIS PENOMORAN SEPERTI "[1/6]", "(Part 1)", ATAU SEJENISNYA! Setiap part harus langsung berisi kalimat cerita mengalir.
-3. PANJANG SETIAP PART MAKSIMAL 360 KARAKTER! WAJIB SELESAIKAN KALIMAT DENGAN TANDA TITIK (.). Jangan menggantung di tengah kalimat.
-4. JANGAN SEBUT NAMA PRODUK ATAU JUALAN DI DALAM CERITA! Karakter dilarang di-endorse produk. Cerita harus murni drama/curhat manusiawi.
-5. Gaya bahasa: Santai, lu-gw / aku-kamu, ceplas-ceplos anak muda Indonesia, POV orang pertama ("aku" atau "gw"), penuh detail kejadian nyata, menguras emosi.
-6. Cerita dibagi menjadi 6 Bagian bersambung (masing-masing 250 - 360 karakter):
-   - Part 1: HOOK TINGGI & MEMIKAT! Langsung masuk ke detik kejadian mengejutkan/konflik dalam 10 kata pertama (contoh: "Gue baru tahu rasanya disidang sekeluarga gara-gara...", "Ternyata firasat gue bener dari awal pas liat..."). DILARANG pakai pembuka basi seperti "Halo guys" atau "Kenalin nama gue".
-   - Part 2: Kronologi awal mula kenapa hal itu bisa terjadi.
-   - Part 3: Tanda-tanda aneh / kecurigaan / kejadian yang makin ga beres.
-   - Part 4: Puncak konflik / momen paling tegang atau memalukan atau bikin syok.
-   - Part 5: Reaksi orang-orang di sekitar dan penyelesaian insiden tersebut.
-   - Part 6: Ending tuntas + MAGNET KOMENTAR / PERTANYAAN DEBAT POLARISASI! Akhiri cerita dengan pertanyaan yang memancing netizen berdebat di kolom komentar (contoh: "Kalian kalau di posisi gue mending diem aja apa labrak sekalian?", "Wajar ga sih gue bersikap kayak gitu, atau gue yang terlalu baper?").
+STANDAR JURNALISME NARATIF & BAHASA MANUSIA (SANGAT KETAT):
+1. KAIDAH HOOK "IN MEDIA RES" (Part 1):
+   - Detik pertama WAJIB langsung menabrak klimaks / momen paling memalukan / pengakuan mengejutkan dalam 10 kata pertama.
+   - Contoh hook jurnalistik: "Udah 3 tahun gue nyimpen rahasia kotor bos gue, tapi kemarin malam semua meledak di depan istrinya.", "Ternyata firasat aneh gue bener pas nemu struk hotel di kantong jaket temen sekamar gue."
+   - DILARANG KERAS pembuka basi: "Halo guys", "Kenalin nama gue", "Jadi gini ceritanya", "Mau numpang curhat". Langsung hantam ke inti kejadian!
+2. PRINSIP "SHOW, DON'T TELL" (Gunakan Detail Sensorik & Nyata):
+   - JANGAN tulis "Temen sekamar gue pelit banget".
+   - TULIS detail nyatanya: "Dia nagih uang bensin 3.500 perak lewat QRIS dan mi instan gue di lemari ditandain spidol satu-satu biar ga dimakan."
+   - Gunakan nama samaran orang Indonesia (Rian, Cici, Mas Bayu, Mbak Tyas, Pak RT).
+3. HILANGKAN 100% "BAU ROBOT / KLISE AI":
+   - DILARANG menggunakan kata-kata terjemahan AI kaku seperti: "tidak disangka-sangka", "pada akhirnya saya menyadari", "peristiwa tersebut", "merupakan hal yang", "sangat disayangkan", "pelajaran hidup yang berharga".
+   - TULIS DENGAN KETIKAN MANUSIAWI ASLI: Gunakan gaya ngobrol tongkrongan (lu-gue/aku-kamu, kesel, speechless, zonk, gak habis fikri, nyesek, elus dada, red flag, gemeteran).
+   - JANGAN PAKAI EMOTIKON APAPUN! 100% teks murni natural.
+   - JANGAN TULIS PENOMORAN SEPERTI "[1/6]" atau "Part 1:".
+4. INTEGRASI AFFILIATE BERSIH:
+   - JANGAN sebut nama produk atau jualan di dalam alur cerita. Karakter murni bercerita tentang kehidupannya.
+5. POLARISASI KOMENTAR (Part 6):
+   - Algoritma Threads menyukai diskusi panas. Akhiri part 6 dengan DILEMA MORAL 2 KUBU yang memaksa netizen terpecah dan berdebat di kolom reply (contoh: "Menurut kalian gue yang terlalu baperan, atau tindakan dia emang udah kelewat batas?", "Kalau kalian di posisi gue, mending diem demi jaga hubungan kerja, apa labrak langsung di depan umum?").
+
+PANJANG TIAP PART:
+- Masing-masing part terdiri dari 250 - 360 karakter.
+- WAJIB diakhiri tanda titik (.) atau tanda tanya (?). Jangan menggantung di tengah kalimat.
 
 Format output WAJIB HANYA berupa JSON murni tanpa markdown:
 {
-  "title": "Judul Cerita Pendek Menarik",
+  "title": "Judul Menfess Tajam & Provokatif (Maksimal 6-8 kata)",
   "topic": "${topic}",
   "story_parts": [
-    "Teks Part 1...",
-    "Teks Part 2...",
-    "Teks Part 3...",
-    "Teks Part 4...",
-    "Teks Part 5...",
-    "Teks Part 6..."
+    "Part 1: Hook In Media Res mengejutkan...",
+    "Part 2: Kronologi awal kenapa hal itu bisa terjadi...",
+    "Part 3: Tanda-tanda aneh / kecurigaan makin memuncak...",
+    "Part 4: Puncak konfrontasi / insiden paling syok...",
+    "Part 5: Situasi pasca kejadian & akibatnya...",
+    "Part 6: Resolusi + Pertanyaan Polarisasi Debat Netizen..."
   ]
 }
 `;

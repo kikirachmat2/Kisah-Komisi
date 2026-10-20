@@ -30,10 +30,11 @@ SLIDES:
 ${slides.map((s, idx) => `[Part ${idx + 1}]: ${s}`).join('\n\n')}
 
 KRITERIA PENILAIAN (Skala 1 - 10):
-1. hook_score: Apakah 10-15 kata pertama di Part 1 langsung memikat dan mengejutkan pembaca? DILARANG ada sapaan basi (seperti "Halo guys", "Kenalin").
-2. pacing_score: Apakah alur cerita mengalir bertahap dari awal, memuncak di tengah, sampai konklusi?
-3. affiliate_score: Apakah sisipan rekomendasi terasa wajar, relevan secara situasi, dan tidak hard-selling seperti iklan TV?
-4. debate_score: Apakah bagian akhir memancing netizen untuk berdebat atau berkomentar memberikan pendapat?
+1. hook_score: Apakah 10-15 kata pertama di Part 1 langsung menerapkan teknik In Media Res (konflik/momen mengejutkan)? DILARANG ada sapaan basi (seperti "Halo guys", "Kenalin").
+2. human_tone_score: Apakah gaya bahasa 100% natural percakapan manusia Indonesia (lu-gue/aku-kamu, ceplas-ceplos)? TOLAK jika ada bau klise AI (seperti "tidak disangka-sangka", "pada akhirnya aku menyadari", "sangat disayangkan").
+3. pacing_score: Apakah alur cerita mengalir bertahap dari awal, memuncak di tengah, sampai konklusi?
+4. affiliate_score: Apakah sisipan rekomendasi terasa wajar, relevan secara situasi, dan tidak hard-selling seperti iklan TV?
+5. debate_score: Apakah bagian akhir memancing netizen untuk berdebat atau berkomentar memberikan pendapat?
 
 Berikan output HANYA berupa JSON valid persis seperti format ini:
 {
@@ -41,6 +42,7 @@ Berikan output HANYA berupa JSON valid persis seperti format ini:
   "total_score": 8.5,
   "scores": {
     "hook": 9,
+    "human_tone": 9,
     "pacing": 8,
     "affiliate": 9,
     "debate": 8
@@ -48,7 +50,7 @@ Berikan output HANYA berupa JSON valid persis seperti format ini:
   "curator_note": "Ringkasan penilaian kurator dalam 1-2 kalimat"
 }
 
-Syarat Lolos (approved = true): total_score >= 7.5. Jika di bawah 7.5, set approved = false.
+Syarat Lolos (approved = true): total_score >= 7.5. Jika di bawah 7.5 atau terdeteksi klise kaku AI, set approved = false.
 `;
 
   // 1. Coba QC via Groq (Primary QC LPU ultra-fast)
