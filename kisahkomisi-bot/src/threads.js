@@ -158,22 +158,28 @@ async function publishStoryToThreads(userId, accessToken, story) {
   const totalParts = parts.length;
   console.log(`[Threads] Memulai publikasi thread (${totalParts} parts)...`);
 
-  // PART 1: Post Utama (Root) - Satu-satunya post yang tampil di tab "Threads" feed akun
+  // PART 1: Post Utama (Root Post)
   const rootPostId = await publishTextPost(userId, accessToken, parts[0]);
-  console.log(`[Threads] Post Utama (ROOT) terbit ID: ${rootPostId}`);
+  console.log(`[Threads] Post 1 (ROOT / Pembuka) terbit ID: ${rootPostId}`);
 
-  // PART 2 s/d SELESAI: Masuk sebagai REPLIES langsung di bawah rootPostId
+  // PART 2 s/d SELESAI: Terbit berurutan dengan menyambung ke part sebelumnya (Persis fitur "Add to thread")
+  // Post 2 reply ke Post 1 -> Post 3 reply ke Post 2 -> Post 4 reply ke Post 3, dst.
+  // Ini yang membuat GARIS VERTIKAL THREAD menyambung utuh dari awal sampai akhir!
+  let parentPostId = rootPostId;
   const replyIds = [];
+
   for (let i = 1; i < totalParts; i++) {
-    // Jeda 5 detik antar reply agar server Meta mengindeks dengan rapi
-    await new Promise(r => setTimeout(r, 5000));
+    // Jeda 6 detik antar postingan agar Meta selesai mengindeks parent post
+    await new Promise(r => setTimeout(r, 6000));
 
     try {
-      const currentReplyId = await publishTextPost(userId, accessToken, parts[i], rootPostId);
+      const currentReplyId = await publishTextPost(userId, accessToken, parts[i], parentPostId);
       replyIds.push(currentReplyId);
-      console.log(`[Threads] Reply part ${i + 1}/${totalParts} terbit ID: ${currentReplyId}`);
+      console.log(`[Threads] Chained Part ${i + 1}/${totalParts} terbit ID: ${currentReplyId} (tersambung ke ID: ${parentPostId})`);
+      parentPostId = currentReplyId; // Sambungkan part berikutnya ke part yang baru saja terbit!
     } catch (err) {
-      console.warn(`[Threads] Gagal menerbitkan reply part ${i + 1}:`, err.message);
+      console.warn(`[Threads] Gagal menyambungkan part ${i + 1}:`, err.message);
+      // Jika satu gagal, tetap coba sambungkan part berikutnya ke parent terakhir yang berhasil
     }
   }
 
