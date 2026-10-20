@@ -414,7 +414,7 @@ bot.command('post_sekarang', async (ctx) => {
   }
 
   isPostingInProgress = true;
-  await ctx.reply(`🚀 Sedang mem-publish cerita: "${story.title}" ke akun Threads @kisahkomisi...`);
+  await ctx.reply(`🚀 Sedang mem-publish cerita: "${story.title}" ke akun Threads @ceritakikiii...`);
 
   try {
     const parsedSlides = JSON.parse(story.slides_json);
@@ -433,7 +433,7 @@ bot.command('post_sekarang', async (ctx) => {
       `📖 *Judul*: ${story.title}\n` +
       `🆔 *Threads Post ID*: \`${postId}\`\n` +
       `🛒 *Struktur*: 1 Post Utama + ${parsedSlides.length - 1} Replies Berantai\n\n` +
-      `Cek langsung di aplikasi Threads Anda: *@kisahkomisi*`
+      `Cek langsung di aplikasi Threads Anda: *@ceritakikiii*`
     );
 
     // Isi ulang stok di background
@@ -555,7 +555,7 @@ async function executeScheduledPosting(label) {
           `🆔 *Post ID*: \`${postId}\`\n` +
           `🛍️ *Produk*: ${story.product_name || 'Murni Cerita'}\n` +
           `📦 *Sisa Stok Antrean*: *${remainingStock} cerita*\n\n` +
-          `Cek langsung di aplikasi Threads: *@kisahkomisi*`
+          `Cek langsung di aplikasi Threads: *@ceritakikiii*`
         );
 
         // Otomatis isi ulang stok buffer di background agar antrean selalu aman

@@ -86,7 +86,7 @@ async function analyzePerformanceAndStrategize() {
   const latestAccount = db.getLatestAccountInsight() || { views: 0, likes: 0, replies: 0 };
 
   const prompt = `
-Kamu adalah Chief Growth Strategist & Head of Audience Retention untuk akun Threads viral @kisahkomisi.
+Kamu adalah Chief Growth Strategist & Head of Audience Retention untuk akun Threads viral @ceritakikiii.
 
 DATA PERFORMA NYATA DARI META THREADS API:
 - Total Views Hari Ini: ${latestAccount.views || 0} views
@@ -214,7 +214,7 @@ async function generateInsightReportMarkdown() {
   const topStories = db.getTopPerformingStories(3);
   const latestStrategy = db.getLatestStrategyLog();
 
-  let msg = `📊 *LAPORAN INSIGHT & PERFORMA THREADS (@kisahkomisi)*\n`;
+  let msg = `📊 *LAPORAN INSIGHT & PERFORMA THREADS (@ceritakikiii)*\n`;
   msg += `📅 _Data Sinkronisasi Meta Threads API_\n\n`;
 
   msg += `📈 *Metrik Akun Terkini:*\n`;
