@@ -71,7 +71,24 @@ async function sendAdminAlert(text, extra = {}) {
   try {
     await bot.telegram.sendMessage(adminChatId, text, { parse_mode: 'Markdown', ...extra });
   } catch (e) {
-    console.warn('[Alert] Gagal mengirim notifikasi ke admin:', e.message);
+    console.warn('[Alert] Gagal kirim markdown ke admin, fallback plain text:', e.message);
+    try {
+      const plain = text.replace(/[*_`\[\]()]/g, '');
+      await bot.telegram.sendMessage(adminChatId, plain, extra);
+    } catch (err2) {
+      console.warn('[Alert] Gagal mengirim notifikasi ke admin:', err2.message);
+    }
+  }
+}
+
+// Helper untuk mengirim pesan markdown dengan aman (fallback plain text jika ada formatting error)
+async function safeReplyMarkdown(ctx, text, extra = {}) {
+  try {
+    return await ctx.replyWithMarkdown(text, extra);
+  } catch (err) {
+    console.warn('[Telegram] Gagal replyWithMarkdown, fallback ke plain text:', err.message);
+    const plain = text.replace(/[*_`\[\]()]/g, '');
+    return await ctx.reply(plain, extra);
   }
 }
 
@@ -131,12 +148,12 @@ function renderHelpMenu(name = 'Kawan') {
 
 bot.start((ctx) => {
   const name = ctx.from?.first_name || 'Kawan';
-  ctx.replyWithMarkdown(renderHelpMenu(name));
+  safeReplyMarkdown(ctx, renderHelpMenu(name));
 });
 
 bot.help((ctx) => {
   const name = ctx.from?.first_name || 'Kawan';
-  ctx.replyWithMarkdown(renderHelpMenu(name));
+  safeReplyMarkdown(ctx, renderHelpMenu(name));
 });
 
 // Command: /status
@@ -156,9 +173,9 @@ bot.command('status', async (ctx) => {
     msg += `🛍️ *Produk Affiliate Aktif*: *${productsCount} produk*\n`;
     msg += `🔑 *Terakhir Token Di-refresh*: ${lastRefresh}\n`;
     msg += `🛡️ *Anti-Bot Jitter*: Aktif (Acak 1-10 menit tiap jadwal tayang)\n`;
-    msg += `\n⏰ *Jadwal Tayang Harian:*\n• Siang: 12:15 WIB (+ Jitter)\n• Malam: 19:45 WIB (+ Jitter)`;
+    msg += `\n⏰ *Jadwal Tayang Golden Hours (3x Sehari):*\n• Pagi: 07:30 WIB (+ Jitter)\n• Siang: 12:30 WIB (+ Jitter)\n• Malam: 20:00 WIB (+ Jitter)`;
 
-    ctx.replyWithMarkdown(msg);
+    safeReplyMarkdown(ctx, msg);
   } catch (err) {
     console.error('Error status:', err);
     ctx.reply(`❌ Gagal membaca status: ${err.message}`);
@@ -223,7 +240,7 @@ bot.command('bikin_cerita', async (ctx) => {
     preview += `*Total Bagian*: ${story.slides.length} Bagian (Chained Sequential)\n\n`;
     preview += `Gunakan \`/post_sekarang\` jika ingin langsung menerbitkan ke Threads sekarang!`;
 
-    ctx.replyWithMarkdown(preview);
+    safeReplyMarkdown(ctx, preview);
   } catch (err) {
     console.error('Error bikin_cerita:', err);
     ctx.reply(`❌ Gagal membuat cerita: ${err.message}`);
@@ -236,11 +253,11 @@ bot.command('isi_stok', async (ctx) => {
   try {
     const res = await replenishStockBuffer(9);
     if (res.status === 'full') {
-      ctx.replyWithMarkdown(`✅ *Stok Antrean Sudah Penuh!*\n\nSaat ini sudah ada *${res.currentCount} cerita* terkurasi yang siap tayang.`);
+      safeReplyMarkdown(ctx, `✅ *Stok Antrean Sudah Penuh!*\n\nSaat ini sudah ada *${res.currentCount} cerita* terkurasi yang siap tayang.`);
     } else if (res.status === 'busy') {
       ctx.reply('⏳ Proses kurasi stok sedang berjalan di background, silakan tunggu sebentar.');
     } else {
-      ctx.replyWithMarkdown(`🎉 *Pengisian Stok Selesai!*\n\nBerhasil menambahkan *${res.added} cerita baru* yang telah lolos QC.\nTotal stok siap tayang sekarang: *${res.currentCount} cerita*.`);
+      safeReplyMarkdown(ctx, `🎉 *Pengisian Stok Selesai!*\n\nBerhasil menambahkan *${res.added} cerita baru* yang telah lolos QC.\nTotal stok siap tayang sekarang: *${res.currentCount} cerita*.`);
     }
   } catch (err) {
     console.error('Error isi_stok:', err);
@@ -270,7 +287,7 @@ bot.command('stok', (ctx) => {
       msg += `_Antrean sedang kosong. Sistem autopilot akan segera mengisi otomatis di background, atau ketik \`/isi_stok\`!_`;
     }
 
-    ctx.replyWithMarkdown(msg);
+    safeReplyMarkdown(ctx, msg);
   } catch (err) {
     console.error('Error getStok:', err);
     ctx.reply('❌ Gagal memeriksa stok antrean.');
@@ -284,7 +301,7 @@ bot.command(['insight', 'statistik'], async (ctx) => {
     await trackAllInsights();
     await analyzePerformanceAndStrategize();
     const report = await generateInsightReportMarkdown();
-    ctx.replyWithMarkdown(report);
+    safeReplyMarkdown(ctx, report);
   } catch (err) {
     console.error('Error command insight:', err);
     ctx.reply(`❌ Gagal mengambil insight Threads: ${err.message}`);
@@ -314,7 +331,7 @@ bot.command('cek_limit', async (ctx) => {
     msg += `📝 *Post Utama (Feed)*:\n• Terpakai: *${postUsed}* dari max ${postMax}\n• Sisa Slot: *${postMax - postUsed} post*\n\n`;
     msg += `💬 *Replies (Lanjutan Cerita)*:\n• Terpakai: *${replyUsed}* dari max ${replyMax}\n• Sisa Slot: *${replyMax - replyUsed} replies*\n\n`;
     msg += `_Aturan Meta: 1 cerita hanya menghabiskan 1 slot Post Utama, sedangkan seluruh lanjutannya masuk ke kuota Replies._`;
-    ctx.replyWithMarkdown(msg);
+    safeReplyMarkdown(ctx, msg);
   } catch (err) {
     console.error('Error cek_limit:', err);
     ctx.reply(`❌ Gagal mengambil limit Threads: ${err.message}`);
@@ -333,7 +350,7 @@ bot.command('list_produk', (ctx) => {
       msg += `${idx + 1}. *${p.name}* (${p.category || 'Umum'})\n🔗 [Link Produk](${p.affiliate_url})\n\n`;
     });
     msg += `_Tambahkan link baru dengan cara:_\n\`/tambah_produk Nama Barang | https://s.shopee.co.id/xxx\``;
-    ctx.replyWithMarkdown(msg, { disable_web_page_preview: true });
+    safeReplyMarkdown(ctx, msg, { disable_web_page_preview: true });
   } catch (err) {
     console.error('Error list_produk:', err);
     ctx.reply('❌ Gagal mengambil daftar produk.');
@@ -344,7 +361,8 @@ bot.command('list_produk', (ctx) => {
 bot.command('tambah_produk', (ctx) => {
   const text = ctx.message.text.replace('/tambah_produk', '').trim();
   if (!text.includes('|')) {
-    return ctx.replyWithMarkdown(
+    return safeReplyMarkdown(
+      ctx,
       '⚠️ *Format salah!*\n\n' +
       'Gunakan format:\n' +
       '`/tambah_produk Nama Produk | Link Shopee Affiliate`\n\n' +
@@ -360,11 +378,12 @@ bot.command('tambah_produk', (ctx) => {
 
   try {
     const newId = db.addProduct(name, link);
-    ctx.replyWithMarkdown(
+    safeReplyMarkdown(
+      ctx,
       `✅ *Produk Affiliate Berhasil Ditambahkan!*\n\n` +
       `🆔 *ID*: #${newId}\n` +
       `📦 *Nama*: ${name}\n` +
-      `🔗 *Link*: ${link}\n\n` +
+      `🔗 *Link*: \`${link}\`\n\n` +
       `Produk ini akan otomatis diputar AI sebagai iklan selingan di cerita-cerita berikutnya!`
     );
   } catch (err) {
@@ -400,7 +419,8 @@ bot.command('post_sekarang', async (ctx) => {
 
     db.markStoryPublished(story.id, postId);
 
-    ctx.replyWithMarkdown(
+    safeReplyMarkdown(
+      ctx,
       `🎉 *BERHASIL TAYANG DI THREADS!*\n\n` +
       `📖 *Judul*: ${story.title}\n` +
       `🆔 *Threads Post ID*: \`${postId}\`\n` +
@@ -438,7 +458,7 @@ bot.command('catat', (ctx) => {
     amount
   });
 
-  ctx.replyWithMarkdown(`✅ *Komisi #${id} Dicatat:* ${projectName} (${formatRupiah(amount)})`);
+  safeReplyMarkdown(ctx, `✅ *Komisi #${id} Dicatat:* ${projectName} (${formatRupiah(amount)})`);
 });
 
 // Command: /rekap
@@ -446,7 +466,7 @@ bot.command('rekap', (ctx) => {
   const summary = db.getSummaryByUser(ctx.from.id);
   let total = 0;
   summary.forEach(s => total += s.total_amount);
-  ctx.replyWithMarkdown(`📊 *Rekap Komisi:* Total *${formatRupiah(total)}*`);
+  safeReplyMarkdown(ctx, `📊 *Rekap Komisi:* Total *${formatRupiah(total)}*`);
 });
 
 // ==========================================
@@ -538,14 +558,23 @@ async function executeScheduledPosting(label) {
 // ⏰ 3 SLOT TAYANG GOLDEN HOURS INDONESIA (WIB)
 // Setiap slot disertai anti-bot jitter acak 1-10 menit
 // ==========================================
-// Slot 1: PAGI 07:30 WIB (00:30 UTC) - Jam komuter & perjalanan kerja
-cron.schedule('30 0 * * *', () => executeScheduledPosting('PAGI 07:30 WIB'));
+// Slot 1: PAGI 07:30 WIB - Jam komuter & perjalanan kerja
+cron.schedule('30 7 * * *', () => executeScheduledPosting('PAGI 07:30 WIB'), {
+  scheduled: true,
+  timezone: 'Asia/Jakarta'
+});
 
-// Slot 2: SIANG 12:30 WIB (05:30 UTC) - Jam istirahat makan siang
-cron.schedule('30 5 * * *', () => executeScheduledPosting('SIANG 12:30 WIB'));
+// Slot 2: SIANG 12:30 WIB - Jam istirahat makan siang
+cron.schedule('30 12 * * *', () => executeScheduledPosting('SIANG 12:30 WIB'), {
+  scheduled: true,
+  timezone: 'Asia/Jakarta'
+});
 
-// Slot 3: MALAM 20:00 WIB (13:00 UTC) - Jam prime time rebahan malam
-cron.schedule('0 13 * * *', () => executeScheduledPosting('MALAM 20:00 WIB'));
+// Slot 3: MALAM 20:00 WIB - Jam prime time rebahan malam
+cron.schedule('0 20 * * *', () => executeScheduledPosting('MALAM 20:00 WIB'), {
+  scheduled: true,
+  timezone: 'Asia/Jakarta'
+});
 
 // ==========================================
 // 📦 AUTO-REPLENISH BUFFER STOK (Setiap 2 Jam Sekali)
@@ -565,13 +594,16 @@ cron.schedule('0 */2 * * *', async () => {
   } catch (err) {
     console.error('[Scheduler] Gagal auto-replenish:', err.message);
   }
+}, {
+  scheduled: true,
+  timezone: 'Asia/Jakarta'
 });
 
 // ==========================================
-// 🛡️ AFFILIATE LINK HEALTH PATROL (Tiap Hari jam 04:00 WIB / 21:00 UTC)
+// 🛡️ AFFILIATE LINK HEALTH PATROL (Tiap Hari jam 04:00 WIB)
 // Audit link Shopee aktif; karantina otomatis jika toko tutup / 404
 // ==========================================
-cron.schedule('0 21 * * *', async () => {
+cron.schedule('0 4 * * *', async () => {
   console.log('[Patrol] Menjalankan audit kesehatan link Shopee Affiliate...');
   try {
     const broken = await auditAffiliateLinks();
@@ -585,13 +617,16 @@ cron.schedule('0 21 * * *', async () => {
   } catch (err) {
     console.error('[Patrol] Gagal audit link:', err.message);
   }
+}, {
+  scheduled: true,
+  timezone: 'Asia/Jakarta'
 });
 
 // ==========================================
-// 📊 DAILY INSIGHT SYNC & STRATEGY DIGEST (Setiap Malam jam 21:00 WIB / 14:00 UTC)
+// 📊 DAILY INSIGHT SYNC & STRATEGY DIGEST (Setiap Malam jam 21:00 WIB)
 // Menarik analitik Meta Threads & menyusun rekomendasi strategi konten otomatis
 // ==========================================
-cron.schedule('0 14 * * *', async () => {
+cron.schedule('0 21 * * *', async () => {
   console.log('[Scheduler] Menjalankan sinkronisasi insight & evaluasi strategi harian...');
   try {
     await trackAllInsights();
@@ -601,12 +636,15 @@ cron.schedule('0 14 * * *', async () => {
   } catch (err) {
     console.error('[Scheduler] Gagal sync insights harian:', err.message);
   }
+}, {
+  scheduled: true,
+  timezone: 'Asia/Jakarta'
 });
 
 // ==========================================
-// 🔄 AUTO-REFRESH TOKEN BERKALA (Tiap tgl 1 & 15 jam 03:00 WIB / 20:00 UTC)
+// 🔄 AUTO-REFRESH TOKEN BERKALA (Tiap tgl 1 & 15 jam 03:00 WIB)
 // ==========================================
-cron.schedule('0 20 1,15 * *', async () => {
+cron.schedule('0 3 1,15 * *', async () => {
   console.log('[Scheduler] Menjalankan auto-refresh token Threads terjadwal...');
   try {
     const res = await refreshThreadsToken();
@@ -616,36 +654,56 @@ cron.schedule('0 20 1,15 * *', async () => {
     console.error('[Scheduler] Gagal auto-refresh token:', err);
     await sendAdminAlert(`🚨 *PERINGATAN: Gagal Auto-Refresh Token Threads!*\n\nError: ${err.message}`);
   }
+}, {
+  scheduled: true,
+  timezone: 'Asia/Jakarta'
 });
 
 // ==========================================
-// 💾 AUTOMATED DATABASE BACKUP (Tiap Hari Minggu jam 02:00 WIB / Sabtu 19:00 UTC)
+// 💾 AUTOMATED DATABASE BACKUP (Tiap Hari Minggu jam 02:00 WIB)
 // ==========================================
-cron.schedule('0 19 * * 0', async () => {
+cron.schedule('0 2 * * 0', async () => {
   console.log('[Scheduler] Menjalankan backup database berkala...');
   await sendDatabaseBackup();
+}, {
+  scheduled: true,
+  timezone: 'Asia/Jakarta'
+});
+
+// Global Error Catching untuk Telegraf
+bot.catch((err, ctx) => {
+  console.error(`[Telegraf Error] Update ID ${ctx?.update?.update_id || 'unknown'}:`, err);
 });
 
 // Start Bot
 bot.launch().then(() => {
-  console.log('🚀 Kisah Komisi Autopilot Engine AKTIF!');
+  console.log('🚀 Kisah Komisi Autopilot Engine AKTIF (Timezone: Asia/Jakarta)!');
   // Trigger otomatis di startup: cek & isi buffer stok bila kurang dari 9
   setTimeout(() => {
     console.log('[Autopilot] Memeriksa stok awal saat startup...');
     replenishStockBuffer(9).catch(e => console.warn('[Autopilot] Startup replenish:', e.message));
   }, 5000);
 }).catch(err => {
-  console.error('FATAL:', err);
+  console.error('FATAL bot.launch:', err);
   process.exit(1);
 });
 
 // Graceful shutdown
 function gracefulShutdown(signal) {
   console.log(`Menangkap ${signal}, menutup dengan aman...`);
-  bot.stop(signal);
+  try { bot.stop(signal); } catch (e) {}
   try { db.db.close(); } catch (e) {}
   process.exit(0);
 }
 
 process.once('SIGINT', () => gracefulShutdown('SIGINT'));
 process.once('SIGTERM', () => gracefulShutdown('SIGTERM'));
+
+// Guard terhadap unhandled error agar tidak mematikan node process secara diam-diam
+process.on('unhandledRejection', (reason, promise) => {
+  console.error('[Process] Unhandled Rejection:', reason);
+});
+
+process.on('uncaughtException', (err) => {
+  console.error('[Process] Uncaught Exception:', err);
+});

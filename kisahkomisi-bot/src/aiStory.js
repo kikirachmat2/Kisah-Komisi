@@ -93,6 +93,10 @@ async function generateStory(forcedTopic = null) {
     throw new Error('GEMINI_API_KEY belum diset di .env');
   }
 
+  // Pilih produk affiliate aktif terlebih dahulu agar suasana cerita bisa diselaraskan
+  const product = db.getRandomProduct();
+  const themeHint = product ? getThematicVibe(product.category) : 'kehidupan sehari-hari anak muda';
+
   // Pilih topik (Adaptasi Cerdas: 60% prioritaskan topik dengan performa tertinggi dari AI Strategist)
   let topic = forcedTopic;
   if (!topic) {
@@ -191,28 +195,35 @@ Format output WAJIB HANYA berupa JSON murni tanpa markdown:
 
   // Fallback ke Groq LPU jika semua model Gemini sedang 429/500/timeout
   if (!rawText && process.env.GROQ_API_KEY) {
-    try {
-      console.log('[AI] Menggunakan Groq LPU sebagai fallback generator cerita...');
-      const groqRes = await fetch('https://api.groq.com/openai/v1/chat/completions', {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${process.env.GROQ_API_KEY}`,
-          'Content-Type': 'application/json'
-        },
-        signal: AbortSignal.timeout(25000),
-        body: JSON.stringify({
-          model: 'openai/gpt-oss-120b',
-          messages: [{ role: 'user', content: prompt + '\n\nKeluarkan HANYA JSON persis sesuai format.' }],
-          response_format: { type: 'json_object' },
-          temperature: 0.9
-        })
-      });
-      if (groqRes.ok) {
-        const groqJson = await groqRes.json();
-        rawText = groqJson.choices?.[0]?.message?.content;
+    const groqModels = ['qwen/qwen3.8-27b', 'openai/gpt-oss-120b'];
+    for (const gModel of groqModels) {
+      try {
+        console.log(`[AI] Menggunakan Groq LPU (${gModel}) sebagai fallback generator cerita...`);
+        const groqRes = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${process.env.GROQ_API_KEY}`,
+            'Content-Type': 'application/json'
+          },
+          signal: AbortSignal.timeout(20000),
+          body: JSON.stringify({
+            model: gModel,
+            messages: [{ role: 'user', content: prompt + '\n\nKeluarkan HANYA JSON persis sesuai format.' }],
+            response_format: { type: 'json_object' },
+            temperature: 0.8
+          })
+        });
+        if (groqRes.ok) {
+          const groqJson = await groqRes.json();
+          rawText = groqJson.choices?.[0]?.message?.content;
+          if (rawText) break;
+        } else {
+          const errText = await groqRes.text();
+          console.warn(`[AI] Groq ${gModel} respon HTTP ${groqRes.status}:`, errText);
+        }
+      } catch (e) {
+        console.warn(`[AI] Fallback Groq ${gModel} gagal:`, e.message);
       }
-    } catch (e) {
-      console.warn('[AI] Fallback Groq gagal:', e.message);
     }
   }
 
