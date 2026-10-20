@@ -71,6 +71,19 @@ function getThematicVibe(category) {
   return 'kehidupan sehari-hari, kampus, kantor, atau pertemanan anak muda';
 }
 
+const TONES = [
+  'Drama Emosional & Menyesakkan Dada (bikin pembaca gregetan dan simpati)',
+  'Kocak, Absurd, & Bikin Geleng-geleng Kepala (humor khas tongkrongan Indonesia)',
+  'Tegang Penuh Kecurigaan & Plot Twist Tak Terduga (bikin penasaran per slide)',
+  'Sarkasme Halus & Realitas Sosial (menyindir kelakuan orang jorok/pelit/narsis)'
+];
+
+const PERSPECTIVES = [
+  'POV Orang Pertama ("aku/gw") sebagai korban langsung kejadian',
+  'POV Orang Pertama ("gw") sebagai saksi mata yang menyaksikan drama teman/tetangga',
+  'POV Orang Pertama ("aku") yang awalnya ga sengaja ikut terseret masalah orang lain'
+];
+
 /**
  * Generate serial thread cerita viral gaya Threads Indonesia (murni cerita seru)
  * Tanpa emotikon berlebihan, mengalir murni selayaknya ketikan curhat orang biasa.
@@ -84,6 +97,8 @@ async function generateStory(forcedTopic = null) {
   const product = db.getRandomProduct();
   const themeHint = product ? getThematicVibe(product.category) : 'kehidupan sehari-hari anak muda';
   const topic = forcedTopic || TOPICS[Math.floor(Math.random() * TOPICS.length)];
+  const tone = TONES[Math.floor(Math.random() * TONES.length)];
+  const perspective = PERSPECTIVES[Math.floor(Math.random() * PERSPECTIVES.length)];
 
   const prompt = `
 Kamu adalah pencerita menfess viral nomor 1 di Threads Indonesia (seperti akun @nobondandrise).
@@ -94,6 +109,10 @@ ${topic}
 
 NUANSA/LATAR CERITA:
 Relate dengan ${themeHint}.
+
+GAYA TONE & SUDUT PANDANG:
+- Nuansa Cerita: ${tone}
+- Sudut Pandang: ${perspective}
 
 ATURAN GAYA PENULISAN SANGAT PENTING:
 1. JANGAN PAKAI EMOTIKON APAPUN! Tulis 100% murni kata-kata teks selayaknya ketikan curhat orang biasa di Threads.

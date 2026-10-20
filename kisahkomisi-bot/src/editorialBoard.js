@@ -182,8 +182,9 @@ async function produceCuratedStory() {
 /**
  * Pengisi Stok Otomatis (Autonomous Stockpile Replenisher)
  * Memastikan minimal ada TARGET_BUFFER cerita siap tayang di antrean database.
+ * Default 9 cerita (~3 hari buffer untuk 3x posting sehari).
  */
-async function replenishStockBuffer(targetBuffer = 6) {
+async function replenishStockBuffer(targetBuffer = 9) {
   if (isReplenishing) {
     console.log('[EditorialBoard] Proses replenish sedang berjalan di background, skip panggilan ganda.');
     return { status: 'busy', added: 0, currentCount: db.getQueuedStoriesCount() };
@@ -234,8 +235,42 @@ async function replenishStockBuffer(targetBuffer = 6) {
   }
 }
 
+/**
+ * Autonomous Affiliate Link Health Patrol
+ * Memeriksa semua link Shopee aktif di database.
+ * Jika ada link toko yang tutup / error 404, nonaktifkan otomatis agar pembaca tidak kecewa.
+ */
+async function auditAffiliateLinks() {
+  const products = db.getAllProducts();
+  const deactivated = [];
+
+  for (const prod of products) {
+    try {
+      const res = await fetch(prod.affiliate_url, {
+        method: 'GET',
+        redirect: 'follow',
+        signal: AbortSignal.timeout(8000),
+        headers: {
+          'User-Agent': 'Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Mobile/15E148 Safari/604.1'
+        }
+      });
+      const finalUrl = res.url || '';
+      if (!res.ok || finalUrl.includes('error_page') || res.status === 404) {
+        db.db.prepare('UPDATE product_bank SET active = 0 WHERE id = ?').run(prod.id);
+        deactivated.push(prod.name);
+        console.warn(`[AffiliatePatrol] Produk "${prod.name}" dinonaktifkan karena link error: ${finalUrl}`);
+      }
+    } catch (e) {
+      // Abaikan jika hanya timeout sementara agar tidak salah menonaktifkan
+    }
+  }
+
+  return deactivated;
+}
+
 module.exports = {
   evaluateStoryWithQC,
   produceCuratedStory,
-  replenishStockBuffer
+  replenishStockBuffer,
+  auditAffiliateLinks
 };

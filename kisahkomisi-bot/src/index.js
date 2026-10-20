@@ -5,7 +5,7 @@ const { Telegraf } = require('telegraf');
 const cron = require('node-cron');
 const db = require('./database');
 const { generateStory } = require('./aiStory');
-const { replenishStockBuffer, produceCuratedStory } = require('./editorialBoard');
+const { replenishStockBuffer, produceCuratedStory, auditAffiliateLinks } = require('./editorialBoard');
 const { 
   publishStoryToThreads, 
   getPublishingLimit, 
@@ -110,8 +110,8 @@ function renderHelpMenu(name = 'Kawan') {
     `👋 Halo *${name}*! Selamat datang di *Kisah Komisi Autopilot Engine*.\n\n` +
     `🤖 *Kontrol Otomatisasi Threads:*\n` +
     `• \`/bikin_cerita\` : AI buat 1 cerita menfess viral (Lolos Kurasi QC)\n` +
-    `• \`/isi_stok\` : Trigger otomatis isi stok buffer (Target 6 cerita)\n` +
-    `• \`/stok\` : Cek status buffer stok tayang (12:15 & 19:45 WIB)\n` +
+    `• \`/isi_stok\` : Trigger otomatis isi buffer stok (Target 9 cerita / 3 hari)\n` +
+    `• \`/stok\` : Cek status buffer stok (07:30, 12:30, & 20:00 WIB)\n` +
     `• \`/post_sekarang\` : Terbitkan 1 cerita antrean ke Threads sekarang\n` +
     `• \`/cek_limit\` : Cek sisa kuota posting & replies Meta Threads\n` +
     `• \`/status\` : Cek kesehatan sistem, token, & database\n\n` +
@@ -230,9 +230,9 @@ bot.command('bikin_cerita', async (ctx) => {
 
 // Command: /isi_stok
 bot.command('isi_stok', async (ctx) => {
-  await ctx.reply('⏳ Menjalankan pengisian stok buffer otomatis (Target: 6 cerita terkurasi)...');
+  await ctx.reply('⏳ Menjalankan pengisian stok buffer otomatis (Target: 9 cerita / 3 hari)...');
   try {
-    const res = await replenishStockBuffer(6);
+    const res = await replenishStockBuffer(9);
     if (res.status === 'full') {
       ctx.replyWithMarkdown(`✅ *Stok Antrean Sudah Penuh!*\n\nSaat ini sudah ada *${res.currentCount} cerita* terkurasi yang siap tayang.`);
     } else if (res.status === 'busy') {
@@ -250,20 +250,20 @@ bot.command('isi_stok', async (ctx) => {
 bot.command('stok', (ctx) => {
   try {
     const count = db.getQueuedStoriesCount();
-    const upcoming = db.getUpcomingStories(5);
+    const upcoming = db.getUpcomingStories(6);
 
     let msg = `📦 *Status Buffer Stok Cerita Otomatis:*\n`;
     msg += `Total Cerita Siap Tayang: *${count} Cerita*\n`;
-    msg += `Status Buffer: *${count >= 6 ? '🟢 SEHAT (Aman 3 Hari)' : (count >= 2 ? '🟡 CUKUP' : '🔴 RENDAH (Auto-Restock Aktif)')}*\n\n`;
+    msg += `Status Buffer: *${count >= 9 ? '🟢 SEHAT (Aman 3 Hari)' : (count >= 3 ? '🟡 CUKUP (Aman 1-2 Hari)' : '🔴 RENDAH (Auto-Restock Aktif)')}*\n\n`;
 
     if (upcoming.length > 0) {
-      msg += `📋 *5 Cerita Terdekat yang Siap Tayang:*\n`;
+      msg += `📋 *Cerita Terdekat yang Siap Tayang:*\n`;
       upcoming.forEach(s => {
         const scoreTag = s.qc_score ? ` ⭐ ${s.qc_score}/10` : '';
         msg += `• *#${s.id}* - ${s.title}${scoreTag} (${s.product_name || 'Cerita'})\n`;
       });
-      msg += `\n⏰ *Jadwal Tayang Otomatis (WIB):*\n• Siang: 12:15 WIB\n• Malam: 19:45 WIB\n\n`;
-      msg += `_Sistem autopilot akan otomatis menjaga stok minimal 6 cerita di background tanpa perlu intervensi manual._`;
+      msg += `\n⏰ *Jadwal Tayang Otomatis (3x Sehari WIB):*\n• Pagi: 07:30 WIB\n• Siang: 12:30 WIB\n• Malam: 20:00 WIB\n\n`;
+      msg += `_Sistem autopilot otomatis menjaga minimal 9 cerita di background tanpa perlu intervensi manual._`;
     } else {
       msg += `_Antrean sedang kosong. Sistem autopilot akan segera mengisi otomatis di background, atau ketik \`/isi_stok\`!_`;
     }
@@ -504,7 +504,7 @@ async function executeScheduledPosting(label) {
       );
 
       // Otomatis isi ulang stok buffer di background agar antrean selalu aman
-      replenishStockBuffer(6).catch(e => console.warn('[Scheduler] Auto-replenish error:', e.message));
+      replenishStockBuffer(9).catch(e => console.warn('[Scheduler] Auto-replenish error:', e.message));
     } catch (err) {
       console.error(`[Scheduler] Gagal posting slot ${label}:`, err);
       db.markStoryFailed(story.id, err.message);
@@ -518,20 +518,27 @@ async function executeScheduledPosting(label) {
   }
 }
 
-// 12:15 WIB (05:15 UTC di server)
-cron.schedule('15 5 * * *', () => executeScheduledPosting('SIANG 12:15 WIB'));
+// ==========================================
+// ⏰ 3 SLOT TAYANG GOLDEN HOURS INDONESIA (WIB)
+// Setiap slot disertai anti-bot jitter acak 1-10 menit
+// ==========================================
+// Slot 1: PAGI 07:30 WIB (00:30 UTC) - Jam komuter & perjalanan kerja
+cron.schedule('30 0 * * *', () => executeScheduledPosting('PAGI 07:30 WIB'));
 
-// 19:45 WIB (12:45 UTC di server)
-cron.schedule('45 12 * * *', () => executeScheduledPosting('MALAM 19:45 WIB'));
+// Slot 2: SIANG 12:30 WIB (05:30 UTC) - Jam istirahat makan siang
+cron.schedule('30 5 * * *', () => executeScheduledPosting('SIANG 12:30 WIB'));
+
+// Slot 3: MALAM 20:00 WIB (13:00 UTC) - Jam prime time rebahan malam
+cron.schedule('0 13 * * *', () => executeScheduledPosting('MALAM 20:00 WIB'));
 
 // ==========================================
 // 📦 AUTO-REPLENISH BUFFER STOK (Setiap 2 Jam Sekali)
-// Menjaga antrean minimal 6 cerita (~3 hari buffer) secara otomatis
+// Menjaga antrean minimal 9 cerita (~3 hari buffer untuk 3x posting sehari)
 // ==========================================
 cron.schedule('0 */2 * * *', async () => {
   console.log('[Scheduler] Menjalankan auto-replenish buffer stok berkala...');
   try {
-    const res = await replenishStockBuffer(6);
+    const res = await replenishStockBuffer(9);
     if (res.added > 0) {
       await sendAdminAlert(
         `📦 *[Auto-Stockpile] Stok Berhasil Ditambah!*\n\n` +
@@ -541,6 +548,26 @@ cron.schedule('0 */2 * * *', async () => {
     }
   } catch (err) {
     console.error('[Scheduler] Gagal auto-replenish:', err.message);
+  }
+});
+
+// ==========================================
+// 🛡️ AFFILIATE LINK HEALTH PATROL (Tiap Hari jam 04:00 WIB / 21:00 UTC)
+// Audit link Shopee aktif; karantina otomatis jika toko tutup / 404
+// ==========================================
+cron.schedule('0 21 * * *', async () => {
+  console.log('[Patrol] Menjalankan audit kesehatan link Shopee Affiliate...');
+  try {
+    const broken = await auditAffiliateLinks();
+    if (broken.length > 0) {
+      await sendAdminAlert(
+        `⚠️ *[Affiliate Patrol Alert]*\n\n` +
+        `Ditemukan *${broken.length} link produk Shopee* yang mengarah ke error/404 dan telah dinonaktifkan otomatis dari rotasi:\n` +
+        broken.map(b => `• ${b}`).join('\n')
+      );
+    }
+  } catch (err) {
+    console.error('[Patrol] Gagal audit link:', err.message);
   }
 });
 
@@ -570,10 +597,10 @@ cron.schedule('0 19 * * 0', async () => {
 // Start Bot
 bot.launch().then(() => {
   console.log('🚀 Kisah Komisi Autopilot Engine AKTIF!');
-  // Trigger otomatis di startup: cek & isi buffer stok bila kurang dari 6
+  // Trigger otomatis di startup: cek & isi buffer stok bila kurang dari 9
   setTimeout(() => {
     console.log('[Autopilot] Memeriksa stok awal saat startup...');
-    replenishStockBuffer(6).catch(e => console.warn('[Autopilot] Startup replenish:', e.message));
+    replenishStockBuffer(9).catch(e => console.warn('[Autopilot] Startup replenish:', e.message));
   }, 5000);
 }).catch(err => {
   console.error('FATAL:', err);
