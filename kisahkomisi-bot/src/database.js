@@ -58,6 +58,12 @@ function initSchema() {
       times_used INTEGER DEFAULT 0
     );
 
+    CREATE TABLE IF NOT EXISTS app_settings (
+      key TEXT PRIMARY KEY,
+      value TEXT NOT NULL,
+      updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+    );
+
     CREATE INDEX IF NOT EXISTS idx_commissions_user ON commissions(telegram_user_id);
     CREATE INDEX IF NOT EXISTS idx_stories_status ON stories(status);
     CREATE INDEX IF NOT EXISTS idx_stories_schedule ON stories(scheduled_for);
@@ -205,5 +211,20 @@ module.exports = {
 
   clearProducts: () => {
     return db.prepare(`DELETE FROM product_bank`).run();
-  }
+  },
+
+  getSetting: (key, defaultValue = null) => {
+    const row = db.prepare(`SELECT value FROM app_settings WHERE key = ?`).get(key);
+    return row ? row.value : defaultValue;
+  },
+
+  setSetting: (key, value) => {
+    return db.prepare(`
+      INSERT INTO app_settings (key, value, updated_at) 
+      VALUES (?, ?, CURRENT_TIMESTAMP)
+      ON CONFLICT(key) DO UPDATE SET value = excluded.value, updated_at = CURRENT_TIMESTAMP
+    `).run(key, String(value));
+  },
+
+  getDbPath: () => dbPath
 };

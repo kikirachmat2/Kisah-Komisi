@@ -1,9 +1,16 @@
-require('dotenv').config();
+const path = require('path');
+require('dotenv').config({ path: path.join(__dirname, '../.env') });
+const fs = require('fs');
 const { Telegraf } = require('telegraf');
 const cron = require('node-cron');
 const db = require('./database');
 const { generateStory } = require('./aiStory');
-const { publishStoryToThreads, getPublishingLimit } = require('./threads');
+const { 
+  publishStoryToThreads, 
+  getPublishingLimit, 
+  getActiveAccessToken, 
+  refreshThreadsToken 
+} = require('./threads');
 
 const token = process.env.BOT_TOKEN;
 
@@ -14,28 +21,34 @@ if (!token) {
 
 const bot = new Telegraf(token);
 
-// Middleware whitelist user opsional (mendukung user ID angka maupun username @iki021)
+// Middleware whitelist user (mendukung user ID angka maupun username @username)
 const allowedUsers = (process.env.ALLOWED_USERS || '')
   .split(',')
   .map(s => s.trim().replace(/^@/, '').toLowerCase())
   .filter(Boolean);
 
-if (allowedUsers.length > 0) {
-  bot.use(async (ctx, next) => {
-    const fromId = ctx.from ? String(ctx.from.id) : null;
-    const username = ctx.from && ctx.from.username ? ctx.from.username.toLowerCase() : null;
-    
+bot.use(async (ctx, next) => {
+  const fromId = ctx.from ? String(ctx.from.id) : null;
+  const username = ctx.from && ctx.from.username ? ctx.from.username.toLowerCase() : null;
+  
+  if (allowedUsers.length > 0) {
     const isAllowed = 
       (fromId && allowedUsers.includes(fromId.toLowerCase())) || 
       (username && allowedUsers.includes(username));
 
-    if (isAllowed) {
-      return next();
+    if (!isAllowed) {
+      console.warn(`[Security] Unauthorized access attempt from ID: ${fromId} (@${ctx.from?.username || 'no_username'})`);
+      return ctx.reply('⚠️ Maaf, Anda tidak memiliki akses ke bot Kisah Komisi ini.');
     }
-    console.warn(`[Security] Unauthorized access attempt from ID: ${fromId} (@${ctx.from?.username || 'no_username'})`);
-    return ctx.reply('⚠️ Maaf, Anda tidak memiliki akses ke bot Kisah Komisi ini.');
-  });
-}
+  }
+
+  // Simpan ID chat admin aktif terakhir agar cron job terjadwal bisa mengirim notifikasi
+  if (ctx.chat?.id) {
+    db.setSetting('LAST_ADMIN_CHAT_ID', ctx.chat.id);
+  }
+
+  return next();
+});
 
 // Format mata uang Rupiah
 function formatRupiah(number) {
@@ -46,24 +59,132 @@ function formatRupiah(number) {
   }).format(number);
 }
 
-// Command: /start
-bot.start((ctx) => {
-  const name = ctx.from?.first_name || 'Kawan';
-  ctx.replyWithMarkdown(
+// Kirim notifikasi / alert ke Telegram admin
+async function sendAdminAlert(text, extra = {}) {
+  const adminChatId = process.env.ADMIN_CHAT_ID || db.getSetting('LAST_ADMIN_CHAT_ID');
+  if (!adminChatId) {
+    console.log('[Alert] Tidak ada adminChatId yang terdaftar untuk menerima alert.');
+    return;
+  }
+  try {
+    await bot.telegram.sendMessage(adminChatId, text, { parse_mode: 'Markdown', ...extra });
+  } catch (e) {
+    console.warn('[Alert] Gagal mengirim notifikasi ke admin:', e.message);
+  }
+}
+
+// Kirim backup file database SQLite ke Telegram admin
+async function sendDatabaseBackup(targetChatId = null) {
+  const chatId = targetChatId || process.env.ADMIN_CHAT_ID || db.getSetting('LAST_ADMIN_CHAT_ID');
+  if (!chatId) {
+    console.log('[Backup] Tidak ada chatId untuk mengirim backup.');
+    return false;
+  }
+
+  const dbFile = db.getDbPath();
+  if (!fs.existsSync(dbFile)) {
+    console.warn('[Backup] File database tidak ditemukan di path:', dbFile);
+    return false;
+  }
+
+  const now = new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19);
+  try {
+    await bot.telegram.sendDocument(chatId, {
+      source: dbFile,
+      filename: `kisahkomisi-backup-${now}.db`
+    }, {
+      caption: `💾 *Backup Database Otomatis Kisah Komisi*\n📅 ${new Date().toLocaleString('id-ID', { timeZone: 'Asia/Jakarta' })} WIB\nFile ini berisi seluruh antrean cerita, histori komisi, dan data produk affiliate.`
+    });
+    console.log('[Backup] Database berhasil dikirim ke Telegram.');
+    return true;
+  } catch (e) {
+    console.error('[Backup] Gagal mengirim database:', e.message);
+    return false;
+  }
+}
+
+// Command: /start & /help
+function renderHelpMenu(name = 'Kawan') {
+  return (
     `👋 Halo *${name}*! Selamat datang di *Kisah Komisi Autopilot Engine*.\n\n` +
     `🤖 *Kontrol Otomatisasi Threads:*\n` +
-    `• \`/bikin_cerita\` : AI buat 1 cerita menfess baru\n` +
+    `• \`/bikin_cerita\` : AI buat 1 cerita menfess viral baru\n` +
     `• \`/stok\` : Cek stok antrean tayang (12:15 & 19:45 WIB)\n` +
-    `• \`/post_sekarang\` : Langsung terbitkan 1 cerita antrean ke Threads sekarang\n` +
-    `• \`/cek_limit\` : Cek sisa kuota posting & replies Meta Threads Anda\n\n` +
+    `• \`/post_sekarang\` : Terbitkan 1 cerita antrean ke Threads sekarang\n` +
+    `• \`/cek_limit\` : Cek sisa kuota posting & replies Meta Threads\n` +
+    `• \`/status\` : Cek kesehatan sistem, token, & database\n\n` +
+    `🔄 *Pemeliharaan & Keamanan:*\n` +
+    `• \`/refresh_token\` : Perpanjang masa aktif token Threads (60 hari lagi)\n` +
+    `• \`/backup\` : Download backup database SQLite langsung ke chat\n\n` +
     `🛍️ *Manajemen Link Shopee Affiliate:*\n` +
     `• \`/list_produk\` : Lihat semua link affiliate yang aktif\n` +
-    `• \`/tambah_produk <Nama> | <Link>\` : Tambahkan link affiliate Shopee punyamu\n\n` +
-    `💰 *Pencatatan Keuangan:*\n` +
+    `• \`/tambah_produk <Nama> | <Link>\` : Tambahkan link affiliate Shopee\n\n` +
+    `💰 *Pencatatan Keuangan Manual:*\n` +
     `• \`/catat <proyek> | <nominal> | [klien]\` : Catat komisi manual\n` +
-    `• \`/rekap\` : Lihat ringkasan pendapatan\n` +
-    `• \`/help\` : Bantuan lengkap`
+    `• \`/rekap\` : Lihat ringkasan pendapatan komisi`
   );
+}
+
+bot.start((ctx) => {
+  const name = ctx.from?.first_name || 'Kawan';
+  ctx.replyWithMarkdown(renderHelpMenu(name));
+});
+
+bot.help((ctx) => {
+  const name = ctx.from?.first_name || 'Kawan';
+  ctx.replyWithMarkdown(renderHelpMenu(name));
+});
+
+// Command: /status
+bot.command('status', async (ctx) => {
+  try {
+    const queueCount = db.getQueuedStoriesCount();
+    const productsCount = db.getAllProducts().length;
+    const lastRefresh = db.getSetting('THREADS_TOKEN_REFRESHED_AT', 'Belum pernah di-refresh');
+    const uptimeSec = Math.floor(process.uptime());
+    const uptimeHours = Math.floor(uptimeSec / 3600);
+    const uptimeMin = Math.floor((uptimeSec % 3600) / 60);
+
+    let msg = `⚙️ *STATUS SISTEM KISAH KOMISI:*\n\n`;
+    msg += `🟢 *Status Bot*: Aktif & Berjalan Normal\n`;
+    msg += `⏱️ *Uptime Server*: ${uptimeHours} jam ${uptimeMin} menit\n`;
+    msg += `📦 *Antrean Stok Cerita*: *${queueCount} cerita*\n`;
+    msg += `🛍️ *Produk Affiliate Aktif*: *${productsCount} produk*\n`;
+    msg += `🔑 *Terakhir Token Di-refresh*: ${lastRefresh}\n`;
+    msg += `🛡️ *Anti-Bot Jitter*: Aktif (Acak 1-10 menit tiap jadwal tayang)\n`;
+    msg += `\n⏰ *Jadwal Tayang Harian:*\n• Siang: 12:15 WIB (+ Jitter)\n• Malam: 19:45 WIB (+ Jitter)`;
+
+    ctx.replyWithMarkdown(msg);
+  } catch (err) {
+    console.error('Error status:', err);
+    ctx.reply(`❌ Gagal membaca status: ${err.message}`);
+  }
+});
+
+// Command: /refresh_token
+bot.command('refresh_token', async (ctx) => {
+  await ctx.reply('⏳ Sedang menghubungi server Meta untuk me-refresh Access Token Threads...');
+  try {
+    const res = await refreshThreadsToken();
+    const daysLeft = Math.round((res.expires_in || 5184000) / 86400);
+    ctx.replyWithMarkdown(
+      `🎉 *Token Threads Berhasil Diperpanjang!*\n\n` +
+      `📅 *Masa Aktif*: Ditambah ~*${daysLeft} hari* ke depan\n` +
+      `🔐 *Penyimpanan*: Token otomatis tersimpan aman di database SQLite dan akan digunakan untuk semua postingan berikutnya.`
+    );
+  } catch (err) {
+    console.error('Error refresh_token command:', err);
+    ctx.reply(`❌ Gagal refresh token: ${err.message}`);
+  }
+});
+
+// Command: /backup
+bot.command('backup', async (ctx) => {
+  await ctx.reply('⏳ Menyiapkan file backup database SQLite...');
+  const success = await sendDatabaseBackup(ctx.chat.id);
+  if (!success) {
+    ctx.reply('❌ Gagal membuat backup database. Silakan periksa log server.');
+  }
 });
 
 // Command: /bikin_cerita
@@ -91,7 +212,7 @@ bot.command('bikin_cerita', async (ctx) => {
       preview += `🛍️ *Produk*: _Murni Cerita (Tanpa Iklan)_\n`;
     }
     preview += `\n*Post Utama (Hook):*\n_"${story.slides[0]}"_\n\n`;
-    preview += `*Total Bagian*: ${story.slides.length} Bagian (1 Post Utama + ${story.slides.length - 1} Replies)\n\n`;
+    preview += `*Total Bagian*: ${story.slides.length} Bagian (1 Post Utama + ${story.slides.length - 1} Replies Chained)\n\n`;
     preview += `Gunakan \`/post_sekarang\` jika ingin langsung menerbitkan ke Threads sekarang!`;
 
     ctx.replyWithMarkdown(preview);
@@ -130,9 +251,9 @@ bot.command('stok', (ctx) => {
 // Command: /cek_limit
 bot.command('cek_limit', async (ctx) => {
   const userId = process.env.THREADS_USER_ID;
-  const token = process.env.THREADS_ACCESS_TOKEN;
+  const token = getActiveAccessToken();
   if (!userId || !token) {
-    return ctx.reply('⚠️ Kredensial Threads API belum lengkap di file .env!');
+    return ctx.reply('⚠️ Kredensial Threads API belum lengkap di server!');
   }
 
   try {
@@ -166,7 +287,7 @@ bot.command('list_produk', (ctx) => {
     }
     let msg = `🛍️ *Daftar Produk Affiliate Shopee di Database:*\n\n`;
     products.forEach((p, idx) => {
-      msg += `${idx + 1}. *${p.name}*\n🔗 [Link Produk](${p.affiliate_url})\n\n`;
+      msg += `${idx + 1}. *${p.name}* (${p.category || 'Umum'})\n🔗 [Link Produk](${p.affiliate_url})\n\n`;
     });
     msg += `_Tambahkan link baru dengan cara:_\n\`/tambah_produk Nama Barang | https://s.shopee.co.id/xxx\``;
     ctx.replyWithMarkdown(msg, { disable_web_page_preview: true });
@@ -212,7 +333,7 @@ bot.command('tambah_produk', (ctx) => {
 // Command: /post_sekarang (Trigger Manual)
 bot.command('post_sekarang', async (ctx) => {
   const userId = process.env.THREADS_USER_ID;
-  const token = process.env.THREADS_ACCESS_TOKEN;
+  const token = getActiveAccessToken();
 
   if (!userId || !token) {
     return ctx.reply('⚠️ Kredensial Threads API belum lengkap di server!');
@@ -240,7 +361,7 @@ bot.command('post_sekarang', async (ctx) => {
       `🎉 *BERHASIL TAYANG DI THREADS!*\n\n` +
       `📖 *Judul*: ${story.title}\n` +
       `🆔 *Threads Post ID*: \`${postId}\`\n` +
-      `🛒 *Produk & Link Shopee*: Otomatis terpasang di komentar pertama!\n\n` +
+      `🛒 *Struktur*: 1 Post Utama + ${parsedSlides.length - 1} Replies Berantai\n\n` +
       `Cek langsung di aplikasi Threads Anda: *@kisahkomisi*`
     );
   } catch (err) {
@@ -286,17 +407,25 @@ bot.command('rekap', (ctx) => {
 });
 
 // ==========================================
-// ⏰ AUTO SCHEDULER (CRON JOB)
+// ⏰ AUTO SCHEDULER DENGAN ANTI-BOT JITTER
 // Jam Siang (12:15 WIB = 05:15 UTC)
 // Jam Malam (19:45 WIB = 12:45 UTC)
 // ==========================================
 async function executeScheduledPosting(label) {
+  // Tambahkan jitter acak antara 1 s/d 10 menit agar tidak terbaca bot oleh filter Meta
+  const jitterMinutes = Math.floor(Math.random() * 10) + 1;
+  const jitterMs = jitterMinutes * 60 * 1000;
+  console.log(`[Scheduler] Slot ${label} aktif! Anti-bot jitter menunggu ${jitterMinutes} menit sebelum eksekusi...`);
+  
+  await new Promise(r => setTimeout(r, jitterMs));
+
   console.log(`[Scheduler] Memulai auto-posting untuk slot ${label}...`);
   const userId = process.env.THREADS_USER_ID;
-  const token = process.env.THREADS_ACCESS_TOKEN;
+  const token = getActiveAccessToken();
 
   if (!userId || !token) {
     console.warn('[Scheduler] Threads credentials missing.');
+    await sendAdminAlert(`⚠️ *[Scheduler] Gagal Posting (${label})*: Kredensial Threads API belum lengkap di server.`);
     return;
   }
 
@@ -317,6 +446,7 @@ async function executeScheduledPosting(label) {
       story = db.getNextQueuedStory();
     } catch (e) {
       console.error('[Scheduler] Gagal generate cerita darurat:', e);
+      await sendAdminAlert(`🚨 *[Scheduler] Error (${label})*: Stok cerita kosong dan gagal auto-generate cerita via AI: ${e.message}`);
       return;
     }
   }
@@ -332,9 +462,26 @@ async function executeScheduledPosting(label) {
       });
       db.markStoryPublished(story.id, postId);
       console.log(`[Scheduler] Sukses posting slot ${label} (Post ID: ${postId})`);
+
+      const remainingStock = db.getQueuedStoriesCount();
+      await sendAdminAlert(
+        `🎉 *BERHASIL AUTO-POSTING KE THREADS!*\n\n` +
+        `⏰ *Slot*: ${label}\n` +
+        `📖 *Judul*: ${story.title}\n` +
+        `🆔 *Post ID*: \`${postId}\`\n` +
+        `🛍️ *Produk*: ${story.product_name || 'Murni Cerita'}\n` +
+        `📦 *Sisa Stok Antrean*: *${remainingStock} cerita*\n\n` +
+        `Cek langsung di aplikasi Threads: *@kisahkomisi*`
+      );
     } catch (err) {
       console.error(`[Scheduler] Gagal posting slot ${label}:`, err);
       db.markStoryFailed(story.id, err.message);
+      await sendAdminAlert(
+        `🚨 *GAGAL AUTO-POSTING KE THREADS!*\n\n` +
+        `⏰ *Slot*: ${label}\n` +
+        `📖 *Judul*: ${story.title}\n` +
+        `❌ *Error*: ${err.message}`
+      );
     }
   }
 }
@@ -344,6 +491,29 @@ cron.schedule('15 5 * * *', () => executeScheduledPosting('SIANG 12:15 WIB'));
 
 // 19:45 WIB (12:45 UTC di server)
 cron.schedule('45 12 * * *', () => executeScheduledPosting('MALAM 19:45 WIB'));
+
+// ==========================================
+// 🔄 AUTO-REFRESH TOKEN BERKALA (Tiap tgl 1 & 15 jam 03:00 WIB / 20:00 UTC)
+// ==========================================
+cron.schedule('0 20 1,15 * *', async () => {
+  console.log('[Scheduler] Menjalankan auto-refresh token Threads terjadwal...');
+  try {
+    const res = await refreshThreadsToken();
+    const daysLeft = Math.round((res.expires_in || 5184000) / 86400);
+    await sendAdminAlert(`🔄 *Auto-Refresh Token Threads Berhasil!*\n\nMasa aktif token diperpanjang hingga *${daysLeft} hari* ke depan.`);
+  } catch (err) {
+    console.error('[Scheduler] Gagal auto-refresh token:', err);
+    await sendAdminAlert(`🚨 *PERINGATAN: Gagal Auto-Refresh Token Threads!*\n\nError: ${err.message}`);
+  }
+});
+
+// ==========================================
+// 💾 AUTOMATED DATABASE BACKUP (Tiap Hari Minggu jam 02:00 WIB / Sabtu 19:00 UTC)
+// ==========================================
+cron.schedule('0 19 * * 0', async () => {
+  console.log('[Scheduler] Menjalankan backup database berkala...');
+  await sendDatabaseBackup();
+});
 
 // Start Bot
 bot.launch().then(() => {

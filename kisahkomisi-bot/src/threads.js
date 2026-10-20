@@ -1,4 +1,37 @@
+const db = require('./database');
+
 const THREADS_API_BASE = 'https://graph.threads.net/v1.0';
+
+/**
+ * Mengambil token Threads aktif (mengutamakan token terbaru di DB sebelum fallback ke .env)
+ */
+function getActiveAccessToken() {
+  const dbToken = db.getSetting('THREADS_ACCESS_TOKEN');
+  return dbToken || process.env.THREADS_ACCESS_TOKEN;
+}
+
+/**
+ * Auto-refresh token Threads Long-Lived (Perpanjang masa aktif 60 hari lagi)
+ */
+async function refreshThreadsToken() {
+  const currentToken = getActiveAccessToken();
+  if (!currentToken) {
+    throw new Error('Tidak ada access token Threads yang tersedia di database atau .env.');
+  }
+
+  const url = `https://graph.threads.net/refresh_access_token?grant_type=th_refresh_token&access_token=${currentToken}`;
+  const res = await fetch(url);
+  const data = await res.json();
+
+  if (data.access_token) {
+    db.setSetting('THREADS_ACCESS_TOKEN', data.access_token);
+    db.setSetting('THREADS_TOKEN_REFRESHED_AT', new Date().toISOString());
+    console.log(`[Threads] Token berhasil di-refresh otomatis! Berlaku hingga ${data.expires_in} detik ke depan.`);
+    return data;
+  } else {
+    throw new Error(`Gagal refresh token Threads: ${JSON.stringify(data)}`);
+  }
+}
 
 /**
  * Menunggu container Threads berstatus 'FINISHED' di server Meta
@@ -17,7 +50,8 @@ async function waitForContainerFinished(containerId, accessToken, maxAttempts = 
         throw new Error(`Container processing error: ${data.error_message || JSON.stringify(data)}`);
       }
     } catch (e) {
-      // Abaikan temporary error saat polling
+      if (e.message.includes('Container processing error')) throw e;
+      // Abaikan temporary network error saat polling status
     }
     await new Promise(r => setTimeout(r, 1500));
   }
@@ -26,17 +60,23 @@ async function waitForContainerFinished(containerId, accessToken, maxAttempts = 
 
 /**
  * Mempublikasikan satu post ke Threads (Batas resmi Meta: Maksimal 500 karakter per post/reply)
- * Jika replyToId diisi, post akan menjadi REPLY di bawah post tersebut (tidak mengotori feed profil).
+ * Jika replyToId diisi, post akan menjadi REPLY di bawah post tersebut.
  */
 async function publishTextPost(userId, accessToken, text, replyToId = null) {
-  // Hard limit 500 karakter Meta Threads, jaga aman di max 480 karakter
+  // Selalu prioritaskan token aktif di DB (hasil auto-refresh)
+  const tokenToUse = getActiveAccessToken() || accessToken;
+  if (!tokenToUse) {
+    throw new Error('Access token Threads tidak ditemukan.');
+  }
+
+  // Hard limit 500 karakter Meta Threads, amankan di max 485 karakter
   const safeText = text.length > 490 ? text.substring(0, 485) + '...' : text;
 
   const createContainerUrl = `${THREADS_API_BASE}/${userId}/threads`;
   const payload = {
     media_type: 'TEXT',
     text: safeText,
-    access_token: accessToken
+    access_token: tokenToUse
   };
   if (replyToId) {
     payload.reply_to_id = replyToId;
@@ -54,7 +94,7 @@ async function publishTextPost(userId, accessToken, text, replyToId = null) {
   }
 
   // Tunggu container selesai diproses oleh Meta (status === 'FINISHED')
-  await waitForContainerFinished(containerData.id, accessToken);
+  await waitForContainerFinished(containerData.id, tokenToUse);
 
   // Publish container
   const publishUrl = `${THREADS_API_BASE}/${userId}/threads_publish`;
@@ -68,7 +108,7 @@ async function publishTextPost(userId, accessToken, text, replyToId = null) {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           creation_id: containerData.id,
-          access_token: accessToken
+          access_token: tokenToUse
         })
       });
 
@@ -82,7 +122,7 @@ async function publishTextPost(userId, accessToken, text, replyToId = null) {
       lastError = err.message;
     }
 
-    // Jeda 2 detik jika container masih antre
+    // Jeda 2 detik jika container masih antre di antrian publishing Meta
     await new Promise(r => setTimeout(r, 2000));
   }
 
@@ -97,19 +137,22 @@ async function publishTextPost(userId, accessToken, text, replyToId = null) {
  * Cek kuota publikasi akun Threads dari Meta API (Limit: 250 post baru & 1.000 reply per 24 jam)
  */
 async function getPublishingLimit(userId, accessToken) {
-  const url = `${THREADS_API_BASE}/${userId}/threads_publishing_limit?fields=quota_usage,config,reply_quota_usage,reply_config&access_token=${accessToken}`;
+  const tokenToUse = getActiveAccessToken() || accessToken;
+  const url = `${THREADS_API_BASE}/${userId}/threads_publishing_limit?fields=quota_usage,config,reply_quota_usage,reply_config&access_token=${tokenToUse}`;
   const res = await fetch(url);
   return await res.json();
 }
 
 /**
  * Memecah teks panjang secara cerdas per kalimat utuh (maksimal maxLen karakter)
- * Menjamin tidak ada kalimat atau kata yang terpotong di tengah jalan.
+ * Menjamin tidak ada kalimat atau link URL yang terpotong di tengah jalan.
  */
 function splitBySentence(text, maxLen = 420) {
+  if (!text) return [];
   if (text.length <= maxLen) return [text];
 
-  const sentences = text.match(/[^.!?]+[.!?]+(\s+|$)|[^.!?]+$/g) || [text];
+  // Regex pemecah kalimat cerdas (tidak memecah url https:// atau www.)
+  const sentences = text.match(/[^.!?]+(?:[.!?]+(?=\s+|$)|$)/g) || [text];
   const chunks = [];
   let current = '';
 
@@ -119,7 +162,8 @@ function splitBySentence(text, maxLen = 420) {
     } else {
       if (current.trim()) chunks.push(current.trim());
       if (sentence.length > maxLen) {
-        const words = sentence.split(' ');
+        // Jika satu kalimat utuh melebihi maxLen, pecah per kata dengan aman
+        const words = sentence.split(/\s+/);
         let wordChunk = '';
         for (const w of words) {
           if ((wordChunk + ' ' + w).length <= maxLen) {
@@ -141,12 +185,13 @@ function splitBySentence(text, maxLen = 420) {
 }
 
 /**
- * Publikasikan seluruh cerita sebagai struktur Thread resmi:
+ * Publikasikan seluruh cerita sebagai struktur Thread berantai resmi ("Add to thread"):
  * 1. Post Utama (Root Post) -> HANYA 1 POST UTAMA yang tampil di feed profil akun
- * 2. Seluruh part lanjutan diterbitkan sebagai REPLIES di bawah Post Utama tersebut
+ * 2. Seluruh part lanjutan diterbitkan secara sekuensial bersambung (Post 2 reply Post 1, Post 3 reply Post 2, dst.)
+ * Menghasilkan garis vertikal thread utuh di aplikasi Threads.
  */
 async function publishStoryToThreads(userId, accessToken, story) {
-  // Pecah semua slide secara cerdas agar aman di bawah limit 500 karakter Meta
+  const tokenToUse = getActiveAccessToken() || accessToken;
   const rawParts = story.slides;
   const parts = [];
 
@@ -156,15 +201,13 @@ async function publishStoryToThreads(userId, accessToken, story) {
   }
 
   const totalParts = parts.length;
-  console.log(`[Threads] Memulai publikasi thread (${totalParts} parts)...`);
+  console.log(`[Threads] Memulai publikasi thread berantai (${totalParts} parts)...`);
 
   // PART 1: Post Utama (Root Post)
-  const rootPostId = await publishTextPost(userId, accessToken, parts[0]);
-  console.log(`[Threads] Post 1 (ROOT / Pembuka) terbit ID: ${rootPostId}`);
+  const rootPostId = await publishTextPost(userId, tokenToUse, parts[0]);
+  console.log(`[Threads] Post 1 (ROOT) terbit ID: ${rootPostId}`);
 
-  // PART 2 s/d SELESAI: Terbit berurutan dengan menyambung ke part sebelumnya (Persis fitur "Add to thread")
-  // Post 2 reply ke Post 1 -> Post 3 reply ke Post 2 -> Post 4 reply ke Post 3, dst.
-  // Ini yang membuat GARIS VERTIKAL THREAD menyambung utuh dari awal sampai akhir!
+  // PART 2 s/d SELESAI: Rantai sekuensial bersambung
   let parentPostId = rootPostId;
   const replyIds = [];
 
@@ -173,13 +216,13 @@ async function publishStoryToThreads(userId, accessToken, story) {
     await new Promise(r => setTimeout(r, 6000));
 
     try {
-      const currentReplyId = await publishTextPost(userId, accessToken, parts[i], parentPostId);
+      const currentReplyId = await publishTextPost(userId, tokenToUse, parts[i], parentPostId);
       replyIds.push(currentReplyId);
-      console.log(`[Threads] Chained Part ${i + 1}/${totalParts} terbit ID: ${currentReplyId} (tersambung ke ID: ${parentPostId})`);
-      parentPostId = currentReplyId; // Sambungkan part berikutnya ke part yang baru saja terbit!
+      console.log(`[Threads] Chained Part ${i + 1}/${totalParts} terbit ID: ${currentReplyId} (reply to ID: ${parentPostId})`);
+      parentPostId = currentReplyId;
     } catch (err) {
       console.warn(`[Threads] Gagal menyambungkan part ${i + 1}:`, err.message);
-      // Jika satu gagal, tetap coba sambungkan part berikutnya ke parent terakhir yang berhasil
+      // Jika satu part gagal, tetap coba sambungkan part berikutnya ke parent terakhir
     }
   }
 
@@ -190,5 +233,7 @@ module.exports = {
   publishTextPost,
   publishStoryToThreads,
   splitBySentence,
-  getPublishingLimit
+  getPublishingLimit,
+  getActiveAccessToken,
+  refreshThreadsToken
 };
