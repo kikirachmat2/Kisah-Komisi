@@ -152,12 +152,61 @@ Format output WAJIB HANYA berupa JSON murni tanpa markdown:
     }
   }
 
-  if (!data) {
-    throw new Error('Semua model Gemini sedang sibuk, silakan coba beberapa saat lagi.');
+  let rawText = data?.candidates?.[0]?.content?.parts?.[0]?.text;
+
+  // Fallback ke Groq LPU jika semua model Gemini sedang 429/sibuk
+  if (!rawText && process.env.GROQ_API_KEY) {
+    try {
+      console.log('[AI] Menggunakan Groq LPU sebagai fallback generator cerita...');
+      const groqRes = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${process.env.GROQ_API_KEY}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          model: 'openai/gpt-oss-120b',
+          messages: [{ role: 'user', content: prompt + '\n\nKeluarkan HANYA JSON persis sesuai format.' }],
+          response_format: { type: 'json_object' },
+          temperature: 0.9
+        })
+      });
+      if (groqRes.ok) {
+        const groqJson = await groqRes.json();
+        rawText = groqJson.choices?.[0]?.message?.content;
+      }
+    } catch (e) {
+      console.warn('[AI] Fallback Groq gagal:', e.message);
+    }
   }
-  const rawText = data.candidates?.[0]?.content?.parts?.[0]?.text;
+
+  // Fallback ke OpenRouter jika Groq juga sibuk
+  if (!rawText && process.env.OPENROUTER_API_KEY) {
+    try {
+      console.log('[AI] Menggunakan OpenRouter sebagai fallback generator cerita...');
+      const orRes = await fetch('https://openrouter.ai/api/v1/chat/completions', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${process.env.OPENROUTER_API_KEY}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          model: 'nvidia/nemotron-3.5-lightning:free',
+          messages: [{ role: 'user', content: prompt + '\n\nKeluarkan HANYA JSON persis sesuai format.' }],
+          temperature: 0.9
+        })
+      });
+      if (orRes.ok) {
+        const orJson = await orRes.json();
+        rawText = orJson.choices?.[0]?.message?.content;
+      }
+    } catch (e) {
+      console.warn('[AI] Fallback OpenRouter gagal:', e.message);
+    }
+  }
+
   if (!rawText) {
-    throw new Error('Respon Gemini kosong.');
+    throw new Error('Semua AI provider (Gemini, Groq, OpenRouter) sedang sibuk. Silakan coba lagi.');
   }
 
   const cleanJson = rawText.replace(/```json/g, '').replace(/```/g, '').trim();
@@ -179,7 +228,10 @@ Format output WAJIB HANYA berupa JSON murni tanpa markdown:
     fullThreadParts.push(adIntermezzo);
   }
 
-  fullThreadParts.push(cleanParts[3], cleanParts[4], cleanParts[5]);
+  // Tambahkan signature transparansi kurasi AI pada slide penutup
+  const finalEnding = `${cleanParts[5]}\n\n— Dicurasi oleh AI @kisahkomisi 🤖`;
+
+  fullThreadParts.push(cleanParts[3], cleanParts[4], finalEnding);
 
   return {
     title: sanitizeText(parsed.title),

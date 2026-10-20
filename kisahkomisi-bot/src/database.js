@@ -69,6 +69,14 @@ function initSchema() {
     CREATE INDEX IF NOT EXISTS idx_stories_schedule ON stories(scheduled_for);
   `);
 
+  // Migrasi aman untuk kolom qc_score dan qc_notes jika belum ada
+  try {
+    db.exec(`ALTER TABLE stories ADD COLUMN qc_score REAL;`);
+  } catch (e) {}
+  try {
+    db.exec(`ALTER TABLE stories ADD COLUMN qc_notes TEXT;`);
+  } catch (e) {}
+
   // Tabel product_bank murni dikelola lewat /tambah_produk
 }
 
@@ -118,8 +126,8 @@ module.exports = {
   // Stories helpers
   addStoryToQueue: (story) => {
     const stmt = db.prepare(`
-      INSERT INTO stories (title, topic, slides_json, product_name, product_url, scheduled_for, status)
-      VALUES (?, ?, ?, ?, ?, ?, 'queued')
+      INSERT INTO stories (title, topic, slides_json, product_name, product_url, scheduled_for, status, qc_score, qc_notes)
+      VALUES (?, ?, ?, ?, ?, ?, 'queued', ?, ?)
     `);
     const info = stmt.run(
       story.title,
@@ -127,7 +135,9 @@ module.exports = {
       JSON.stringify(story.slides),
       story.productName || null,
       story.productUrl || null,
-      story.scheduledFor
+      story.scheduledFor,
+      story.qcScore || null,
+      story.qcNotes || null
     );
     return info.lastInsertRowid;
   },
@@ -147,7 +157,7 @@ module.exports = {
 
   getUpcomingStories: (limit = 5) => {
     return db.prepare(`
-      SELECT id, title, topic, product_name, scheduled_for, status 
+      SELECT id, title, topic, product_name, scheduled_for, status, qc_score, qc_notes 
       FROM stories 
       WHERE status = 'queued' 
       ORDER BY scheduled_for ASC 

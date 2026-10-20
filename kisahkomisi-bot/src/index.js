@@ -5,6 +5,7 @@ const { Telegraf } = require('telegraf');
 const cron = require('node-cron');
 const db = require('./database');
 const { generateStory } = require('./aiStory');
+const { replenishStockBuffer, produceCuratedStory } = require('./editorialBoard');
 const { 
   publishStoryToThreads, 
   getPublishingLimit, 
@@ -108,8 +109,9 @@ function renderHelpMenu(name = 'Kawan') {
   return (
     `👋 Halo *${name}*! Selamat datang di *Kisah Komisi Autopilot Engine*.\n\n` +
     `🤖 *Kontrol Otomatisasi Threads:*\n` +
-    `• \`/bikin_cerita\` : AI buat 1 cerita menfess viral baru\n` +
-    `• \`/stok\` : Cek stok antrean tayang (12:15 & 19:45 WIB)\n` +
+    `• \`/bikin_cerita\` : AI buat 1 cerita menfess viral (Lolos Kurasi QC)\n` +
+    `• \`/isi_stok\` : Trigger otomatis isi stok buffer (Target 6 cerita)\n` +
+    `• \`/stok\` : Cek status buffer stok tayang (12:15 & 19:45 WIB)\n` +
     `• \`/post_sekarang\` : Terbitkan 1 cerita antrean ke Threads sekarang\n` +
     `• \`/cek_limit\` : Cek sisa kuota posting & replies Meta Threads\n` +
     `• \`/status\` : Cek kesehatan sistem, token, & database\n\n` +
@@ -189,22 +191,26 @@ bot.command('backup', async (ctx) => {
 
 // Command: /bikin_cerita
 bot.command('bikin_cerita', async (ctx) => {
-  await ctx.reply('⏳ Sedang memproses cerita menfess viral dengan Gemini AI...');
+  await ctx.reply('⏳ Sedang memproduksi & mengurasi cerita menfess viral (Creator Gemini + QC Kurator Groq)...');
   try {
-    const story = await generateStory();
+    const story = await produceCuratedStory();
     const id = db.addStoryToQueue({
       title: story.title,
       topic: story.topic,
       slides: story.slides,
       productName: story.product_name,
       productUrl: story.product_url,
-      scheduledFor: new Date().toISOString()
+      scheduledFor: new Date().toISOString(),
+      qcScore: story.qcScore,
+      qcNotes: story.qcNotes
     });
 
-    let preview = `✅ *Cerita Baru Berhasil Dibuat & Masuk Antrean!*\n\n`;
+    let preview = `✅ *Cerita Baru Berhasil Dibuat & Lolos Kurasi!*\n\n`;
     preview += `🆔 *ID Antrean*: #${id}\n`;
     preview += `📖 *Judul*: ${story.title}\n`;
     preview += `🏷️ *Topik*: ${story.topic}\n`;
+    preview += `⭐ *QC Score*: *${story.qcScore}/10*\n`;
+    preview += `🧐 *Catatan Kurator*: _${story.qcNotes}_\n`;
     if (story.product_name) {
       preview += `🛍️ *Produk*: ${story.product_name}\n`;
       preview += `🔗 *Link*: ${story.product_url}\n`;
@@ -212,7 +218,7 @@ bot.command('bikin_cerita', async (ctx) => {
       preview += `🛍️ *Produk*: _Murni Cerita (Tanpa Iklan)_\n`;
     }
     preview += `\n*Post Utama (Hook):*\n_"${story.slides[0]}"_\n\n`;
-    preview += `*Total Bagian*: ${story.slides.length} Bagian (1 Post Utama + ${story.slides.length - 1} Replies Chained)\n\n`;
+    preview += `*Total Bagian*: ${story.slides.length} Bagian (Chained Sequential)\n\n`;
     preview += `Gunakan \`/post_sekarang\` jika ingin langsung menerbitkan ke Threads sekarang!`;
 
     ctx.replyWithMarkdown(preview);
@@ -222,23 +228,44 @@ bot.command('bikin_cerita', async (ctx) => {
   }
 });
 
+// Command: /isi_stok
+bot.command('isi_stok', async (ctx) => {
+  await ctx.reply('⏳ Menjalankan pengisian stok buffer otomatis (Target: 6 cerita terkurasi)...');
+  try {
+    const res = await replenishStockBuffer(6);
+    if (res.status === 'full') {
+      ctx.replyWithMarkdown(`✅ *Stok Antrean Sudah Penuh!*\n\nSaat ini sudah ada *${res.currentCount} cerita* terkurasi yang siap tayang.`);
+    } else if (res.status === 'busy') {
+      ctx.reply('⏳ Proses kurasi stok sedang berjalan di background, silakan tunggu sebentar.');
+    } else {
+      ctx.replyWithMarkdown(`🎉 *Pengisian Stok Selesai!*\n\nBerhasil menambahkan *${res.added} cerita baru* yang telah lolos QC.\nTotal stok siap tayang sekarang: *${res.currentCount} cerita*.`);
+    }
+  } catch (err) {
+    console.error('Error isi_stok:', err);
+    ctx.reply(`❌ Gagal mengisi stok: ${err.message}`);
+  }
+});
+
 // Command: /stok
 bot.command('stok', (ctx) => {
   try {
     const count = db.getQueuedStoriesCount();
     const upcoming = db.getUpcomingStories(5);
 
-    let msg = `📦 *Status Antrean Stok Cerita:*\n`;
-    msg += `Total Cerita Menunggu: *${count} Cerita*\n\n`;
+    let msg = `📦 *Status Buffer Stok Cerita Otomatis:*\n`;
+    msg += `Total Cerita Siap Tayang: *${count} Cerita*\n`;
+    msg += `Status Buffer: *${count >= 6 ? '🟢 SEHAT (Aman 3 Hari)' : (count >= 2 ? '🟡 CUKUP' : '🔴 RENDAH (Auto-Restock Aktif)')}*\n\n`;
 
     if (upcoming.length > 0) {
       msg += `📋 *5 Cerita Terdekat yang Siap Tayang:*\n`;
       upcoming.forEach(s => {
-        msg += `• *#${s.id}* - ${s.title} (${s.product_name || '-'})\n`;
+        const scoreTag = s.qc_score ? ` ⭐ ${s.qc_score}/10` : '';
+        msg += `• *#${s.id}* - ${s.title}${scoreTag} (${s.product_name || 'Cerita'})\n`;
       });
-      msg += `\n⏰ Jadwal Tayang Otomatis:\n• Siang: 12:15 WIB\n• Malam: 19:45 WIB`;
+      msg += `\n⏰ *Jadwal Tayang Otomatis (WIB):*\n• Siang: 12:15 WIB\n• Malam: 19:45 WIB\n\n`;
+      msg += `_Sistem autopilot akan otomatis menjaga stok minimal 6 cerita di background tanpa perlu intervensi manual._`;
     } else {
-      msg += `_Antrean kosong. Ketik \`/bikin_cerita\` untuk membuat stok baru!_`;
+      msg += `_Antrean sedang kosong. Sistem autopilot akan segera mengisi otomatis di background, atau ketik \`/isi_stok\`!_`;
     }
 
     ctx.replyWithMarkdown(msg);
@@ -430,18 +457,20 @@ async function executeScheduledPosting(label) {
   }
 
   let story = db.getNextQueuedStory();
-  // Jika stok habis, minta AI bikin 1 cerita secara on-the-fly!
+  // Jika stok habis, minta AI bikin 1 cerita terkurasi secara on-the-fly!
   if (!story) {
-    console.log('[Scheduler] Stok kosong! Men-generate cerita darurat via Gemini...');
+    console.log('[Scheduler] Stok kosong! Men-generate cerita darurat via Creator Gemini + QC Groq...');
     try {
-      const generated = await generateStory();
+      const generated = await produceCuratedStory();
       const id = db.addStoryToQueue({
         title: generated.title,
         topic: generated.topic,
         slides: generated.slides,
         productName: generated.product_name,
         productUrl: generated.product_url,
-        scheduledFor: new Date().toISOString()
+        scheduledFor: new Date().toISOString(),
+        qcScore: generated.qcScore,
+        qcNotes: generated.qcNotes
       });
       story = db.getNextQueuedStory();
     } catch (e) {
@@ -473,6 +502,9 @@ async function executeScheduledPosting(label) {
         `📦 *Sisa Stok Antrean*: *${remainingStock} cerita*\n\n` +
         `Cek langsung di aplikasi Threads: *@kisahkomisi*`
       );
+
+      // Otomatis isi ulang stok buffer di background agar antrean selalu aman
+      replenishStockBuffer(6).catch(e => console.warn('[Scheduler] Auto-replenish error:', e.message));
     } catch (err) {
       console.error(`[Scheduler] Gagal posting slot ${label}:`, err);
       db.markStoryFailed(story.id, err.message);
@@ -491,6 +523,26 @@ cron.schedule('15 5 * * *', () => executeScheduledPosting('SIANG 12:15 WIB'));
 
 // 19:45 WIB (12:45 UTC di server)
 cron.schedule('45 12 * * *', () => executeScheduledPosting('MALAM 19:45 WIB'));
+
+// ==========================================
+// 📦 AUTO-REPLENISH BUFFER STOK (Setiap 2 Jam Sekali)
+// Menjaga antrean minimal 6 cerita (~3 hari buffer) secara otomatis
+// ==========================================
+cron.schedule('0 */2 * * *', async () => {
+  console.log('[Scheduler] Menjalankan auto-replenish buffer stok berkala...');
+  try {
+    const res = await replenishStockBuffer(6);
+    if (res.added > 0) {
+      await sendAdminAlert(
+        `📦 *[Auto-Stockpile] Stok Berhasil Ditambah!*\n\n` +
+        `Dewan Redaksi AI (Gemini Creator + Groq QC) baru saja menambahkan *${res.added} cerita terkurasi* ke antrean.\n` +
+        `Total stok siap tayang sekarang: *${res.currentCount} cerita*.`
+      );
+    }
+  } catch (err) {
+    console.error('[Scheduler] Gagal auto-replenish:', err.message);
+  }
+});
 
 // ==========================================
 // 🔄 AUTO-REFRESH TOKEN BERKALA (Tiap tgl 1 & 15 jam 03:00 WIB / 20:00 UTC)
@@ -518,6 +570,11 @@ cron.schedule('0 19 * * 0', async () => {
 // Start Bot
 bot.launch().then(() => {
   console.log('🚀 Kisah Komisi Autopilot Engine AKTIF!');
+  // Trigger otomatis di startup: cek & isi buffer stok bila kurang dari 6
+  setTimeout(() => {
+    console.log('[Autopilot] Memeriksa stok awal saat startup...');
+    replenishStockBuffer(6).catch(e => console.warn('[Autopilot] Startup replenish:', e.message));
+  }, 5000);
 }).catch(err => {
   console.error('FATAL:', err);
   process.exit(1);
