@@ -285,8 +285,8 @@ Format output WAJIB HANYA berupa JSON murni tanpa markdown:
     fullThreadParts.push(adIntermezzo);
   }
 
-  // Tambahkan signature transparansi kurasi AI pada slide penutup
-  const finalEnding = `${cleanParts[5]}\n\n— Dicurasi oleh AI @kisahkomisi 🤖`;
+  // Penutup murni cerita dan pancingan debat tanpa watermark bot yang merusak ilusi
+  const finalEnding = cleanParts[5];
 
   fullThreadParts.push(cleanParts[3], cleanParts[4], finalEnding);
 
