@@ -62,11 +62,29 @@ function getThematicVibe(category) {
   if (cat.includes('kosan') || cat.includes('rumah')) {
     return 'kehidupan kamar kosan, suasana kamar kontrakan yang sempit, begadang tugas, atau drama barang sekamar';
   }
-  if (cat.includes('fashion') || cat.includes('aksesoris')) {
+  if (cat.includes('fashion') || cat.includes('aksesoris') || cat.includes('outfit')) {
     return 'nongkrong santai bareng temen, outfit pas jalan bareng gebetan, jalan sore, atau insiden salah kostum';
   }
-  if (cat.includes('skincare') || cat.includes('body')) {
+  if (cat.includes('parfum') || cat.includes('wewangian')) {
+    return 'kejadian awkward pas kencan pertama, aroma mencurigakan di lift kantor, atau drama wangi parfum rekan kerja';
+  }
+  if (cat.includes('skincare') || cat.includes('grooming') || cat.includes('perawatan') || cat.includes('body')) {
     return 'persiapan kencan pertama, panas-panasan di jalanan kota, acara hajatan keluarga, atau insecure penampilan';
+  }
+  if (cat.includes('olahraga') || cat.includes('kebugaran')) {
+    return 'sesi workout di kamar kosan, jogging pagi minggu, insiden di tempat gym, atau niat diet yang penuh godaan';
+  }
+  if (cat.includes('makanan') || cat.includes('camilan') || cat.includes('snack')) {
+    return 'kebiasaan ngemil tengah malam pas begadang tugas, rebutan camilan di kosan, atau insiden lapar melanda pas lembur';
+  }
+  if (cat.includes('botol') || cat.includes('tumbler')) {
+    return 'perjalanan jauh di cuaca panas terik, hemat biaya makan di kantor, atau insiden botol ketinggalan di commuter line';
+  }
+  if (cat.includes('hobi') || cat.includes('mainan') || cat.includes('hiburan')) {
+    return 'koleksi barang unik di kamar kosan, hadiah kejutan buat gebetan, hobi nostalgia, atau drama barang kesayangan dirusak';
+  }
+  if (cat.includes('kesehatan')) {
+    return 'polusi dan cuaca berdebu di jalanan kota, musim sakit di kantor, atau insiden bersin di gerbong kereta';
   }
   return 'kehidupan sehari-hari, kampus, kantor, atau pertemanan anak muda';
 }
