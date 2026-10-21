@@ -23,16 +23,35 @@ const TOPICS = [
   'Pasangan Pelit Perhitungan Ekstrem (Bensin dibagi dua sampai serupiah, hitung-hitungan makan di warteg)'
 ];
 
-// Menambahkan sub_id tracking ke link Shopee Affiliate secara aman
-function appendSubId(urlStr, subId = 'threads_ceritakiki') {
+// Menambahkan sub_id tracking ke link Shopee Affiliate secara aman dan terperinci
+function appendSubId(urlStr, subIdOptions = 'threads_ceritakiki') {
   if (!urlStr) return urlStr;
+  
+  // Normalisasi opsi: jika string, jadikan { sub_id1: subIdOptions }
+  let params = {};
+  if (typeof subIdOptions === 'string') {
+    params.sub_id1 = subIdOptions;
+  } else if (typeof subIdOptions === 'object' && subIdOptions !== null) {
+    params = subIdOptions;
+  } else {
+    params.sub_id1 = 'threads_ceritakiki';
+  }
+
   try {
     const u = new URL(urlStr);
-    u.searchParams.set('sub_id1', subId);
+    for (const [k, v] of Object.entries(params)) {
+      if (v) u.searchParams.set(k, String(v));
+    }
     return u.toString();
   } catch (e) {
-    const separator = urlStr.includes('?') ? '&' : '?';
-    return `${urlStr}${separator}sub_id1=${encodeURIComponent(subId)}`;
+    let res = urlStr;
+    for (const [k, v] of Object.entries(params)) {
+      if (v) {
+        const separator = res.includes('?') ? '&' : '?';
+        res = `${res}${separator}${encodeURIComponent(k)}=${encodeURIComponent(String(v))}`;
+      }
+    }
+    return res;
   }
 }
 
@@ -307,7 +326,22 @@ Format output WAJIB HANYA berupa JSON murni tanpa markdown:
 
   let trackedProductUrl = null;
   if (product && product.affiliate_url) {
-    trackedProductUrl = appendSubId(product.affiliate_url, 'threads_ceritakiki');
+    const catSlug = (product.category || 'umum')
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, '_')
+      .slice(0, 15);
+
+    const currentHour = nowWIB.getHours();
+    let slotTag = 'malam';
+    if (currentHour < 11) slotTag = 'pagi';
+    else if (currentHour < 17) slotTag = 'siang';
+
+    trackedProductUrl = appendSubId(product.affiliate_url, {
+      sub_id1: 'threads_ceritakiki',
+      sub_id2: catSlug,
+      sub_id3: slotTag,
+      sub_id4: product.id ? `p${product.id}` : undefined
+    });
     const adIntermezzo = `Btw selingan bentar ya, kemarin banyak yang nanya rekomendasi ${product.name} belinya di mana, aku belinya di toko ini mumpung lagi diskon:\n${trackedProductUrl}\n\nLanjut ceritanya ke bawah...`;
     fullThreadParts.push(adIntermezzo);
   }

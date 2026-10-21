@@ -21,6 +21,19 @@ async function runTests() {
   assert(!tracked2.includes('??'), 'URL 2 should not have double question marks');
   console.log('  ✓ URL dengan query:', tracked2);
 
+  const url3 = 'https://s.shopee.co.id/2AwoQ0tZfG';
+  const tracked3 = appendSubId(url3, {
+    sub_id1: 'threads_ceritakiki',
+    sub_id2: 'kosan',
+    sub_id3: 'pagi',
+    sub_id4: 'p42'
+  });
+  assert(tracked3.includes('sub_id1=threads_ceritakiki'), 'URL 3 sub_id1');
+  assert(tracked3.includes('sub_id2=kosan'), 'URL 3 sub_id2');
+  assert(tracked3.includes('sub_id3=pagi'), 'URL 3 sub_id3');
+  assert(tracked3.includes('sub_id4=p42'), 'URL 3 sub_id4');
+  console.log('  ✓ URL multi-tier granular tracking:', tracked3);
+
   // TEST 2: getThematicVibe
   console.log('\n[Test 2] Testing getThematicVibe...');
   const vibeGadget = getThematicVibe('Elektronik & Gadget');
