@@ -11,7 +11,8 @@ const {
   publishStoryToThreads, 
   getPublishingLimit, 
   getActiveAccessToken, 
-  refreshThreadsToken 
+  refreshThreadsToken,
+  deletePost
 } = require('./threads');
 const { runAutoEngagementScan } = require('./autoReplyEngine');
 const { executeThreadBump } = require('./threadBumper');
@@ -199,6 +200,24 @@ bot.command('refresh_token', async (ctx) => {
   } catch (err) {
     console.error('Error refresh_token command:', err);
     ctx.reply(`❌ Gagal refresh token: ${err.message}`);
+  }
+});
+
+// Command: /hapus_post <mediaId>
+bot.command('hapus_post', async (ctx) => {
+  const parts = ctx.message.text.split(' ').filter(Boolean);
+  const mediaId = parts[1];
+  if (!mediaId) {
+    return ctx.reply('⚠️ Masukkan Media ID postingan Threads yang ingin dihapus.\nContoh: `/hapus_post 18218227525358737`', { parse_mode: 'Markdown' });
+  }
+
+  await ctx.reply(`⏳ Menghapus postingan ID ${mediaId} dari Threads...`);
+  try {
+    await deletePost(mediaId);
+    ctx.reply(`✅ Postingan Threads ID ${mediaId} berhasil dihapus dari akun!`);
+  } catch (err) {
+    console.error('Error hapus_post:', err.message);
+    ctx.reply(`❌ Gagal menghapus postingan: ${err.message}\n\nCatatan: Jika error permission, token Anda perlu di-authorize ulang dengan scope threads_delete.`);
   }
 });
 

@@ -279,6 +279,28 @@ async function getMediaInsights(mediaId, accessToken) {
   return await res.json();
 }
 
+/**
+ * Menghapus satu postingan Threads berdasarkan Media ID (membutuhkan permission threads_delete)
+ */
+async function deletePost(mediaId, accessToken = null) {
+  const tokenToUse = getActiveAccessToken() || accessToken;
+  if (!tokenToUse) throw new Error('Access token tidak tersedia.');
+
+  const url = `${THREADS_API_BASE}/${mediaId}`;
+  const res = await fetch(url, {
+    method: 'DELETE',
+    headers: {
+      'Authorization': `Bearer ${tokenToUse}`
+    }
+  });
+
+  const data = await res.json();
+  if (!res.ok || data.error) {
+    throw new Error(data.error?.message || `Gagal delete post (HTTP ${res.status})`);
+  }
+  return data;
+}
+
 module.exports = {
   publishTextPost,
   publishStoryToThreads,
@@ -287,5 +309,6 @@ module.exports = {
   getActiveAccessToken,
   refreshThreadsToken,
   getAccountInsights,
-  getMediaInsights
+  getMediaInsights,
+  deletePost
 };
