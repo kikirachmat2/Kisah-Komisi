@@ -1,8 +1,28 @@
 const db = require('./database');
 const { getAccountInsights, getMediaInsights, getActiveAccessToken } = require('./threads');
+const { TOPICS } = require('./aiStory');
 
 const GROQ_API_KEY = process.env.GROQ_API_KEY;
 const OPENROUTER_API_KEY = process.env.OPENROUTER_API_KEY;
+const SELF_USERNAME = (process.env.THREADS_USERNAME || 'ceritakikiii').toLowerCase();
+
+/**
+ * Metrik `replies` dari Meta ikut menghitung part thread berantai & bump milik kita sendiri.
+ * Fungsi ini menghitung balasan ASLI dari akun lain via endpoint conversation.
+ * Return null jika gagal (agar tidak menimpa data dengan angka palsu).
+ */
+async function countRealReplies(mediaId, token) {
+  try {
+    const res = await fetch(`https://graph.threads.net/v1.0/${mediaId}/conversation?fields=username&access_token=${token}`, {
+      signal: AbortSignal.timeout(10000)
+    });
+    const json = await res.json();
+    if (!Array.isArray(json.data)) return null;
+    return json.data.filter(c => c.username && c.username.toLowerCase() !== SELF_USERNAME).length;
+  } catch (e) {
+    return null;
+  }
+}
 
 /**
  * Mengambil dan menyimpan insight performa akun dan postingan ke database SQLite
@@ -66,6 +86,10 @@ async function trackAllInsights() {
         }
       }
 
+      // Ganti angka replies mentah dengan balasan asli dari orang lain
+      const realReplies = await countRealReplies(story.threads_media_id, token);
+      if (realReplies !== null) postMetrics.replies = realReplies;
+
       db.upsertStoryInsight(story.id, story.threads_media_id, postMetrics);
       results.postsTracked++;
     } catch (err) {
@@ -91,15 +115,21 @@ Kamu adalah Chief Growth Strategist & Head of Audience Retention untuk akun Thre
 DATA PERFORMA NYATA DARI META THREADS API:
 - Total Views Hari Ini: ${latestAccount.views || 0} views
 - Total Likes: ${latestAccount.likes || 0}
-- Total Replies/Komentar: ${latestAccount.replies || 0}
+- Total Replies dari orang lain: ${latestAccount.replies || 0}
 
-TOP CERITA DENGAN PENAYANGAN & INTERAKSI TERTINGGI:
-${topStories.map((s, idx) => `${idx + 1}. Judul: "${s.title}" | Topik: ${s.topic} | Views: ${s.views} | Likes: ${s.likes} | Replies: ${s.replies}`).join('\n')}
+TOP CERITA (replies = HANYA balasan dari akun lain, bukan part thread sendiri):
+${topStories.map((s, idx) => `${idx + 1}. Judul: "${s.title}" | Topik: ${s.topic} | Views: ${s.views} | Likes: ${s.likes} | Replies asli: ${s.replies}`).join('\n')}
+
+ATURAN ANALISIS:
+- Jika total sampel kecil (views < 500 atau replies asli = 0), JANGAN menarik kesimpulan kuat. Katakan datanya belum cukup.
+- Threads berbasis teks: JANGAN rekomendasikan hashtag, hook visual/video, atau "link di bio".
+- recommended_priority_topics WAJIB dipilih persis (copy teks utuh) dari daftar topik berikut, tidak boleh membuat topik baru:
+${TOPICS.map(t => `  - ${t}`).join('\n')}
 
 TUGAS STRATEGIS:
-1. Evaluasi apa yang membuat cerita performa tinggi berhasil menarik pembaca.
-2. Rumuskan 3 rekomendasi taktis agar penayangan dan klik link affiliate di Threads meningkat lebih cepat.
-3. Tentukan 3-5 topik menfess prioritas yang sebaiknya lebih sering diproduksi AI dalam beberapa hari ke depan.
+1. Evaluasi jujur apa yang terlihat dari data (termasuk jika datanya belum cukup).
+2. Rumuskan 3 rekomendasi taktis untuk menaikkan balasan asli dan views di Threads.
+3. Pilih 3-5 topik prioritas dari daftar di atas.
 
 Keluarkan HANYA JSON persis sesuai struktur ini:
 {
@@ -198,8 +228,13 @@ Keluarkan HANYA JSON persis sesuai struktur ini:
   db.recordStrategyLog(strategyData.summary, strategyData.actionable_strategy, strategyData.recommended_priority_topics);
 
   // Terapkan adaptasi dinamis: simpan topik prioritas agar sistem AI mengutamakannya
-  if (Array.isArray(strategyData.recommended_priority_topics) && strategyData.recommended_priority_topics.length > 0) {
-    db.setSetting('PRIORITY_TOPICS', JSON.stringify(strategyData.recommended_priority_topics));
+  // Hanya terima topik yang benar-benar ada di bank topik (cegah topik fiksi/horor lama masuk lagi)
+  const validTopics = Array.isArray(strategyData.recommended_priority_topics)
+    ? strategyData.recommended_priority_topics.filter(t => TOPICS.includes(t))
+    : [];
+  strategyData.recommended_priority_topics = validTopics;
+  if (validTopics.length > 0) {
+    db.setSetting('PRIORITY_TOPICS', JSON.stringify(validTopics));
     console.log('[GrowthEngine] Rekomendasi topik prioritas otomatis disinkronkan ke AI Generator:', strategyData.recommended_priority_topics);
   }
 
@@ -244,5 +279,6 @@ async function generateInsightReportMarkdown() {
 module.exports = {
   trackAllInsights,
   analyzePerformanceAndStrategize,
-  generateInsightReportMarkdown
+  generateInsightReportMarkdown,
+  countRealReplies
 };
