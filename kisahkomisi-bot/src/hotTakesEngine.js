@@ -68,6 +68,18 @@ async function fetchTrendingHeadline() {
   };
 }
 
+function isValidHotTake(text) {
+  if (!text || typeof text !== 'string') return false;
+  const clean = text.replace(/^["']|["']$/g, '').trim();
+  // Wajib minimal 60 karakter dan minimal 8 kata
+  if (clean.length < 60) return false;
+  const words = clean.split(/\s+/).filter(Boolean);
+  if (words.length < 8) return false;
+  // Dilarang keras postingan satu kata atau label kategori
+  if (/^(kesehatan|politik|ekonomi|hiburan|olahraga|hukum|nasional|internasional|berita|ragam)\.?$/i.test(clean)) return false;
+  return true;
+}
+
 /**
  * Generate 1 Hot Take pendek dengan persona Gen Z Kiki Rachmat (@ceritakikiii)
  */
@@ -82,14 +94,15 @@ ISU / BERITA / FENOMENA HARI INI:
 Waktu Posting: Slot ${slotType}
 
 TUGAS:
-Tuliskan SATU (1) POSTINGAN PENDEK MANDIRI (1-3 kalimat, maksimal 140-220 karakter) untuk mengomentari fenomena/isu tersebut.
+Tuliskan SATU (1) POSTINGAN PENDEK MANDIRI (2-3 kalimat lengkap, panjang 100 - 200 karakter) untuk mengomentari fenomena/isu tersebut.
 
 PRINSIP "THE MICRO-IMPACT LENS" (SANGAT KETAT):
 1. JANGAN sebut nama politisi, menteri, atau partai politik tertentu (menghindari sensor algoritma Meta & UU ITE).
 2. BELOKKAN isu/kemarahan warganet ke realitas sehari-hari: dompet rakyat biasa, mahalnya hidup ("In this economy..."), gaji stagnan, cicilan, kelakuan kantor, atau lelahnya cari nafkah.
-3. Gaya bahasa: Gaul santai Indonesia, self-deprecating (menertawakan nasib sendiri/remahan rengginang), tajam, bikin audiens langsung pengen me-repost/quote.
-4. DILARANG KERAS menyisipkan link promosi atau menyebut produk apapun. Postingan ini 100% murni opini organik.
-5. Output HANYA teks postingan langsung tanpa tanda kutip.
+3. Gaya bahasa: Gaul santai Indonesia, self-deprecating (menertawakan nasib sendiri), tajam, bikin audiens langsung pengen me-repost/quote.
+4. DILARANG KERAS hanya membalas satu kata, judul berita, atau label kategori (seperti "Kesehatan" atau "Ekonomi"). WAJIB kalimat lengkap bercerita/mengeluh dengan opini personal.
+5. DILARANG menyisipkan link promosi atau produk apapun.
+6. Output HANYA teks postingan langsung tanpa tanda kutip.
 `;
 
   // 1. Coba Gemini 2.5 Flash
@@ -101,13 +114,15 @@ PRINSIP "THE MICRO-IMPACT LENS" (SANGAT KETAT):
         signal: AbortSignal.timeout(10000),
         body: JSON.stringify({
           contents: [{ parts: [{ text: prompt }] }],
-          generationConfig: { maxOutputTokens: 120, temperature: 0.8 }
+          generationConfig: { maxOutputTokens: 250, temperature: 0.8 }
         })
       });
       if (res.ok) {
         const data = await res.json();
         const text = data.candidates?.[0]?.content?.parts?.[0]?.text?.trim();
-        if (text) return text.replace(/^["']|["']$/g, '');
+        const clean = text ? text.replace(/^["']|["']$/g, '').trim() : '';
+        if (isValidHotTake(clean)) return clean;
+        console.warn(`[HotTakes] Hasil Gemini tidak lolos validasi ("${clean}"), mencoba Groq...`);
       }
     } catch (e) {
       console.warn('[HotTakes] Gemini rate limit/error, mencoba Groq...');
@@ -127,21 +142,29 @@ PRINSIP "THE MICRO-IMPACT LENS" (SANGAT KETAT):
         body: JSON.stringify({
           model: 'qwen/qwen3.8-27b',
           messages: [{ role: 'user', content: prompt }],
-          max_tokens: 120,
+          max_tokens: 250,
           temperature: 0.8
         })
       });
       if (res.ok) {
         const data = await res.json();
         const text = data.choices?.[0]?.message?.content?.trim();
-        if (text) return text.replace(/^["']|["']$/g, '');
+        const clean = text ? text.replace(/^["']|["']$/g, '').trim() : '';
+        if (isValidHotTake(clean)) return clean;
+        console.warn(`[HotTakes] Hasil Groq tidak lolos validasi ("${clean}")`);
       }
     } catch (e) {
       console.warn('[HotTakes] Groq fallback error:', e.message);
     }
   }
 
-  return 'In this economy, gaji gue berasa cuma numpang lewat buat bayar tagihan. Mau flexing gaya hidup tapi sadar sisa saldo di M-Banking cuma cukup buat beli cilok kuah.';
+  // Fallback kurasi tinggi yang pasti valid & manusiawi
+  const fallbackList = [
+    `In this economy, denger berita kayak gini cuma bikin elus dada. Gaji bulanan cuma numpang lewat beberapa jam buat bayar cicilan, sisanya bertahan hidup pake doa dan kopi saset.`,
+    `Mau sok-sokan cuek sama keadaan tapi pas buka m-banking langsung sadar diri. Hidup makin mahal, tuntutan makin banyak, tapi saldo tabungan jalan di tempat.`,
+    `Realitas pekerja zaman sekarang: berangkat gelap pulang gelap, tenaga diperas, tapi giliran nuntut hak malah disuruh bersyukur sama manajemen.`
+  ];
+  return fallbackList[Math.floor(Math.random() * fallbackList.length)];
 }
 
 /**

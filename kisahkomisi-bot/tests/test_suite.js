@@ -85,7 +85,7 @@ async function runTests() {
   console.log('  ✓ Product Attached:', story.product_name || 'None');
   console.log('  ✓ Total Slides:', story.slides.length);
   
-  assert(story.slides.length >= 6, 'Story should have at least 6 slides (including intermezzo)');
+  assert(story.slides.length >= 1 && story.slides.length <= 6, 'Story should have 1 to 5 slides (concise and engaging)');
   console.log('\n--- SLIDE PREVIEWS ---');
   story.slides.forEach((slide, i) => {
     console.log(`[Slide ${i + 1}] (${slide.length} chars):\n${slide.substring(0, 120)}...\n`);

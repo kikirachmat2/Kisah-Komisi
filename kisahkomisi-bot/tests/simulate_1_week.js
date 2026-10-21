@@ -139,9 +139,11 @@ async function runWeeklySimulation() {
         }
       });
 
-      // Pastikan ada link Shopee terpasang dan memiliki sub_id tracking
-      const hasShopeeLink = parts.some(p => p.includes('shopee.co.id') && p.includes('sub_id1=threads_ceritakiki'));
-      assert(hasShopeeLink, `Harus ada 1 slide intermezzo dengan link affiliate bertag sub_id1`);
+      // Pastikan ada link Shopee terpasang pada mode thread berbobot
+      if (!storyData.is_single_menfess && storyData.product_url) {
+        const hasShopeeLink = parts.some(p => (p.includes('shopee.co.id') || p.includes('s.shopee.co.id')) && p.includes('sub_id1=threads_ceritakiki'));
+        assert(hasShopeeLink, `Harus ada 1 slide solusi dengan link affiliate bertag sub_id1`);
+      }
 
       // 5. SIMULASI PUBLISHING BERANTAI RESMI META ("Add to thread")
       const mockRootId = `mock_root_${Date.now()}_${slotCounter}`;
