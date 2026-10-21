@@ -137,6 +137,13 @@ async function generateStory(forcedTopic = null) {
   const tone = TONES[Math.floor(Math.random() * TONES.length)];
   const perspective = PERSPECTIVES[Math.floor(Math.random() * PERSPECTIVES.length)];
 
+  const nowWIB = new Date(new Date().toLocaleString('en-US', { timeZone: 'Asia/Jakarta' }));
+  const dayOfWeek = nowWIB.getDay(); // 0: Minggu, 6: Sabtu
+  const isWeekend = (dayOfWeek === 0 || dayOfWeek === 6);
+  const rhythmHint = isWeekend 
+    ? 'Suasana Akhir Pekan (Weekend): Audiens sedang santai, relate dengan kencan pertama, jalan-jalan, drama keluarga/mertua, nongkrong, atau belanja santai.' 
+    : 'Suasana Hari Kerja (Weekday): Audiens sedang menghadapi realitas kerja, relate dengan kantor toxic, lembur, drama commuter line/ojol, masalah kosan, atau lelahnya cari nafkah.';
+
   const prompt = `
 Kamu adalah kurator cerita naratif di akun Threads @ceritakikiii (Kiki Rachmat).
 Bio akun: "In this economy mau nulis cerita orang-orang aja lah".
@@ -147,6 +154,7 @@ ${topic}
 
 LATAR / NUANSA KEHIDUPAN:
 Relate erat dengan ${themeHint}.
+${rhythmHint}
 
 GAYA TONE & PERSPEKTIF:
 - Nuansa Cerita: ${tone}

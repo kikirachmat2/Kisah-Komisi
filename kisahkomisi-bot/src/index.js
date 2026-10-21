@@ -14,6 +14,7 @@ const {
   refreshThreadsToken 
 } = require('./threads');
 const { runAutoEngagementScan } = require('./autoReplyEngine');
+const { executeThreadBump } = require('./threadBumper');
 
 const token = process.env.BOT_TOKEN;
 
@@ -751,6 +752,49 @@ cron.schedule('30 3 * * *', () => {
     global.gc();
   }
 }, {
+  scheduled: true,
+  timezone: 'Asia/Jakarta'
+});
+
+// ==========================================
+// 🚀 THREAD BUMPER (The 4-Hour Algorithmic Resurfacing)
+// Jadwal bump presisi di lembah tayangan tanpa menabrak slot berikutnya:
+// 1. Pagi: 10:45 WIB (selesai 1h 45m sebelum slot siang 12:30)
+// 2. Siang: 16:00 WIB (selesai 4 jam sebelum slot malam 20:00)
+// 3. Malam: 23:00 WIB (jam netizen begadang)
+// ==========================================
+async function runScheduledThreadBump(slotLabel) {
+  const userId = process.env.THREADS_USER_ID;
+  if (!userId) return;
+  console.log(`[ThreadBumper] Menjalankan bump cerdas untuk slot ${slotLabel}...`);
+  try {
+    const res = await executeThreadBump(userId);
+    if (res) {
+      const link = `https://www.threads.net/@ceritakikiii/post/${res.rootMediaId}`;
+      await sendAdminAlert(
+        `🚀 *[Thread Bumper] Post Berhasil Disundul Ulang!*\n\n` +
+        `📖 *Cerita*: ${res.title}\n` +
+        `💬 *Update*: "${res.bumpText}"\n\n` +
+        `🔗 [Cek Live di Threads](${link})\n` +
+        `Algoritma Threads akan merekomendasikan ulang thread ini ke puncak feed For You.`
+      );
+    }
+  } catch (err) {
+    console.warn('[ThreadBumper] Gagal bump:', err.message);
+  }
+}
+
+cron.schedule('45 10 * * *', () => runScheduledThreadBump('PAGI (10:45 WIB)'), {
+  scheduled: true,
+  timezone: 'Asia/Jakarta'
+});
+
+cron.schedule('0 16 * * *', () => runScheduledThreadBump('SIANG (16:00 WIB)'), {
+  scheduled: true,
+  timezone: 'Asia/Jakarta'
+});
+
+cron.schedule('0 23 * * *', () => runScheduledThreadBump('MALAM (23:00 WIB)'), {
   scheduled: true,
   timezone: 'Asia/Jakarta'
 });

@@ -122,6 +122,9 @@ function initSchema() {
   try {
     db.exec(`ALTER TABLE stories ADD COLUMN qc_notes TEXT;`);
   } catch (e) {}
+  try {
+    db.exec(`ALTER TABLE stories ADD COLUMN bumped_at DATETIME;`);
+  } catch (e) {}
 
   // Tabel product_bank murni dikelola lewat /tambah_produk
 }
@@ -409,6 +412,25 @@ module.exports = {
       WHERE threads_media_id = ?
     `).get(mediaId);
     return row ? row.cnt : 0;
+  },
+
+  // Thread Bumper Helpers
+  getLatestPublishedStoryUnbumped: (minHoursAgo = 2.5, maxHoursAgo = 6) => {
+    return db.prepare(`
+      SELECT id, title, topic, slides_json, threads_media_id, published_at
+      FROM stories
+      WHERE status = 'published' 
+        AND threads_media_id IS NOT NULL 
+        AND bumped_at IS NULL
+        AND published_at >= datetime('now', '-' || ? || ' hours')
+        AND published_at <= datetime('now', '-' || ? || ' hours')
+      ORDER BY id DESC
+      LIMIT 1
+    `).get(maxHoursAgo, minHoursAgo);
+  },
+
+  markStoryBumped: (storyId) => {
+    return db.prepare(`UPDATE stories SET bumped_at = CURRENT_TIMESTAMP WHERE id = ?`).run(storyId);
   },
 
   // Database maintenance: checkpoint WAL to prevent file bloat on VPS
