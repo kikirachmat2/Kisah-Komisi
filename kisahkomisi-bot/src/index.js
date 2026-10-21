@@ -15,6 +15,7 @@ const {
 } = require('./threads');
 const { runAutoEngagementScan } = require('./autoReplyEngine');
 const { executeThreadBump } = require('./threadBumper');
+const { executeHotTake } = require('./hotTakesEngine');
 
 const token = process.env.BOT_TOKEN;
 
@@ -795,6 +796,43 @@ cron.schedule('0 16 * * *', () => runScheduledThreadBump('SIANG (16:00 WIB)'), {
 });
 
 cron.schedule('0 23 * * *', () => runScheduledThreadBump('MALAM (23:00 WIB)'), {
+  scheduled: true,
+  timezone: 'Asia/Jakarta'
+});
+
+// ==========================================
+// ⚡ KIKI'S DAILY HOT TAKES & REALITY CHECKS
+// Opini santai mengomentari berita & realitas ekonomi Indonesia (0 Link)
+// 1. Pagi: 10:15 WIB (Keresahan berita pagi / dunia kerja)
+// 2. Sore: 15:30 WIB (Keresahan finansial / In This Economy)
+// ==========================================
+async function runScheduledHotTake(slotLabel) {
+  const userId = process.env.THREADS_USER_ID;
+  if (!userId) return;
+  console.log(`[HotTakes] Menjalankan opini santai untuk slot ${slotLabel}...`);
+  try {
+    const res = await executeHotTake(userId, slotLabel);
+    if (res) {
+      const link = `https://www.threads.net/@ceritakikiii/post/${res.mediaId}`;
+      await sendAdminAlert(
+        `⚡ *[Hot Take Terbit]* Kiki baru saja mengunggah opini santai di Threads:\n\n` +
+        `"${res.postText}"\n\n` +
+        `📰 *Dasar Isu*: ${res.headline} (${res.source})\n` +
+        `🔗 [Lihat di Threads](${link})\n` +
+        `Format organik 0 link ini menjaga reputasi akun dan mendongkrak distribusi feed For You.`
+      );
+    }
+  } catch (err) {
+    console.warn('[HotTakes] Gagal eksekusi hot take:', err.message);
+  }
+}
+
+cron.schedule('15 10 * * *', () => runScheduledHotTake('PAGI (10:15 WIB)'), {
+  scheduled: true,
+  timezone: 'Asia/Jakarta'
+});
+
+cron.schedule('30 15 * * *', () => runScheduledHotTake('SORE (15:30 WIB)'), {
   scheduled: true,
   timezone: 'Asia/Jakarta'
 });

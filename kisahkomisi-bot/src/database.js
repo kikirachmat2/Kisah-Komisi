@@ -107,12 +107,23 @@ function initSchema() {
       created_at DATETIME DEFAULT CURRENT_TIMESTAMP
     );
 
+    CREATE TABLE IF NOT EXISTS hot_takes (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      topic_source TEXT,
+      headline TEXT,
+      post_text TEXT NOT NULL,
+      threads_media_id TEXT,
+      slot_label TEXT,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+    );
+
     CREATE INDEX IF NOT EXISTS idx_commissions_user ON commissions(telegram_user_id);
     CREATE INDEX IF NOT EXISTS idx_stories_status ON stories(status);
     CREATE INDEX IF NOT EXISTS idx_stories_schedule ON stories(scheduled_for);
     CREATE INDEX IF NOT EXISTS idx_story_insights_story ON story_insights(story_id);
     CREATE INDEX IF NOT EXISTS idx_auto_replies_comment ON auto_replies(comment_id);
     CREATE INDEX IF NOT EXISTS idx_auto_replies_media ON auto_replies(threads_media_id);
+    CREATE INDEX IF NOT EXISTS idx_hot_takes_created ON hot_takes(created_at);
   `);
 
   // Migrasi aman untuk kolom qc_score dan qc_notes jika belum ada
@@ -431,6 +442,22 @@ module.exports = {
 
   markStoryBumped: (storyId) => {
     return db.prepare(`UPDATE stories SET bumped_at = CURRENT_TIMESTAMP WHERE id = ?`).run(storyId);
+  },
+
+  // Hot Takes Helpers
+  logHotTake: ({ topicSource, headline, postText, threadsMediaId, slotLabel }) => {
+    return db.prepare(`
+      INSERT INTO hot_takes (topic_source, headline, post_text, threads_media_id, slot_label)
+      VALUES (?, ?, ?, ?, ?)
+    `).run(topicSource || 'news_radar', headline || null, postText, threadsMediaId || null, slotLabel || null);
+  },
+
+  getRecentHotTakes: (limit = 10) => {
+    return db.prepare(`
+      SELECT * FROM hot_takes 
+      ORDER BY id DESC 
+      LIMIT ?
+    `).all(limit);
   },
 
   // Database maintenance: checkpoint WAL to prevent file bloat on VPS

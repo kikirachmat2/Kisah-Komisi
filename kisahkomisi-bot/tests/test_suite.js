@@ -98,6 +98,29 @@ async function runTests() {
   assert(dailyCount > 0, 'Daily auto reply count should be incremented');
   console.log('  ✓ Auto-Reply Guardrails & DB Tracking: 100% Verified');
 
+  // TEST 7: Hot Takes Engine & News Radar
+  console.log('\n[Test 7] Testing Hot Takes Engine & Social Radar...');
+  const { fetchTrendingHeadline, generateHotTakePost } = require('../src/hotTakesEngine');
+  const headlineInfo = await fetchTrendingHeadline();
+  assert(headlineInfo && headlineInfo.headline, 'Trending headline must be present');
+  console.log(`  ✓ Headline Source: ${headlineInfo.source} | "${headlineInfo.headline.substring(0, 50)}..."`);
+
+  const hotTake = await generateHotTakePost(headlineInfo, 'PAGI');
+  assert(hotTake && hotTake.length > 20, 'Hot take text should be valid length');
+  assert(!hotTake.includes('shopee.co.id'), 'Hot take must not contain affiliate links');
+  console.log(`  ✓ Generated Hot Take (${hotTake.length} chars): "${hotTake.substring(0, 60)}..."`);
+
+  db.logHotTake({
+    topicSource: headlineInfo.source,
+    headline: headlineInfo.headline,
+    postText: hotTake,
+    threadsMediaId: 'mock_media_id_hottake',
+    slotLabel: 'TEST_SLOT'
+  });
+  const recentHotTakes = db.getRecentHotTakes(1);
+  assert(recentHotTakes.length > 0, 'Hot take successfully recorded in database');
+  console.log('  ✓ Hot Takes Database Persistence: Verified');
+
   console.log('\n🎉 === ALL TESTS PASSED SUCCESSFULLY! === 🎉');
 }
 
