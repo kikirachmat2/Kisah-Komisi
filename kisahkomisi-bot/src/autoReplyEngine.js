@@ -53,7 +53,7 @@ ATURAN SANGAT KETAT:
 5. Output HANYA teks balasan langsung tanpa tanda kutip.
 `;
 
-  // 1. Coba Gemini 2.5 Flash
+  // 1. Coba Gemini 2.5 Flash (tanpa thinking tokens agar tidak kepotong)
   if (GEMINI_API_KEY) {
     try {
       const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${GEMINI_API_KEY}`, {
@@ -62,13 +62,20 @@ ATURAN SANGAT KETAT:
         signal: AbortSignal.timeout(10000),
         body: JSON.stringify({
           contents: [{ parts: [{ text: prompt }] }],
-          generationConfig: { maxOutputTokens: 100, temperature: 0.7 }
+          generationConfig: {
+            maxOutputTokens: 400,
+            temperature: 0.7,
+            thinkingConfig: { thinkingBudget: 0 }
+          }
         })
       });
       if (res.ok) {
         const data = await res.json();
-        const reply = data.candidates?.[0]?.content?.parts?.[0]?.text?.trim();
-        if (reply) return reply.replace(/^["']|["']$/g, '');
+        const text = data.candidates?.[0]?.content?.parts?.[0]?.text?.trim();
+        const reply = text ? text.replace(/^["']|["']$/g, '').trim() : '';
+        if (reply && reply.length >= 15 && reply.split(/\s+/).length >= 3) {
+          return reply;
+        }
       }
     } catch (e) {
       console.warn('[AutoReply] Gemini rate limit/error, mencoba Groq...');
@@ -88,14 +95,17 @@ ATURAN SANGAT KETAT:
         body: JSON.stringify({
           model: 'qwen/qwen3.8-27b',
           messages: [{ role: 'user', content: prompt }],
-          max_tokens: 100,
+          max_tokens: 200,
           temperature: 0.7
         })
       });
       if (res.ok) {
         const data = await res.json();
-        const reply = data.choices?.[0]?.message?.content?.trim();
-        if (reply) return reply.replace(/^["']|["']$/g, '');
+        const text = data.choices?.[0]?.message?.content?.trim();
+        const reply = text ? text.replace(/^["']|["']$/g, '').trim() : '';
+        if (reply && reply.length >= 15 && reply.split(/\s+/).length >= 3) {
+          return reply;
+        }
       }
     } catch (e) {
       console.warn('[AutoReply] Groq fallback error:', e.message);

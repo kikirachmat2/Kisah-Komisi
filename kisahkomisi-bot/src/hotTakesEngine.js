@@ -114,7 +114,11 @@ PRINSIP "THE MICRO-IMPACT LENS" (SANGAT KETAT):
         signal: AbortSignal.timeout(10000),
         body: JSON.stringify({
           contents: [{ parts: [{ text: prompt }] }],
-          generationConfig: { maxOutputTokens: 250, temperature: 0.8 }
+          generationConfig: {
+            maxOutputTokens: 600,
+            temperature: 0.8,
+            thinkingConfig: { thinkingBudget: 0 }
+          }
         })
       });
       if (res.ok) {

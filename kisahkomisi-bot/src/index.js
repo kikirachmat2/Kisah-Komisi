@@ -440,14 +440,16 @@ bot.command('post_sekarang', async (ctx) => {
 
   try {
     const parsedSlides = JSON.parse(story.slides_json);
-    const postId = await publishStoryToThreads(userId, token, {
+    const publishResult = await publishStoryToThreads(userId, token, {
       title: story.title,
       slides: parsedSlides,
       product_name: story.product_name,
       product_url: story.product_url
     });
+    const postId = typeof publishResult === 'object' ? publishResult.rootPostId : publishResult;
+    const lastId = typeof publishResult === 'object' ? publishResult.lastPostId : postId;
 
-    db.markStoryPublished(story.id, postId);
+    db.markStoryPublished(story.id, postId, lastId);
 
     safeReplyMarkdown(
       ctx,
@@ -560,13 +562,16 @@ async function executeScheduledPosting(label) {
     if (story) {
       try {
         const slides = JSON.parse(story.slides_json);
-        const postId = await publishStoryToThreads(userId, token, {
+        const publishResult = await publishStoryToThreads(userId, token, {
           title: story.title,
           slides: slides,
           product_name: story.product_name,
           product_url: story.product_url
         });
-        db.markStoryPublished(story.id, postId);
+        const postId = typeof publishResult === 'object' ? publishResult.rootPostId : publishResult;
+        const lastId = typeof publishResult === 'object' ? publishResult.lastPostId : postId;
+
+        db.markStoryPublished(story.id, postId, lastId);
         console.log(`[Scheduler] Sukses posting slot ${label} (Post ID: ${postId})`);
 
         const remainingStock = db.getQueuedStoriesCount();
@@ -593,13 +598,16 @@ async function executeScheduledPosting(label) {
           console.log(`[Scheduler] Mencoba mempublikasikan cerita cadangan #${fallbackStory.id} ("${fallbackStory.title}")...`);
           try {
             const fallbackSlides = JSON.parse(fallbackStory.slides_json);
-            const fallbackPostId = await publishStoryToThreads(userId, token, {
+            const fallbackResult = await publishStoryToThreads(userId, token, {
               title: fallbackStory.title,
               slides: fallbackSlides,
               product_name: fallbackStory.product_name,
               product_url: fallbackStory.product_url
             });
-            db.markStoryPublished(fallbackStory.id, fallbackPostId);
+            const fallbackPostId = typeof fallbackResult === 'object' ? fallbackResult.rootPostId : fallbackResult;
+            const fallbackLastId = typeof fallbackResult === 'object' ? fallbackResult.lastPostId : fallbackPostId;
+
+            db.markStoryPublished(fallbackStory.id, fallbackPostId, fallbackLastId);
             console.log(`[Scheduler] Cerita cadangan #${fallbackStory.id} sukses terbit (Post ID: ${fallbackPostId})`);
             
             await sendAdminAlert(

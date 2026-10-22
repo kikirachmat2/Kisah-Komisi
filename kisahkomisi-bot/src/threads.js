@@ -248,7 +248,11 @@ async function publishStoryToThreads(userId, accessToken, story) {
     }
   }
 
-  return rootPostId;
+  return {
+    rootPostId,
+    lastPostId: parentPostId,
+    replyIds
+  };
 }
 
 /**

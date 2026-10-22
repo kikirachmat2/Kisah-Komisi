@@ -7,6 +7,22 @@ const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
 const GROQ_API_KEY = process.env.GROQ_API_KEY;
 
 /**
+ * Validasi ketat agar teks update tidak buntung / kepotong
+ */
+function isValidBump(text) {
+  if (!text || typeof text !== 'string') return false;
+  const clean = text.trim();
+  if (clean.length < 50 || clean.length > 450) return false;
+  // Wajib punya minimal 8 kata
+  if (clean.split(/\s+/).length < 8) return false;
+  // Wajib diakhiri tanda baca lengkap (tidak boleh terpotong di tengah jalan)
+  if (!/[.!?]$/.test(clean)) return false;
+  // Tidak boleh cuma kalimat awalan
+  if (/^(update dikit|btw ada|barusan dapet|banyak yang salfok)\s*:?\s*$/i.test(clean)) return false;
+  return true;
+}
+
+/**
  * Generate 1 slide update pendek ala Kiki Rachmat (@ceritakikiii)
  * untuk menyundul kembali thread yang mulai melandai di feed For You
  */
@@ -19,20 +35,21 @@ Kamu adalah kurator cerita menfess / curhatan kehidupan nyata anak muda di Threa
 Beberapa jam lalu kamu mengunggah cerita menfess berantai berjudul:
 "${story.title}" (Topik: ${story.topic})
 
-Tugasmu: Tuliskan SATU (1) slide balasan singkat (1-2 kalimat, maksimal 180-220 karakter) sebagai "UPDATE KELANJUTAN CERITA" di bawah thread tersebut.
+Tugasmu: Tuliskan SATU (1) slide balasan singkat (1-2 kalimat utuh, panjang 80-200 karakter) sebagai "UPDATE KELANJUTAN CERITA" yang menyambung langsung di utas tersebut.
 
 Tujuan:
-Menyundul kembali postingan ke puncak algoritma feed Threads seolah-olah kamu baru saja mendapat kabar lanjutan dari pengirim cerita atau merespons reaksi seru netizen di kolom reply.
+Menyundul kembali postingan ke puncak feed Threads seolah-olah kamu baru saja mendapat kabar lanjutan dari pengirim cerita atau merespons reaksi seru netizen di kolom reply.
 
 ATURAN SANGAT KETAT:
 1. Awali dengan variasi pembuka santai: "Update dikit:", "Btw ada update lanjutan:", "Banyak yang salfok di komen:", atau "Barusan dapet kabar tambahan:".
-2. Nada bicara: Santai, manusiawi, khas tongkrongan Indonesia (contoh: "Update dikit: Ternyata si pelaku udah dipanggil HRD tadi siang dan sekarang lagi nangis-nangis di tangga darurat wkwk. Gimana menurut kalian?").
-3. DILARANG KERAS menyebut produk jualan atau menyisipkan link apapun! Murni kelanjutan cerita.
-4. Maksimal 220 karakter, jangan terlalu panjang.
-5. Output HANYA teks balasan tanpa tanda kutip.
+2. Tulis kalimat LENGKAP sampai tuntas dan diakhiri tanda baca titik (.) atau tanda tanya (?) atau tanda seru (!). DILARANG KERAS MENGGANTUNG ATAU KEPOTONG!
+3. Nada bicara: Santai, manusiawi, khas tongkrongan Indonesia (contoh: "Update dikit: Ternyata si pelaku udah dipanggil HRD tadi siang dan sekarang lagi nangis-nangis di tangga darurat wkwk. Gimana menurut kalian?").
+4. DILARANG KERAS menyebut produk jualan atau menyisipkan link apapun! Murni kelanjutan cerita.
+5. Panjang 80-200 karakter.
+6. Output HANYA teks balasan langsung tanpa tanda kutip.
 `;
 
-  // 1. Coba Gemini 2.5 Flash
+  // 1. Coba Gemini 2.5 Flash (tanpa thinking tokens agar tidak kepotong)
   if (GEMINI_API_KEY) {
     try {
       const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${GEMINI_API_KEY}`, {
@@ -41,13 +58,19 @@ ATURAN SANGAT KETAT:
         signal: AbortSignal.timeout(10000),
         body: JSON.stringify({
           contents: [{ parts: [{ text: prompt }] }],
-          generationConfig: { maxOutputTokens: 120, temperature: 0.75 }
+          generationConfig: {
+            maxOutputTokens: 600,
+            temperature: 0.75,
+            thinkingConfig: { thinkingBudget: 0 }
+          }
         })
       });
       if (res.ok) {
         const data = await res.json();
-        const reply = data.candidates?.[0]?.content?.parts?.[0]?.text?.trim();
-        if (reply) return reply.replace(/^["']|["']$/g, '');
+        const text = data.candidates?.[0]?.content?.parts?.[0]?.text?.trim();
+        const clean = text ? text.replace(/^["']|["']$/g, '').trim() : '';
+        if (isValidBump(clean)) return clean;
+        console.warn(`[ThreadBumper] Hasil Gemini tidak lolos validasi ("${clean}"), mencoba Groq...`);
       }
     } catch (e) {
       console.warn('[ThreadBumper] Gemini rate limit/error, mencoba Groq...');
@@ -67,25 +90,34 @@ ATURAN SANGAT KETAT:
         body: JSON.stringify({
           model: 'qwen/qwen3.8-27b',
           messages: [{ role: 'user', content: prompt }],
-          max_tokens: 120,
+          max_tokens: 300,
           temperature: 0.75
         })
       });
       if (res.ok) {
         const data = await res.json();
-        const reply = data.choices?.[0]?.message?.content?.trim();
-        if (reply) return reply.replace(/^["']|["']$/g, '');
+        const text = data.choices?.[0]?.message?.content?.trim();
+        const clean = text ? text.replace(/^["']|["']$/g, '').trim() : '';
+        if (isValidBump(clean)) return clean;
+        console.warn(`[ThreadBumper] Hasil Groq tidak lolos validasi ("${clean}").`);
       }
     } catch (e) {
       console.warn('[ThreadBumper] Groq fallback error:', e.message);
     }
   }
 
-  return 'Update dikit: Banyak banget yang DM nanyain kelanjutan kasus ini. Nanti kalau ada kabar baru bakal gue spill lagi di thread ini ya!';
+  // Fallback aman dan utuh jika AI error
+  const fallbacks = [
+    'Update dikit: Banyak banget yang DM nanyain kelanjutan kasus ini. Ternyata masalahnya udah mulai dimediasi sama pihak terkait tadi sore. Semoga ada solusi adil!',
+    'Btw ada update lanjutan: Katanya si pengirim cerita udah mutusin buat ambil sikap tegas setelah baca saran-saran di komen. Makasih banyak buat yang udah kasih insight!',
+    'Barusan dapet kabar tambahan: Cerita ini ternyata rame dibahas di kantor sebelah juga. Realita dunia kerja emang kadang lebih drama dari sinetron wkwk. Tetap semangat pejuang rupiah!'
+  ];
+  return fallbacks[Math.floor(Math.random() * fallbacks.length)];
 }
 
 /**
  * Mengecek dan mengeksekusi 1 bump cerdas untuk thread yang sedang melandai
+ * WAJIB reply ke last_media_id agar terbit sebagai "Add to thread" bersambung, bukan comment reply biasa.
  */
 async function executeThreadBump(userId) {
   const token = getActiveAccessToken();
@@ -94,7 +126,7 @@ async function executeThreadBump(userId) {
     return null;
   }
 
-  // Cari cerita yang terbit antara 2.5 s/d 6 jam yang lalu dan belum pernah di-bump
+  // Cari cerita yang terbit antara 2.0 s/d 6 jam yang lalu dan belum pernah di-bump
   const targetStory = db.getLatestPublishedStoryUnbumped(2.0, 6.0);
   if (!targetStory) {
     console.log('[ThreadBumper] Tidak ada thread yang memenuhi kriteria cooldown untuk di-bump saat ini.');
@@ -103,24 +135,29 @@ async function executeThreadBump(userId) {
 
   console.log(`[ThreadBumper] Mempersiapkan bump untuk Cerita #${targetStory.id}: "${targetStory.title}"...`);
 
-  // Generate narasi update
+  // Targetkan part terakhir agar Threads merendernya sebagai sambungan garis vertikal ("Add to thread")
+  const parentPostId = targetStory.last_media_id || targetStory.threads_media_id;
+  console.log(`[ThreadBumper] Target parent post untuk 'Add to thread': ${parentPostId} (Root: ${targetStory.threads_media_id})`);
+
+  // Generate narasi update utuh
   const bumpText = await generateBumpUpdate(targetStory);
 
   try {
-    // Terbitkan reply di bawah root post dari cerita tersebut
-    console.log(`[ThreadBumper] Mempublikasikan bump ke Threads (Parent: ${targetStory.threads_media_id})...`);
-    const bumpPostId = await publishTextPost(userId, token, bumpText, targetStory.threads_media_id);
+    console.log(`[ThreadBumper] Mempublikasikan sambungan bump ke Threads di bawah parent ID: ${parentPostId}...`);
+    const bumpPostId = await publishTextPost(userId, token, bumpText, parentPostId);
 
-    // Tandai di database agar tidak pernah di-bump dua kali
+    // Tandai di database agar tidak pernah di-bump dua kali dan perbarui last_media_id
     db.markStoryBumped(targetStory.id);
-    console.log(`[ThreadBumper] SUKSES! Thread #${targetStory.id} berhasil di-bump (Reply ID: ${bumpPostId})`);
+    db.updateStoryLastMediaId(targetStory.id, bumpPostId);
+    console.log(`[ThreadBumper] SUKSES! Thread #${targetStory.id} berhasil di-bump sambung (Post ID: ${bumpPostId})`);
 
     return {
       storyId: targetStory.id,
       title: targetStory.title,
       bumpText,
       bumpPostId,
-      rootMediaId: targetStory.threads_media_id
+      rootMediaId: targetStory.threads_media_id,
+      parentPostId
     };
   } catch (err) {
     console.error(`[ThreadBumper] Gagal mempublikasikan bump untuk cerita #${targetStory.id}:`, err.message);
@@ -130,5 +167,6 @@ async function executeThreadBump(userId) {
 
 module.exports = {
   executeThreadBump,
-  generateBumpUpdate
+  generateBumpUpdate,
+  isValidBump
 };

@@ -126,7 +126,7 @@ function initSchema() {
     CREATE INDEX IF NOT EXISTS idx_hot_takes_created ON hot_takes(created_at);
   `);
 
-  // Migrasi aman untuk kolom qc_score dan qc_notes jika belum ada
+  // Migrasi aman untuk kolom qc_score, qc_notes, bumped_at, dan last_media_id jika belum ada
   try {
     db.exec(`ALTER TABLE stories ADD COLUMN qc_score REAL;`);
   } catch (e) {}
@@ -136,8 +136,9 @@ function initSchema() {
   try {
     db.exec(`ALTER TABLE stories ADD COLUMN bumped_at DATETIME;`);
   } catch (e) {}
-
-  // Tabel product_bank murni dikelola lewat /tambah_produk
+  try {
+    db.exec(`ALTER TABLE stories ADD COLUMN last_media_id TEXT;`);
+  } catch (e) {}
 }
 
 initSchema();
@@ -225,12 +226,20 @@ module.exports = {
     `).all(limit);
   },
 
-  markStoryPublished: (id, threadsMediaId) => {
+  markStoryPublished: (id, threadsMediaId, lastMediaId = null) => {
     return db.prepare(`
       UPDATE stories 
-      SET status = 'published', published_at = CURRENT_TIMESTAMP, threads_media_id = ? 
+      SET status = 'published', published_at = CURRENT_TIMESTAMP, threads_media_id = ?, last_media_id = ? 
       WHERE id = ?
-    `).run(threadsMediaId, id);
+    `).run(threadsMediaId, lastMediaId || threadsMediaId, id);
+  },
+
+  updateStoryLastMediaId: (id, lastMediaId) => {
+    return db.prepare(`
+      UPDATE stories 
+      SET last_media_id = ? 
+      WHERE id = ?
+    `).run(lastMediaId, id);
   },
 
   markStoryFailed: (id, errorMessage) => {
@@ -428,7 +437,7 @@ module.exports = {
   // Thread Bumper Helpers
   getLatestPublishedStoryUnbumped: (minHoursAgo = 2.5, maxHoursAgo = 6) => {
     return db.prepare(`
-      SELECT id, title, topic, slides_json, threads_media_id, published_at
+      SELECT id, title, topic, slides_json, threads_media_id, last_media_id, published_at
       FROM stories
       WHERE status = 'published' 
         AND threads_media_id IS NOT NULL 
