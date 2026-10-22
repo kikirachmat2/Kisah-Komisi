@@ -305,6 +305,32 @@ async function deletePost(mediaId, accessToken = null) {
   return data;
 }
 
+/**
+ * Mengonversi numeric Threads Media ID menjadi Base64 shortcode URL
+ * Menghasilkan link yang valid dan bisa langsung dibuka tanpa redirect ke 'invalid_post'
+ */
+function mediaIdToShortcode(mediaId) {
+  if (!mediaId) return '';
+  try {
+    const alphabet = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_';
+    let id = BigInt(String(mediaId).trim());
+    let shortcode = '';
+    while (id > 0n) {
+      const remainder = Number(id % 64n);
+      shortcode = alphabet[remainder] + shortcode;
+      id = id / 64n;
+    }
+    return shortcode;
+  } catch (e) {
+    return mediaId;
+  }
+}
+
+function getPostUrl(mediaId, username = 'ceritakikiii') {
+  const shortcode = mediaIdToShortcode(mediaId);
+  return shortcode ? `https://www.threads.net/@${username}/post/${shortcode}` : `https://www.threads.net/@${username}`;
+}
+
 module.exports = {
   publishTextPost,
   publishStoryToThreads,
@@ -314,5 +340,7 @@ module.exports = {
   refreshThreadsToken,
   getAccountInsights,
   getMediaInsights,
-  deletePost
+  deletePost,
+  mediaIdToShortcode,
+  getPostUrl
 };

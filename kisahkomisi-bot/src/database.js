@@ -242,6 +242,15 @@ module.exports = {
     `).run(lastMediaId, id);
   },
 
+  getRecentStoryTopics: (limit = 10) => {
+    const rows = db.prepare(`
+      SELECT topic FROM stories 
+      ORDER BY id DESC 
+      LIMIT ?
+    `).all(limit);
+    return rows.map(r => r.topic).filter(Boolean);
+  },
+
   markStoryFailed: (id, errorMessage) => {
     return db.prepare(`
       UPDATE stories 
@@ -251,16 +260,26 @@ module.exports = {
   },
 
   // Product bank helper
-  getRandomProduct: (topic) => {
+  getRandomProduct: (categoriesOrTopic) => {
     let prod = null;
-    if (topic) {
+    if (Array.isArray(categoriesOrTopic) && categoriesOrTopic.length > 0) {
+      const placeholders = categoriesOrTopic.map(() => 'category LIKE ?').join(' OR ');
+      const params = categoriesOrTopic.map(c => `%${c}%`);
+      prod = db.prepare(`
+        SELECT * FROM product_bank 
+        WHERE active = 1 AND (${placeholders})
+        ORDER BY times_used ASC, RANDOM() 
+        LIMIT 1
+      `).get(...params);
+    } else if (typeof categoriesOrTopic === 'string' && categoriesOrTopic.trim()) {
       prod = db.prepare(`
         SELECT * FROM product_bank 
         WHERE active = 1 AND category LIKE ? 
         ORDER BY times_used ASC, RANDOM() 
         LIMIT 1
-      `).get(`%${topic}%`);
+      `).get(`%${categoriesOrTopic}%`);
     }
+
     if (!prod) {
       prod = db.prepare(`
         SELECT * FROM product_bank 

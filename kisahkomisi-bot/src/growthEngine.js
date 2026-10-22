@@ -64,8 +64,13 @@ async function trackAllInsights() {
     results.account = metricsMap;
     console.log(`[GrowthEngine] Account insights tersimpan untuk tanggal ${todayDate}:`, metricsMap);
   } catch (err) {
-    console.warn('[GrowthEngine] Gagal sinkronisasi account insights:', err.message);
-    results.errors.push(`Account: ${err.message}`);
+    if (err.message && (err.message.includes('API access blocked') || err.message.includes('code":200'))) {
+      console.warn('[GrowthEngine] Meta Graph API memblokir endpoint insights. Akun Meta App saat ini belum memiliki izin threads_manage_insights.');
+      results.errors.push('Permission threads_manage_insights belum aktif di Meta App.');
+    } else {
+      console.warn('[GrowthEngine] Gagal sinkronisasi account insights:', err.message);
+      results.errors.push(`Account: ${err.message}`);
+    }
   }
 
   // 2. Ambil & Simpan Post Insights untuk 25 cerita terbaru yang sudah tayang

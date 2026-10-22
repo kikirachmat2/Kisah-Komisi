@@ -1,8 +1,9 @@
 const db = require('./database');
-const { generateStory } = require('./aiStory');
+const { generateStory, TOPICS } = require('./aiStory');
 
 const GROQ_API_KEY = process.env.GROQ_API_KEY;
 const OPENROUTER_API_KEY = process.env.OPENROUTER_API_KEY;
+const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
 
 // Mutex lock agar proses pengisian stok tidak tumpang tindih
 let isReplenishing = false;
@@ -99,10 +100,10 @@ Syarat Lolos (approved = true): total_score >= 7.5 dan realism >= 7.0. Jika terd
           'Authorization': `Bearer ${OPENROUTER_API_KEY}`,
           'Content-Type': 'application/json'
         },
-        signal: AbortSignal.timeout(8000),
+        signal: AbortSignal.timeout(10000),
         body: JSON.stringify({
-          model: 'nvidia/nemotron-3.5-lightning:free',
-          messages: [{ role: 'user', content: evaluationPrompt + '\n\nBalas HANYA string JSON.' }],
+          model: 'openrouter/free',
+          messages: [{ role: 'user', content: evaluationPrompt + '\n\nBalas HANYA string JSON tanpa markdown.' }],
           temperature: 0.3
         })
       });
@@ -114,7 +115,7 @@ Syarat Lolos (approved = true): total_score >= 7.5 dan realism >= 7.0. Jika terd
           const clean = content.replace(/```json/g, '').replace(/```/g, '').trim();
           const parsed = JSON.parse(clean);
           return {
-            provider: 'OpenRouter (nemotron)',
+            provider: 'OpenRouter (free)',
             approved: Boolean(parsed.approved && parsed.total_score >= 7.5),
             total_score: Number(parsed.total_score) || 8.0,
             scores: parsed.scores || {},
@@ -124,6 +125,41 @@ Syarat Lolos (approved = true): total_score >= 7.5 dan realism >= 7.0. Jika terd
       }
     } catch (e) {
       console.warn('[EditorialBoard] OpenRouter QC error:', e.message);
+    }
+  }
+
+  // 3. Fallback QC via Gemini Flash (Cadangan handal jika Groq & OpenRouter limit)
+  if (GEMINI_API_KEY) {
+    try {
+      const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${GEMINI_API_KEY}`;
+      const geminiRes = await fetch(url, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        signal: AbortSignal.timeout(10000),
+        body: JSON.stringify({
+          contents: [{ parts: [{ text: evaluationPrompt }] }],
+          generationConfig: {
+            responseMimeType: 'application/json',
+            temperature: 0.2
+          }
+        })
+      });
+      if (geminiRes.ok) {
+        const gemData = await geminiRes.json();
+        const gemText = gemData.candidates?.[0]?.content?.parts?.[0]?.text;
+        if (gemText) {
+          const parsed = JSON.parse(gemText.trim());
+          return {
+            provider: 'Gemini (2.5-flash QC)',
+            approved: Boolean(parsed.approved && parsed.total_score >= 7.5),
+            total_score: Number(parsed.total_score) || 8.0,
+            scores: parsed.scores || {},
+            curator_note: parsed.curator_note || 'Lolos kurasi standar editorial.'
+          };
+        }
+      }
+    } catch (e) {
+      console.warn('[EditorialBoard] Gemini QC error:', e.message);
     }
   }
 
@@ -147,14 +183,24 @@ Syarat Lolos (approved = true): total_score >= 7.5 dan realism >= 7.0. Jika terd
  * Menghasilkan 1 cerita terkurasi yang telah lolos QC Dewan Redaksi.
  * Mengulang maksimal 2 kali bila draf awal ditolak.
  */
-async function produceCuratedStory() {
+async function produceCuratedStory(forcedTopic = null) {
+  let targetTopic = forcedTopic;
+  if (!targetTopic) {
+    const recentTopics = db.getRecentStoryTopics ? db.getRecentStoryTopics(12) : [];
+    // Prioritaskan topik yang belum pernah dipakai dalam 12 postingan terakhir
+    const freshTopics = TOPICS.filter(t => !recentTopics.some(rt => rt.toLowerCase().includes(t.toLowerCase().slice(0, 20))));
+    if (freshTopics.length > 0) {
+      targetTopic = freshTopics[Math.floor(Math.random() * freshTopics.length)];
+    }
+  }
+
   const maxAttempts = 2;
   let lastDraft = null;
   let lastQC = null;
 
   for (let attempt = 1; attempt <= maxAttempts; attempt++) {
     console.log(`[EditorialBoard] Memproduksi draf cerita (Percobaan ${attempt}/${maxAttempts})...`);
-    const draft = await generateStory();
+    const draft = await generateStory(targetTopic);
     const qc = await evaluateStoryWithQC(draft);
 
     console.log(`[EditorialBoard] Hasil QC (${qc.provider}): Skor ${qc.total_score} | Approved: ${qc.approved}`);

@@ -9,7 +9,10 @@ const TOPICS_CORPORATE = [
   'Trik Licik HRD Nahan Kenaikan Gaji (Dikasih tanggung jawab manajerial tapi status staf dan gaji tetap UMR)',
   'Bos Narsis & Playing Victim (Kesalahan manajer tapi tim bawah yang disuruh nanggung di depan direksi)',
   'Cuti Tahunan Ditolak Alasan Kekeluargaan (Hak cuti dihanguskan sepihak dengan dalih loyalitas perusahaan)',
-  'Spill Gaji Karyawan Berujung Dikucilkan (Karyawan baru gaji lebih tinggi dari senior yang loyal 4 tahun)'
+  'Spill Gaji Karyawan Berujung Dikucilkan (Karyawan baru gaji lebih tinggi dari senior yang loyal 4 tahun)',
+  'Budaya Resign Dianggap Khianat (Karyawan loyal ajukan resign baik-baik tapi surat paklaring dipersulit HRD)',
+  'Meeting di Luar Jam Kerja Tanpa Uang Lembur (Bos hobi chat WhatsApp jam 10 malam minta data dadakan buat besok pagi)',
+  'Promosi Kosong Tanpa Kenaikan Gaji (Dikasih titel Lead/Supervisor baru tapi pas ditanya slip gaji katanya nunggu evaluasi tahun depan)'
 ];
 
 const TOPICS_INTIMATE_MENFESS = [
@@ -17,14 +20,19 @@ const TOPICS_INTIMATE_MENFESS = [
   'Nafkah & Uang Dapur Timpang (Suami pelit jatah belanja istri tapi royal ke keluarga/teman tongkrongannya)',
   'Mertua Ikut Campur Privasi Kamar (Mertua suka masuk kamar tanpa ketuk dan mengomentari cara ngurus rumah)',
   'Pasangan Perhitungan Ekstrem (Bensin dihitung bagi dua sampai serupiah, hitung-hitungan makan di warteg)',
-  'Hubungan Menggantung Bertahun-tahun (Pacaran 6 tahun menemani dari nol tapi pas ditanya nikah selalu ngeles nunggu mapan)'
+  'Hubungan Menggantung Bertahun-tahun (Pacaran 6 tahun menemani dari nol tapi pas ditanya nikah selalu ngeles nunggu mapan)',
+  'Dilema Pasangan Minim Inisiatif (Semua keputusan dari makan apa sampai rencana masa depan harus pihak perempuan yang mikir)',
+  'Pasangan Selalu Playing Victim (Tiap ada konflik selalu balik nyalahin pasangan sampai merasa bersalah sendiri)'
 ];
 
 const TOPICS_SOCIAL_DILEMMA = [
   'Tetangga Parkir Mobil Depan Pagar (Garasi dijadikan gudang, mobil parkir nutupin akses jalan warga komplek)',
   'Teman Pinjam Uang Pura-pura Amnesia (Ditagih beralasan lagi susah tapi update story liburan dan makan enak)',
   'Drama Kamar Kosan & Teman Sekamar (Bawa pacar nginep tanpa izin, kasur dipakai saat pemilik lagi lembur)',
-  'Drama Token Listrik Jebol di Kontrakan (Teman sekamar nyalain AC 24 jam tapi maunya patungan listrik rata)'
+  'Drama Token Listrik Jebol di Kontrakan (Teman sekamar nyalain AC 24 jam tapi maunya patungan listrik rata)',
+  'Teman Tongkrongan FOMO Gaya Hidup (Nongkrong di cafe mahal tiap minggu padahal cicilan paylater numpuk)',
+  'Arisan Komplek Berujung Renggang (Uang arisan macet di bendahara pas ditagih malah bawa-bawa urusan keluarga)',
+  'Teman Kantor Pinjam Barang Ga Balik (Minjem charger dan earphone berminggu-minggu pas diminta balik malah sinis)'
 ];
 
 const TOPICS = [
@@ -68,14 +76,96 @@ function appendSubId(urlStr, subIdOptions = 'threads_ceritakiki') {
 function sanitizeText(str) {
   if (!str) return '';
   return str
-    // Hapus penomoran di awal kalimat seperti [Part 1], Part 1:, Slide 1:
-    .replace(/^(\[|\()?\s*(part|slide|bagian)\s*\d+\s*(\]|\))?\s*[:\-]?\s*/gi, '')
+    // Hapus penomoran di awal kalimat seperti [Part 1], Part 1:, Slide 1:, 1.
+    .replace(/^(\[|\()?\s*(part|slide|bagian)?\s*\d+\s*(\]|\))?\s*[:\.\-]?\s*/gi, '')
     .replace(/^\*\*[^*]+\*\*\s*[:\-]?\s*/g, '')
-    // Hapus penomoran pecahan di akhir kalimat seperti 1/5, 2/5, 3/5 (karena Threads sudah punya badge UI native)
-    .replace(/\s*\b\d+\/\d+\b\.?$/gi, '')
+    // Hapus penomoran pecahan di akhir atau tengah kalimat seperti 1/5, (1/5), [1/5], 2/5, 3/5
+    .replace(/(\(|\s|\[)\d+\/\d+(\)|\s|\]|\.)*$/gi, '')
+    .replace(/\s*\b\d+\/\d+\b\.?/gi, '')
     // Pertahankan emoji warganet yang pasrah/relatable (🫠, 🙃, 😭, 💀) tapi bersihkan emoji spam beruntun
     .replace(/([\u{1F600}-\u{1F64F}\u{1F300}-\u{1F5FF}\u{1F680}-\u{1F6FF}]){3,}/gu, '$1')
     .trim();
+}
+
+/**
+ * Membersihkan nama produk yang panjang / berantakan dari Shopee menjadi nama ringkas manusiawi
+ */
+function cleanProductName(rawName) {
+  if (!rawName) return 'barang ini';
+  return rawName
+    .replace(/^(\[.*?\]|\(.*?\))\s*/g, '')
+    .replace(/\s*-\s*(Official|Original|Garansi).*$/i, '')
+    .replace(/\b(100%|Original|Termurah|Terlaris|Promo|Diskon|Gratis Ongkir|Bisa COD)\b/gi, '')
+    .replace(/\s+/g, ' ')
+    .trim()
+    .slice(0, 45);
+}
+
+/**
+ * Menghasilkan copy rekomendasi produk yang organik, realistis, dan relevan dengan konteks kehidupan
+ * Mencegah klaim konyol seperti menaruh talenan atau tanah 10kg di meja kantor.
+ */
+function generateContextualAd(product, trackedUrl) {
+  if (!product || !trackedUrl) return '';
+  const cat = (product.category || '').toLowerCase();
+  const name = cleanProductName(product.name);
+
+  // Kategori: Botol Minum / Tumbler / Gaya Hidup
+  if (cat.includes('botol') || cat.includes('tumbler') || name.toLowerCase().includes('tumbler') || name.toLowerCase().includes('termos')) {
+    const templates = [
+      `Btw di tengah pusingnya kerjaan dan drama kantor, hal kecil yang bikin gue tetep waras itu sedia tumbler air es di meja biar ga dehidrasi pas lembur: ${trackedUrl}. Beneran nahan dingin seharian.`,
+      `Btw buat yang kerjanya di ruangan AC seharian dan sering lupa minum air, gue selalu bawa tumbler ini di tas kantor: ${trackedUrl}. Lumayan banget biar ga gampang lemes.`
+    ];
+    return templates[Math.floor(Math.random() * templates.length)];
+  }
+
+  // Kategori: Elektronik & Gadget (Charger, Kabel, Kipas)
+  if (cat.includes('elektronik') || cat.includes('gadget') || name.toLowerCase().includes('charger') || name.toLowerCase().includes('kabel') || name.toLowerCase().includes('kipas')) {
+    const templates = [
+      `Btw buat yang seharian mobile atau sering lembur dan baterai HP sekarat mulu, charger fast charging kayak gini lifesaver banget di tas kerja: ${trackedUrl}. Daripada minjem sana-sini.`,
+      `Btw daripada pusing kabel kusut atau nunggu ngecas berjam-jam pas lagi dikejar deadline kantor, gue andelin ini di meja: ${trackedUrl}. Ngecas cepet dan ga ribet.`
+    ];
+    return templates[Math.floor(Math.random() * templates.length)];
+  }
+
+  // Kategori: Skincare & Grooming / Perawatan Diri
+  if (cat.includes('skincare') || cat.includes('grooming') || cat.includes('perawatan') || name.toLowerCase().includes('wash') || name.toLowerCase().includes('deodorant') || name.toLowerCase().includes('serum')) {
+    const templates = [
+      `Btw seharian dihajar stres kerjaan sama polusi jalanan komuter, muka kuyu jangan sampai dibiarin. Gue biasa cuci muka pake ini pas istirahat biar seger lagi: ${trackedUrl}.`,
+      `Btw di tengah capeknya tuntutan kerja, ngerawat diri sendiri itu bentuk self-respect paling realistis. Buat daily care yang ga ribet pas ngantor: ${trackedUrl}.`
+    ];
+    return templates[Math.floor(Math.random() * templates.length)];
+  }
+
+  // Kategori: Parfum & Wewangian
+  if (cat.includes('parfum') || cat.includes('wewangian')) {
+    const templates = [
+      `Btw salah satu booster mood kerja paling ampuh pas lagi pusing itu aroma yang calming. Buat yang nyari wewangian subtle dan awet buat ngantor: ${trackedUrl}.`,
+      `Btw di tengah hecticnya meeting dan rutinitas kantor, wangi yang seger tuh ngaruh banget ke rasa percaya diri. Yang ini lumayan oke buat daily: ${trackedUrl}.`
+    ];
+    return templates[Math.floor(Math.random() * templates.length)];
+  }
+
+  // Kategori: Camilan & Minuman
+  if (cat.includes('camilan') || cat.includes('makanan') || cat.includes('teh') || cat.includes('lemon')) {
+    const templates = [
+      `Btw buat nemenin fokus di depan laptop atau ngusir ngantuk pas jam rawan siang di kantor, stok minuman/camilan ini lumayan bikin melek: ${trackedUrl}.`,
+      `Btw pas lagi mumet ngerjain revisian malam hari, yang paling ngebantu ya asupan yang seger-seger kayak gini di meja: ${trackedUrl}.`
+    ];
+    return templates[Math.floor(Math.random() * templates.length)];
+  }
+
+  // Kategori: Rumah Tangga & Kosan (Tissue, Gantungan, Keset, dll.)
+  if (cat.includes('kosan') || cat.includes('rumah')) {
+    const templates = [
+      `Btw buat anak kos atau yang tinggal di kontrakan dan butuh barang esensial biar kamar ga berantakan: ${trackedUrl}. Simple tapi fungsional banget.`,
+      `Btw salah satu investasi kecil buat kenyamanan tempat istirahat setelah seharian cape kerja di luar: ${trackedUrl}.`
+    ];
+    return templates[Math.floor(Math.random() * templates.length)];
+  }
+
+  // Fallback netral & manusiawi
+  return `Btw buat yang lagi cari rekomendasi barang fungsional buat nemenin rutinitas harian biar lebih praktis: ${trackedUrl}. Lumayan kepake banget.`;
 }
 
 /**
@@ -163,7 +253,14 @@ async function generateStory(forcedTopic = null) {
   else if (currentHour < 17) slotTag = 'siang';
 
   // Pilih produk affiliate HANYA jika bukan Single Menfess
-  const product = (!isSingleMenfess) ? db.getRandomProduct() : null;
+  let product = null;
+  if (!isSingleMenfess) {
+    let relevantCategories = ['Elektronik & Gadget', 'Gaya Hidup & Botol', 'Skincare & Perawatan', 'Skincare Pria', 'Parfum & Wewangian', 'Camilan & Makanan'];
+    if (categoryGroup === 'social') {
+      relevantCategories = ['Rumah Tangga & Kosan', 'Gaya Hidup & Botol', 'Elektronik & Gadget', 'Camilan & Makanan'];
+    }
+    product = db.getRandomProduct(relevantCategories);
+  }
   const themeHint = product ? getThematicVibe(product.category) : 'realitas hidup pekerja dan anak muda';
 
   let prompt = '';
@@ -355,8 +452,8 @@ Keluarkan HANYA JSON:
         sub_id4: product.id ? `p${product.id}` : undefined
       });
 
-      // Template solusi fungsional (bukan iklan basi)
-      const contextualAd = `Btw buat yang sering ngalamin capek lembur atau pusing kerjaan kayak gini, gue selalu sedia ${product.name} ini di meja kantor: ${trackedProductUrl}. Beneran ngebantu biar ga gampang drop.`;
+      // Template solusi fungsional cerdas & kontekstual sesuai kategori produk riil
+      const contextualAd = generateContextualAd(product, trackedProductUrl);
 
       // Susun 5 part: Part 1, Part 2, Part 3, Solusi Part 4, Debat Part 5
       finalSlides = [
@@ -370,6 +467,15 @@ Keluarkan HANYA JSON:
       finalSlides = cleanParts;
     }
   }
+
+  // Pastikan setiap slide aman di bawah batas 485 karakter Meta Threads
+  finalSlides = finalSlides.map(slide => {
+    const s = (slide || '').trim();
+    if (s.length > 485) {
+      return s.substring(0, 480) + '...';
+    }
+    return s;
+  });
 
   return {
     title: sanitizeText(parsed.title),

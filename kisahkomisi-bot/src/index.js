@@ -12,7 +12,8 @@ const {
   getPublishingLimit, 
   getActiveAccessToken, 
   refreshThreadsToken,
-  deletePost
+  deletePost,
+  getPostUrl
 } = require('./threads');
 const { runAutoEngagementScan } = require('./autoReplyEngine');
 const { executeThreadBump } = require('./threadBumper');
@@ -575,7 +576,7 @@ async function executeScheduledPosting(label) {
         console.log(`[Scheduler] Sukses posting slot ${label} (Post ID: ${postId})`);
 
         const remainingStock = db.getQueuedStoriesCount();
-        const postLink = `https://www.threads.net/@ceritakikiii/post/${postId}`;
+        const postLink = getPostUrl(postId);
         await sendAdminAlert(
           `🎉 *BERHASIL AUTO-POSTING KE THREADS!*\n\n` +
           `⏰ *Slot*: ${label}\n` +
@@ -798,7 +799,7 @@ async function runScheduledThreadBump(slotLabel) {
   try {
     const res = await executeThreadBump(userId);
     if (res) {
-      const link = `https://www.threads.net/@ceritakikiii/post/${res.rootMediaId}`;
+      const link = getPostUrl(res.rootMediaId);
       await sendAdminAlert(
         `🚀 *[Thread Bumper] Post Berhasil Disundul Ulang!*\n\n` +
         `📖 *Cerita*: ${res.title}\n` +
@@ -840,7 +841,7 @@ async function runScheduledHotTake(slotLabel) {
   try {
     const res = await executeHotTake(userId, slotLabel);
     if (res) {
-      const link = `https://www.threads.net/@ceritakikiii/post/${res.mediaId}`;
+      const link = getPostUrl(res.mediaId);
       await sendAdminAlert(
         `⚡ *[Hot Take Terbit]* Kiki baru saja mengunggah opini santai di Threads:\n\n` +
         `"${res.postText}"\n\n` +
