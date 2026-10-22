@@ -6,6 +6,7 @@ const { publishTextPost, getActiveAccessToken } = require('./threads');
 const THREADS_API_BASE = 'https://graph.threads.net/v1.0';
 const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
 const GROQ_API_KEY = process.env.GROQ_API_KEY;
+const OPENROUTER_API_KEY = process.env.OPENROUTER_API_KEY;
 
 // Batas aman interaksi Meta Threads
 const MAX_DAILY_REPLIES = 10;
@@ -109,6 +110,36 @@ ATURAN SANGAT KETAT:
       }
     } catch (e) {
       console.warn('[AutoReply] Groq fallback error:', e.message);
+    }
+  }
+
+  // 3. Fallback ke OpenRouter (Free tier)
+  if (OPENROUTER_API_KEY) {
+    try {
+      const res = await fetch('https://openrouter.ai/api/v1/chat/completions', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${OPENROUTER_API_KEY}`
+        },
+        signal: AbortSignal.timeout(12000),
+        body: JSON.stringify({
+          model: 'openrouter/free',
+          messages: [{ role: 'user', content: prompt }],
+          max_tokens: 250,
+          temperature: 0.7
+        })
+      });
+      if (res.ok) {
+        const data = await res.json();
+        const text = data.choices?.[0]?.message?.content?.trim();
+        const reply = text ? text.replace(/^["']|["']$/g, '').trim() : '';
+        if (reply && reply.length >= 15 && reply.split(/\s+/).length >= 3) {
+          return reply;
+        }
+      }
+    } catch (e) {
+      console.warn('[AutoReply] OpenRouter fallback error:', e.message);
     }
   }
 

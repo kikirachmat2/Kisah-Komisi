@@ -5,6 +5,7 @@ const { publishTextPost, getActiveAccessToken } = require('./threads');
 
 const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
 const GROQ_API_KEY = process.env.GROQ_API_KEY;
+const OPENROUTER_API_KEY = process.env.OPENROUTER_API_KEY;
 
 /**
  * Validasi ketat agar teks update tidak buntung / kepotong
@@ -103,6 +104,35 @@ ATURAN SANGAT KETAT:
       }
     } catch (e) {
       console.warn('[ThreadBumper] Groq fallback error:', e.message);
+    }
+  }
+
+  // 3. Fallback ke OpenRouter (Free tier)
+  if (OPENROUTER_API_KEY) {
+    try {
+      const res = await fetch('https://openrouter.ai/api/v1/chat/completions', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${OPENROUTER_API_KEY}`
+        },
+        signal: AbortSignal.timeout(12000),
+        body: JSON.stringify({
+          model: 'openrouter/free',
+          messages: [{ role: 'user', content: prompt }],
+          max_tokens: 300,
+          temperature: 0.75
+        })
+      });
+      if (res.ok) {
+        const data = await res.json();
+        const text = data.choices?.[0]?.message?.content?.trim();
+        const clean = text ? text.replace(/^["']|["']$/g, '').trim() : '';
+        if (isValidBump(clean)) return clean;
+        console.warn(`[ThreadBumper] Hasil OpenRouter tidak lolos validasi ("${clean}").`);
+      }
+    } catch (e) {
+      console.warn('[ThreadBumper] OpenRouter fallback error:', e.message);
     }
   }
 

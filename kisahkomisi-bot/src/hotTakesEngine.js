@@ -5,6 +5,7 @@ const { publishTextPost, getActiveAccessToken } = require('./threads');
 
 const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
 const GROQ_API_KEY = process.env.GROQ_API_KEY;
+const OPENROUTER_API_KEY = process.env.OPENROUTER_API_KEY;
 
 // Blacklist ketat untuk berita/isu terlarang
 const UNSAFE_NEWS_KEYWORDS = [
@@ -159,6 +160,35 @@ PRINSIP "THE MICRO-IMPACT LENS" (SANGAT KETAT):
       }
     } catch (e) {
       console.warn('[HotTakes] Groq fallback error:', e.message);
+    }
+  }
+
+  // 3. Fallback ke OpenRouter (Free tier)
+  if (OPENROUTER_API_KEY) {
+    try {
+      const res = await fetch('https://openrouter.ai/api/v1/chat/completions', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${OPENROUTER_API_KEY}`
+        },
+        signal: AbortSignal.timeout(12000),
+        body: JSON.stringify({
+          model: 'openrouter/free',
+          messages: [{ role: 'user', content: prompt }],
+          max_tokens: 300,
+          temperature: 0.8
+        })
+      });
+      if (res.ok) {
+        const data = await res.json();
+        const text = data.choices?.[0]?.message?.content?.trim();
+        const clean = text ? text.replace(/^["']|["']$/g, '').trim() : '';
+        if (isValidHotTake(clean)) return clean;
+        console.warn(`[HotTakes] Hasil OpenRouter tidak lolos validasi ("${clean}")`);
+      }
+    } catch (e) {
+      console.warn('[HotTakes] OpenRouter fallback error:', e.message);
     }
   }
 

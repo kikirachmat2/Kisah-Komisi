@@ -297,8 +297,35 @@ Keluarkan HANYA JSON:
     }
   }
 
+  // Fallback ke OpenRouter (Free tier) jika Gemini dan Groq keduanya limit
+  if (!rawText && process.env.OPENROUTER_API_KEY) {
+    try {
+      console.log('[AI] Menggunakan OpenRouter (openrouter/free) sebagai cadangan lapis ke-3 cerita...');
+      const orRes = await fetch('https://openrouter.ai/api/v1/chat/completions', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${process.env.OPENROUTER_API_KEY}`,
+          'Content-Type': 'application/json'
+        },
+        signal: AbortSignal.timeout(25000),
+        body: JSON.stringify({
+          model: 'openrouter/free',
+          messages: [{ role: 'user', content: prompt + '\n\nKeluarkan HANYA JSON persis sesuai format tanpa markdown.' }],
+          response_format: { type: 'json_object' },
+          temperature: 0.75
+        })
+      });
+      if (orRes.ok) {
+        const orJson = await orRes.json();
+        rawText = orJson.choices?.[0]?.message?.content;
+      }
+    } catch (e) {
+      console.warn('[AI] Fallback OpenRouter gagal:', e.message);
+    }
+  }
+
   if (!rawText) {
-    throw new Error('Semua AI provider sedang sibuk. Silakan coba lagi.');
+    throw new Error('Semua AI provider (Gemini, Groq, OpenRouter) sedang sibuk. Silakan coba lagi.');
   }
 
   const cleanJson = rawText.replace(/```json/g, '').replace(/```/g, '').trim();
