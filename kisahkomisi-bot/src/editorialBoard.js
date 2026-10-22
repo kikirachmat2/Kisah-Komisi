@@ -32,7 +32,7 @@ ${slides.map((s, idx) => `[Part ${idx + 1}]: ${s}`).join('\n\n')}
 KRITERIA PENILAIAN (Skala 1 - 10):
 1. realism_score: Apakah ini masalah nyata yang dialami orang dewasa/pekerja Indonesia (seperti magang, lembur, PP 35/2021, uang dapur, ranjang pasutri, kosan)? TOLAK KERAS cerita fiktif sinetron/Wattpad (seperti peramal hantu, melodrama berlebihan, noda lipstik ala sinetron).
 2. human_tone_score: Apakah gaya bahasa 100% natural warganet Threads Indonesia (lu-gue/aku-kamu, istilah nyata seperti HB/bgt/ngadep)? TOLAK jika ada bau klise AI (seperti "tidak disangka-sangka", "pada akhirnya aku menyadari").
-3. format_pacing_score: Apakah alur ringkas dan padat (4-5 slide dengan nomor 1/5 di akhir, atau 1 slide curhat murni)?
+3. format_pacing_score: Apakah alur ringkas dan padat (4-5 slide teks bersih tanpa nomor manual, atau 1 slide curhat murni)?
 4. affiliate_score: Jika ada link, apakah disisipkan wajar sebagai alat bantu/solusi praktis (bukan iklan template)? Jika tanpa link, beri nilai 10.
 5. debate_score: Apakah bagian akhir memancing netizen untuk berdebat atau curhat balik di kolom reply?
 

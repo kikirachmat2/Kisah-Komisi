@@ -64,13 +64,15 @@ function appendSubId(urlStr, subIdOptions = 'threads_ceritakiki') {
   }
 }
 
-// Filter teks manusiawi: membersihkan label bot di awal tapi menjaga tag penomoran alami di akhir (1/5)
+// Filter teks manusiawi: membersihkan label bot di awal dan penomoran pecahan duplikat di akhir (1/5)
 function sanitizeText(str) {
   if (!str) return '';
   return str
     // Hapus penomoran di awal kalimat seperti [Part 1], Part 1:, Slide 1:
     .replace(/^(\[|\()?\s*(part|slide|bagian)\s*\d+\s*(\]|\))?\s*[:\-]?\s*/gi, '')
     .replace(/^\*\*[^*]+\*\*\s*[:\-]?\s*/g, '')
+    // Hapus penomoran pecahan di akhir kalimat seperti 1/5, 2/5, 3/5 (karena Threads sudah punya badge UI native)
+    .replace(/\s*\b\d+\/\d+\b\.?$/gi, '')
     // Pertahankan emoji warganet yang pasrah/relatable (🫠, 🙃, 😭, 💀) tapi bersihkan emoji spam beruntun
     .replace(/([\u{1F600}-\u{1F64F}\u{1F300}-\u{1F5FF}\u{1F680}-\u{1F6FF}]){3,}/gu, '$1')
     .trim();
@@ -206,19 +208,16 @@ Konteks Masalah: ${themeHint}
 STANDAR GAYA PENULISAN (PERSIS GAYA @adabangwira & @zialaava):
 1. PART 1 (Hook Realitas / Dialog Nyata):
    - Tanpa basa-basi! Langsung sajikan dialog tajam bos vs karyawan, atau pengamatan nyata di kantor/lingkungan.
-   - Contoh gaya: "Di kantor gue ada anak magang. Udah 3 bulan, diperpanjang lagi 3 bulan. Dia nolak dan minta kepastian: diangkat officer atau resign. 1/5" atau "Manajer: Jam kerja Senin sampai Sabtu, jam 8 sampai 5 ya. Karyawan: Itu 48 jam seminggu, Pak. 1/5"
-   - Di ujung kalimat WAJIB tulis nomor "1/5".
+   - Contoh gaya: "Di kantor gue ada anak magang. Udah 3 bulan, diperpanjang lagi 3 bulan. Dia nolak dan minta kepastian: diangkat officer atau resign." atau "Manajer: Jam kerja Senin sampai Sabtu, jam 8 sampai 5 ya. Karyawan: Itu 48 jam seminggu, Pak."
 2. PART 2 (Realitas / Aturan / Fakta di Balik Kejadian):
    - Bongkar fakta/aturan sebenarnya. Boleh sebut aturan riil seperti PP 35/2021 tentang batas kerja 40 jam atau logika gaji/tanggung jawab yang timpang.
-   - Di ujung kalimat WAJIB tulis nomor "2/5".
 3. PART 3 (Opini Kritis & Insight Tajam):
    - Penjelasan kenapa tindakan tersebut merugikan atau bagaimana pekerja harus bersikap.
-   - Di ujung kalimat WAJIB tulis nomor "3/5".
 4. PART 4 (Pertanyaan Dilema Penutup):
-   - Pertanyaan yang memancing perdebatan di kolom reply: "Kalau kalian di posisi ini, mending speak-up atau cari aman sambil cari loker lain? 5/5"
-   - Di ujung kalimat WAJIB tulis nomor "5/5".
+   - Pertanyaan yang memancing perdebatan di kolom reply: "Kalau kalian di posisi ini, mending speak-up atau cari aman sambil cari loker lain?"
 
-PENTING:
+PENTING (ATURAN TEKS BERSIH):
+- DILARANG MENGETIK ANGKA PENOMORAN seperti "1/5", "2/5", "[Part 1]", "1.", dll di dalam teks! Aplikasi Threads sudah otomatis memberi badge nomor thread secara native.
 - DILARANG menggunakan kata-kata AI klise seperti "tidak disangka-sangka", "pada akhirnya saya menyadari", "sangat disayangkan".
 - Gunakan bahasa manusia yang cerdas, dingin, observatif, dan relatable.
 
@@ -227,10 +226,10 @@ Keluarkan HANYA JSON:
   "title": "Judul Utas Tajam (Maksimal 6-8 kata)",
   "topic": "${topic}",
   "story_parts": [
-    "Part 1 dengan dialog/kejadian nyata... 1/5",
-    "Part 2 dengan aturan/fakta lapangan... 2/5",
-    "Part 3 opini tajam & logika... 3/5",
-    "Part 4 pertanyaan debat warganet... 5/5"
+    "Part 1 dengan dialog/kejadian nyata tanpa angka nomor...",
+    "Part 2 dengan aturan/fakta lapangan tanpa angka nomor...",
+    "Part 3 opini tajam & logika tanpa angka nomor...",
+    "Part 4 pertanyaan debat warganet tanpa angka nomor..."
   ]
 }
 `;
@@ -330,7 +329,7 @@ Keluarkan HANYA JSON:
       });
 
       // Template solusi fungsional (bukan iklan basi)
-      const contextualAd = `Btw buat yang sering ngalamin capek lembur atau pusing kerjaan kayak gini, gue selalu sedia ${product.name} ini di meja kantor: ${trackedProductUrl}. Beneran ngebantu biar ga gampang drop. 4/5`;
+      const contextualAd = `Btw buat yang sering ngalamin capek lembur atau pusing kerjaan kayak gini, gue selalu sedia ${product.name} ini di meja kantor: ${trackedProductUrl}. Beneran ngebantu biar ga gampang drop.`;
 
       // Susun 5 part: Part 1, Part 2, Part 3, Solusi Part 4, Debat Part 5
       finalSlides = [
