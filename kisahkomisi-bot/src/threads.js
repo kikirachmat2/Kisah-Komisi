@@ -72,7 +72,8 @@ async function publishTextPost(userId, accessToken, text, replyToId = null) {
   // Hard limit 500 karakter Meta Threads, amankan di max 485 karakter
   const safeText = text.length > 490 ? text.substring(0, 485) + '...' : text;
 
-  const createContainerUrl = `${THREADS_API_BASE}/${userId}/threads`;
+  const effectiveUserId = userId || process.env.THREADS_USER_ID || db.getSetting('THREADS_USER_ID') || '28712871241704878';
+  const createContainerUrl = `${THREADS_API_BASE}/${effectiveUserId}/threads`;
   const payload = {
     media_type: 'TEXT',
     text: safeText,
