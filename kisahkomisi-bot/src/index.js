@@ -208,6 +208,19 @@ bot.command('refresh_token', async (ctx) => {
   }
 });
 
+// Command: /set_token <token>
+bot.command('set_token', async (ctx) => {
+  const parts = ctx.message.text.split(/\s+/).filter(Boolean);
+  const newToken = parts[1];
+  if (!newToken) {
+    return safeReplyMarkdown(ctx, '⚠️ Masukkan access token Threads yang baru.\nContoh: `/set_token THAAY...`');
+  }
+
+  db.setSetting('THREADS_ACCESS_TOKEN', newToken);
+  db.setSetting('THREADS_TOKEN_REFRESHED_AT', new Date().toISOString());
+  await safeReplyMarkdown(ctx, '✅ *Access Token Threads berhasil diperbarui di database!*\n\nCoba ketik `/status` atau `/post_sekarang` untuk memverifikasi.');
+});
+
 // Command: /hapus_post <mediaId>
 bot.command('hapus_post', async (ctx) => {
   const parts = ctx.message.text.split(' ').filter(Boolean);
