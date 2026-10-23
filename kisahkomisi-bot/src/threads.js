@@ -249,10 +249,14 @@ async function publishStoryToThreads(userId, accessToken, story) {
     }
   }
 
+  // Ambil official permalink langsung dari Meta Graph API agar URL 100% valid
+  const officialPermalink = await fetchPostPermalink(rootPostId, tokenToUse);
+
   return {
     rootPostId,
     lastPostId: parentPostId,
-    replyIds
+    replyIds,
+    permalink: officialPermalink || `https://www.threads.net/@ceritakikiii`
   };
 }
 
@@ -307,6 +311,25 @@ async function deletePost(mediaId, accessToken = null) {
 }
 
 /**
+ * Mengambil official permalink postingan langsung dari Meta Threads Graph API
+ */
+async function fetchPostPermalink(mediaId, accessToken = null) {
+  if (!mediaId) return null;
+  const tokenToUse = getActiveAccessToken() || accessToken;
+  if (!tokenToUse) return null;
+  try {
+    const res = await fetch(`${THREADS_API_BASE}/${mediaId}?fields=permalink&access_token=${tokenToUse}`);
+    if (res.ok) {
+      const data = await res.json();
+      if (data.permalink) return data.permalink;
+    }
+  } catch (e) {
+    // Abaikan jika offline / network glitch
+  }
+  return null;
+}
+
+/**
  * Mengonversi numeric Threads Media ID menjadi Base64 shortcode URL
  * Menghasilkan link yang valid dan bisa langsung dibuka tanpa redirect ke 'invalid_post'
  */
@@ -328,8 +351,7 @@ function mediaIdToShortcode(mediaId) {
 }
 
 function getPostUrl(mediaId, username = 'ceritakikiii') {
-  const shortcode = mediaIdToShortcode(mediaId);
-  return shortcode ? `https://www.threads.net/@${username}/post/${shortcode}` : `https://www.threads.net/@${username}`;
+  return `https://www.threads.net/@${username}`;
 }
 
 module.exports = {
@@ -343,5 +365,6 @@ module.exports = {
   getMediaInsights,
   deletePost,
   mediaIdToShortcode,
+  fetchPostPermalink,
   getPostUrl
 };

@@ -139,6 +139,9 @@ function initSchema() {
   try {
     db.exec(`ALTER TABLE stories ADD COLUMN last_media_id TEXT;`);
   } catch (e) {}
+  try {
+    db.exec(`ALTER TABLE stories ADD COLUMN permalink TEXT;`);
+  } catch (e) {}
 }
 
 initSchema();
@@ -226,12 +229,12 @@ module.exports = {
     `).all(limit);
   },
 
-  markStoryPublished: (id, threadsMediaId, lastMediaId = null) => {
+  markStoryPublished: (id, threadsMediaId, lastMediaId = null, permalink = null) => {
     return db.prepare(`
       UPDATE stories 
-      SET status = 'published', published_at = CURRENT_TIMESTAMP, threads_media_id = ?, last_media_id = ? 
+      SET status = 'published', published_at = CURRENT_TIMESTAMP, threads_media_id = ?, last_media_id = ?, permalink = ? 
       WHERE id = ?
-    `).run(threadsMediaId, lastMediaId || threadsMediaId, id);
+    `).run(threadsMediaId, lastMediaId || threadsMediaId, permalink, id);
   },
 
   updateStoryLastMediaId: (id, lastMediaId) => {

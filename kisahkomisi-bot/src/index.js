@@ -466,8 +466,9 @@ bot.command('post_sekarang', async (ctx) => {
     });
     const postId = typeof publishResult === 'object' ? publishResult.rootPostId : publishResult;
     const lastId = typeof publishResult === 'object' ? publishResult.lastPostId : postId;
+    const permalink = typeof publishResult === 'object' ? publishResult.permalink : `https://www.threads.net/@ceritakikiii`;
 
-    db.markStoryPublished(story.id, postId, lastId);
+    db.markStoryPublished(story.id, postId, lastId, permalink);
 
     safeReplyMarkdown(
       ctx,
@@ -475,7 +476,8 @@ bot.command('post_sekarang', async (ctx) => {
       `📖 *Judul*: ${story.title}\n` +
       `🆔 *Threads Post ID*: \`${postId}\`\n` +
       `🛒 *Struktur*: 1 Post Utama + ${parsedSlides.length - 1} Replies Berantai\n\n` +
-      `Cek langsung di aplikasi Threads Anda: *@ceritakikiii*`
+      `🔗 [Buka Postingan Threads](${permalink})\n` +
+      `Akun: *@ceritakikiii*`
     );
 
     // Isi ulang stok di background
@@ -588,19 +590,19 @@ async function executeScheduledPosting(label) {
         });
         const postId = typeof publishResult === 'object' ? publishResult.rootPostId : publishResult;
         const lastId = typeof publishResult === 'object' ? publishResult.lastPostId : postId;
+        const permalink = typeof publishResult === 'object' ? publishResult.permalink : `https://www.threads.net/@ceritakikiii`;
 
-        db.markStoryPublished(story.id, postId, lastId);
+        db.markStoryPublished(story.id, postId, lastId, permalink);
         console.log(`[Scheduler] Sukses posting slot ${label} (Post ID: ${postId})`);
 
         const remainingStock = db.getQueuedStoriesCount();
-        const postLink = getPostUrl(postId);
         await sendAdminAlert(
           `🎉 *BERHASIL AUTO-POSTING KE THREADS!*\n\n` +
           `⏰ *Slot*: ${label}\n` +
           `📖 *Judul*: ${story.title}\n` +
           `🛍️ *Produk*: ${story.product_name || 'Murni Cerita'}\n` +
           `📦 *Sisa Stok Antrean*: *${remainingStock} cerita*\n\n` +
-          `🔗 [Buka Postingan Threads](${postLink})\n` +
+          `🔗 [Buka Postingan Threads](${permalink})\n` +
           `Akun: *@ceritakikiii*`
         );
 
@@ -624,8 +626,9 @@ async function executeScheduledPosting(label) {
             });
             const fallbackPostId = typeof fallbackResult === 'object' ? fallbackResult.rootPostId : fallbackResult;
             const fallbackLastId = typeof fallbackResult === 'object' ? fallbackResult.lastPostId : fallbackPostId;
+            const fallbackPermalink = typeof fallbackResult === 'object' ? fallbackResult.permalink : `https://www.threads.net/@ceritakikiii`;
 
-            db.markStoryPublished(fallbackStory.id, fallbackPostId, fallbackLastId);
+            db.markStoryPublished(fallbackStory.id, fallbackPostId, fallbackLastId, fallbackPermalink);
             console.log(`[Scheduler] Cerita cadangan #${fallbackStory.id} sukses terbit (Post ID: ${fallbackPostId})`);
             
             await sendAdminAlert(
@@ -633,6 +636,7 @@ async function executeScheduledPosting(label) {
               `⏰ *Slot*: ${label}\n` +
               `📖 *Judul*: ${fallbackStory.title}\n` +
               `🆔 *Post ID*: \`${fallbackPostId}\`\n\n` +
+              `🔗 [Buka Postingan Threads](${fallbackPermalink})\n\n` +
               `_Catatan: Cerita utama sebelumnya gagal (${err.message}) dan telah digantikan otomatis oleh antrean berikutnya._`
             );
             replenishStockBuffer(9).catch(e => console.warn('[Scheduler] Auto-replenish error:', e.message));
