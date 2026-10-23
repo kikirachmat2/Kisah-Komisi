@@ -79,7 +79,9 @@ async function sendAdminAlert(text, extra = {}) {
     console.warn('[Alert] Gagal kirim markdown ke admin, fallback plain text:', e.message);
     try {
       const plain = text.replace(/[*_`\[\]()]/g, '');
-      await bot.telegram.sendMessage(adminChatId, plain, extra);
+      const cleanExtra = { ...extra };
+      delete cleanExtra.parse_mode;
+      await bot.telegram.sendMessage(adminChatId, plain, cleanExtra);
     } catch (err2) {
       console.warn('[Alert] Gagal mengirim notifikasi ke admin:', err2.message);
     }
@@ -93,7 +95,9 @@ async function safeReplyMarkdown(ctx, text, extra = {}) {
   } catch (err) {
     console.warn('[Telegram] Gagal replyWithMarkdown, fallback ke plain text:', err.message);
     const plain = text.replace(/[*_`\[\]()]/g, '');
-    return await ctx.reply(plain, extra);
+    const cleanExtra = { ...extra };
+    delete cleanExtra.parse_mode;
+    return await ctx.reply(plain, cleanExtra);
   }
 }
 
