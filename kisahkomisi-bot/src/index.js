@@ -862,7 +862,7 @@ async function runScheduledHotTake(slotLabel) {
   try {
     const res = await executeHotTake(userId, slotLabel);
     if (res) {
-      const link = getPostUrl(res.mediaId);
+      const link = res.permalink || getPostUrl(res.mediaId);
       await sendAdminAlert(
         `⚡ *[Hot Take Terbit]* Kiki baru saja mengunggah opini santai di Threads:\n\n` +
         `"${res.postText}"\n\n` +

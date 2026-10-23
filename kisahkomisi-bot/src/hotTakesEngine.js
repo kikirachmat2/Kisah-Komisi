@@ -1,7 +1,7 @@
 const path = require('path');
 require('dotenv').config({ path: path.join(__dirname, '../.env') });
 const db = require('./database');
-const { publishTextPost, getActiveAccessToken } = require('./threads');
+const { publishTextPost, getActiveAccessToken, fetchPostPermalink } = require('./threads');
 
 const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
 const GROQ_API_KEY = process.env.GROQ_API_KEY;
@@ -222,6 +222,7 @@ async function executeHotTake(userId, slotLabel = 'PAGI (10:15 WIB)') {
 
   try {
     const mediaId = await publishTextPost(userId, token, postText);
+    const permalink = await fetchPostPermalink(mediaId, token);
 
     // Simpan ke database
     db.logHotTake({
@@ -239,7 +240,8 @@ async function executeHotTake(userId, slotLabel = 'PAGI (10:15 WIB)') {
       headline: headlineInfo.headline,
       source: headlineInfo.source,
       postText,
-      slotLabel
+      slotLabel,
+      permalink: permalink || `https://www.threads.net/@ceritakikiii`
     };
   } catch (err) {
     console.error('[HotTakes] Gagal menerbitkan hot take:', err.message);
