@@ -199,12 +199,35 @@ function getThematicVibe(category) {
 }
 
 /**
+ * Menentukan topic_tag resmi Threads yang relevan dan terbukti aktif dipakai warganet
+ */
+function getAutoTopicTag(topic) {
+  if (!topic) return 'curhat';
+  const t = topic.toLowerCase();
+  if (t.includes('kantor') || t.includes('kerja') || t.includes('gaji') || t.includes('lembur') || t.includes('bos') || t.includes('hrd') || t.includes('magang') || t.includes('resign') || t.includes('meeting')) {
+    return 'duniakerja';
+  }
+  if (t.includes('kos') || t.includes('kontrakan') || t.includes('kamar') || t.includes('kulkas') || t.includes('token listrik')) {
+    return 'anakkos';
+  }
+  if (t.includes('krl') || t.includes('stasiun') || t.includes('manggarai') || t.includes('gerbong') || t.includes('komuter') || t.includes('kereta')) {
+    return 'krl';
+  }
+  if (t.includes('mertua') || t.includes('suami') || t.includes('istri') || t.includes('pasutri') || t.includes('arisan') || t.includes('tetangga') || t.includes('keluarga') || t.includes('rumah tangga')) {
+    return 'rumahtangga';
+  }
+  if (t.includes('uang') || t.includes('pinjam') || t.includes('bensin') || t.includes('cicilan') || t.includes('finansial') || t.includes('perhitungan') || t.includes('utang')) {
+    return 'finansial';
+  }
+  return 'curhat';
+}
+
+/**
  * Generate postingan Threads viral "Orang Banget"
- * Mendukung 2 mode pengujian A/B resmi:
- * 1. Format A: Single Post Menfess 1 Part (≤ 280 karakter total termasuk header)
- * 2. Format B: Micro-Thread Tepat 3 Part (Part 1 ≤ 200 karakter termasuk header, Part 2 eskalasi, Part 3 debat)
- * Afiliasi Shopee DIBEKUKAN 100% (0 link) selama masa eksperimen.
- * Header [Cerita Fiksi] / [Kiriman Warganet] disematkan KETAT DARI KODE, bukan prompt.
+ * Mendukung 2 mode:
+ * 1. Single Menfess 1 Part (≤ 280 karakter total, 0% link, viral magnet)
+ * 2. Micro-Thread 4-5 Part (Hook adegan konkret + Solusi Shopee Kontekstual + Pertanyaan Terbuka Warganet)
+ * Otomatis melampirkan topic_tag resmi Threads (duniakerja, anakkos, krl, rumahtangga, finansial, curhat).
  */
 async function generateStory(options = {}) {
   if (!GEMINI_API_KEY) {
@@ -212,7 +235,7 @@ async function generateStory(options = {}) {
   }
 
   let forcedTopic = null;
-  let variant = 'A';
+  let variant = 'B';
   let origin = 'fiction';
   let topicTag = null;
 
@@ -228,6 +251,10 @@ async function generateStory(options = {}) {
   let topic = forcedTopic;
   if (!topic) {
     topic = TOPICS[Math.floor(Math.random() * TOPICS.length)];
+  }
+
+  if (!topicTag) {
+    topicTag = getAutoTopicTag(topic);
   }
 
   const isFormatA = (variant === 'A');
@@ -498,6 +525,7 @@ Keluarkan HANYA JSON:
     variant: variant,
     origin: origin,
     topicTag: topicTag,
+    topic_tag: topicTag,
     is_single_menfess: isFormatA
   };
 }
@@ -506,6 +534,7 @@ module.exports = {
   generateStory,
   appendSubId,
   getThematicVibe,
+  getAutoTopicTag,
   TOPICS,
   TOPICS_CORPORATE,
   TOPICS_INTIMATE_MENFESS,

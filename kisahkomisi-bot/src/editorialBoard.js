@@ -297,7 +297,10 @@ async function replenishStockBuffer(targetBuffer = 9) {
           productUrl: story.product_url,
           scheduledFor: new Date().toISOString(),
           qcScore: story.qcScore,
-          qcNotes: story.qcNotes
+          qcNotes: story.qcNotes,
+          topicTag: story.topic_tag || story.topicTag || 'curhat',
+          variant: story.variant || 'B',
+          origin: story.origin || 'fiction'
         });
         addedCount++;
         console.log(`[EditorialBoard] Cerita #${id} ("${story.title}") berhasil dikurasi & dimasukkan ke antrean!`);
