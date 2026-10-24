@@ -1,3 +1,5 @@
+const path = require('path');
+require('dotenv').config({ path: path.join(__dirname, '../.env') });
 const db = require('./database');
 
 const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
@@ -230,8 +232,9 @@ function getAutoTopicTag(topic) {
  * Otomatis melampirkan topic_tag resmi Threads (duniakerja, anakkos, krl, rumahtangga, finansial, curhat).
  */
 async function generateStory(options = {}) {
-  if (!GEMINI_API_KEY) {
-    throw new Error('GEMINI_API_KEY belum diset di .env');
+  const apiKey = process.env.GEMINI_API_KEY || GEMINI_API_KEY;
+  if (!apiKey && !process.env.GROQ_API_KEY && !process.env.OPENROUTER_API_KEY) {
+    throw new Error('Tidak ada AI API KEY (GEMINI, GROQ, atau OPENROUTER) yang diset di .env');
   }
 
   let forcedTopic = null;
@@ -371,29 +374,31 @@ Keluarkan HANYA JSON:
   const models = ['gemini-2.5-flash', 'gemini-3-flash-preview'];
   let data = null;
 
-  for (const model of models) {
-    try {
-      const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${GEMINI_API_KEY}`;
-      const response = await fetch(url, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        signal: AbortSignal.timeout(20000),
-        body: JSON.stringify({
-          contents: [{ parts: [{ text: prompt }] }],
-          generationConfig: {
-            responseMimeType: 'application/json',
-            temperature: 0.8
-          }
-        })
-      });
+  if (apiKey) {
+    for (const model of models) {
+      try {
+        const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`;
+        const response = await fetch(url, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          signal: AbortSignal.timeout(20000),
+          body: JSON.stringify({
+            contents: [{ parts: [{ text: prompt }] }],
+            generationConfig: {
+              responseMimeType: 'application/json',
+              temperature: 0.8
+            }
+          })
+        });
 
-      if (response.ok) {
-        data = await response.json();
-        break;
+        if (response.ok) {
+          data = await response.json();
+          break;
+        }
+        console.warn(`[AI] Model ${model} respon ${response.status}, mencoba model alternatif...`);
+      } catch (e) {
+        console.warn(`[AI] Gagal request model ${model}:`, e.message);
       }
-      console.warn(`[AI] Model ${model} respon ${response.status}, mencoba model alternatif...`);
-    } catch (e) {
-      console.warn(`[AI] Gagal request model ${model}:`, e.message);
     }
   }
 
