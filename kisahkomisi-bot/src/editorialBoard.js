@@ -220,10 +220,28 @@ async function produceCuratedStory(options = null) {
 
   if (!storyOpts.topic) {
     const recentTopics = db.getRecentStoryTopics ? db.getRecentStoryTopics(12) : [];
-    // Prioritaskan topik yang belum pernah dipakai dalam 12 postingan terakhir
-    const freshTopics = TOPICS.filter(t => !recentTopics.some(rt => rt.toLowerCase().includes(t.toLowerCase().slice(0, 20))));
-    if (freshTopics.length > 0) {
-      storyOpts.topic = freshTopics[Math.floor(Math.random() * freshTopics.length)];
+    
+    // 1. Cek apakah AI Chief Strategist memiliki rekomendasi topik prioritas berdasarkan data insight nyata
+    let priorityCandidates = [];
+    const prioritySetting = db.getSetting('PRIORITY_TOPICS');
+    if (prioritySetting) {
+      try {
+        const parsed = JSON.parse(prioritySetting);
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          priorityCandidates = parsed.filter(t => !recentTopics.some(rt => rt.toLowerCase().includes(t.toLowerCase().slice(0, 20))));
+        }
+      } catch (e) {}
+    }
+
+    if (priorityCandidates.length > 0) {
+      storyOpts.topic = priorityCandidates[Math.floor(Math.random() * priorityCandidates.length)];
+      console.log(`[EditorialBoard] Menggunakan topik prioritas hasil evaluasi insight: "${storyOpts.topic}"`);
+    } else {
+      // 2. Fallback: Prioritaskan topik dari bank topik yang belum pernah dipakai dalam 12 postingan terakhir
+      const freshTopics = TOPICS.filter(t => !recentTopics.some(rt => rt.toLowerCase().includes(t.toLowerCase().slice(0, 20))));
+      if (freshTopics.length > 0) {
+        storyOpts.topic = freshTopics[Math.floor(Math.random() * freshTopics.length)];
+      }
     }
   }
 
