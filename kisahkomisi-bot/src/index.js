@@ -67,15 +67,16 @@ function formatRupiah(number) {
   }).format(number);
 }
 
-// Kirim notifikasi / alert ke Telegram admin
+// Kirim notifikasi / alert ke Telegram admin (Return boolean status)
 async function sendAdminAlert(text, extra = {}) {
   const adminChatId = process.env.ADMIN_CHAT_ID || db.getSetting('LAST_ADMIN_CHAT_ID');
   if (!adminChatId) {
     console.log('[Alert] Tidak ada adminChatId yang terdaftar untuk menerima alert.');
-    return;
+    return false;
   }
   try {
     await bot.telegram.sendMessage(adminChatId, text, { parse_mode: 'Markdown', ...extra });
+    return true;
   } catch (e) {
     console.warn('[Alert] Gagal kirim markdown ke admin, fallback plain text:', e.message);
     try {
@@ -83,8 +84,10 @@ async function sendAdminAlert(text, extra = {}) {
       const cleanExtra = { ...extra };
       delete cleanExtra.parse_mode;
       await bot.telegram.sendMessage(adminChatId, plain, cleanExtra);
+      return true;
     } catch (err2) {
       console.warn('[Alert] Gagal mengirim notifikasi ke admin:', err2.message);
+      return false;
     }
   }
 }
@@ -689,11 +692,21 @@ async function recordPeriodicSnapshots() {
     if (isNaN(pubTime)) continue;
     const ageHours = (now - pubTime) / (1000 * 60 * 60);
 
+    // KETAT SESUAI PROTOKOL CLAUDE: Jendela presisi interval ±15 menit (0.25 jam)
+    // DILARANG MENULIS INTERVAL YANG SUDAH LEWAT! Jika terlewat, jangan tulis retroaktif.
     const intervalsToCheck = [];
-    if (ageHours >= 1 && !db.hasPostSnapshot(story.threads_media_id, '1h')) intervalsToCheck.push('1h');
-    if (ageHours >= 6 && !db.hasPostSnapshot(story.threads_media_id, '6h')) intervalsToCheck.push('6h');
-    if (ageHours >= 24 && !db.hasPostSnapshot(story.threads_media_id, '24h')) intervalsToCheck.push('24h');
-    if (ageHours >= 72 && !db.hasPostSnapshot(story.threads_media_id, '72h')) intervalsToCheck.push('72h');
+    if (ageHours >= 0.75 && ageHours <= 1.25 && !db.hasPostSnapshot(story.threads_media_id, '1h')) {
+      intervalsToCheck.push('1h');
+    }
+    if (ageHours >= 5.75 && ageHours <= 6.25 && !db.hasPostSnapshot(story.threads_media_id, '6h')) {
+      intervalsToCheck.push('6h');
+    }
+    if (ageHours >= 23.75 && ageHours <= 24.25 && !db.hasPostSnapshot(story.threads_media_id, '24h')) {
+      intervalsToCheck.push('24h');
+    }
+    if (ageHours >= 71.75 && ageHours <= 72.25 && !db.hasPostSnapshot(story.threads_media_id, '72h')) {
+      intervalsToCheck.push('72h');
+    }
 
     if (intervalsToCheck.length > 0) {
       try {
@@ -719,8 +732,8 @@ async function recordPeriodicSnapshots() {
         }
 
         for (const interval of intervalsToCheck) {
-          db.recordPostSnapshot(story.id, story.threads_media_id, interval, views, likes, replies, reposts, quotes, externalReplies);
-          console.log(`[Snapshot] Tersimpan interval ${interval} untuk cerita #${story.id} (${views} views, ${likes} likes, ${replies} replies, ${externalReplies} ext replies)`);
+          db.recordPostSnapshot(story.id, story.threads_media_id, interval, views, likes, replies, reposts, quotes, externalReplies, 0);
+          console.log(`[Snapshot] Tersimpan interval presisi ${interval} untuk cerita #${story.id} (${views} views, ${likes} likes, ${replies} replies, ${externalReplies} ext replies)`);
         }
       } catch (err) {
         console.warn(`[Snapshot] Gagal fetch insights untuk ${story.threads_media_id}:`, err.message);
@@ -804,7 +817,7 @@ async function prepareAndNotifyVetoSlot(slotTime, label) {
     const firstSlide = slides[0] || '';
     const variantDesc = experimentSlot.variant === 'A' ? 'Format A (Single Menfess)' : 'Format B (3-Part Micro-Thread)';
 
-    await sendAdminAlert(
+    const sent = await sendAdminAlert(
       `⏳ *[30-MIN VETO WINDOW]* Draf Siap Tayang Jam ${slotTime} WIB!\n\n` +
       `⏰ *Slot*: ${label}\n` +
       `📅 *Hari Eksperimen*: Hari ke-${experimentSlot.day_number}\n` +
@@ -818,6 +831,14 @@ async function prepareAndNotifyVetoSlot(slotTime, label) {
       `Bot akan otomatis menerbitkan post ini tepat jam *${slotTime} WIB*.\n` +
       `Ketik \`/veto\` untuk membatalkan tayang dalam 30 menit ke depan.`
     );
+
+    if (sent) {
+      db.setSetting(`VETO_ALERT_DELIVERED_${dateStr}_${slotTime}`, 'success');
+      console.log(`[VetoWindow] Notifikasi veto Telegram berhasil terkirim untuk slot ${label}.`);
+    } else {
+      db.setSetting(`VETO_ALERT_DELIVERED_${dateStr}_${slotTime}`, 'failed');
+      console.error(`[VetoWindow] GAGAL mengirim notifikasi veto Telegram untuk slot ${label}.`);
+    }
   } catch (err) {
     console.error(`[VetoWindow] Gagal menyiapkan draf veto untuk slot ${label}:`, err.message);
   }
@@ -844,6 +865,21 @@ async function executeScheduledPosting(slotTime, label) {
     return;
   }
 
+  // Cek apakah ada jadwal eksperimen terdaftar untuk hari & slot ini
+  const experimentSlot = db.getExperimentSlot(dateStr, slotTime);
+
+  // FAIL-CLOSED 3 HARI PERTAMA: Jika Hari 1-3 dan notifikasi veto Telegram gagal terkirim, JANGAN TAYANG OTOMATIS!
+  const isFirst3Days = experimentSlot && experimentSlot.day_number <= 3;
+  const alertDelivered = db.getSetting(`VETO_ALERT_DELIVERED_${dateStr}_${slotTime}`);
+  if (isFirst3Days && alertDelivered !== 'success') {
+    console.error(`[Scheduler] FAIL-CLOSED ACTIVE: Notifikasi veto belum/gagal terkirim ke Telegram pada Hari ke-${experimentSlot.day_number} (${label}). Posting dibatalkan demi keamanan.`);
+    if (experimentSlot) {
+      db.updateExperimentSlot(experimentSlot.id, 'failed');
+    }
+    await sendAdminAlert(`🛑 *[FAIL-CLOSED SAFETY]* Slot ${label} (Hari ke-${experimentSlot.day_number}) DIBATALKAN otomatis karena notifikasi draf veto Telegram gagal terkirim.`);
+    return;
+  }
+
   if (isPostingInProgress) {
     console.warn(`[Scheduler] Sedang ada proses posting lain, menunda slot ${label} selama 30 detik...`);
     await new Promise(r => setTimeout(r, 30000));
@@ -860,9 +896,6 @@ async function executeScheduledPosting(slotTime, label) {
       await sendAdminAlert(`⚠️ *[Scheduler] Gagal Posting (${label})*: Kredensial Threads API belum lengkap di server.`);
       return;
     }
-
-    // Cek apakah ada jadwal eksperimen terdaftar untuk hari & slot ini
-    const experimentSlot = db.getExperimentSlot(dateStr, slotTime);
 
     let story = null;
     let storyId = null;
@@ -1004,8 +1037,8 @@ cron.schedule('30 21 * * *', () => executeScheduledPosting('21:30', 'MALAM 21:30
   timezone: 'Asia/Jakarta'
 });
 
-// Polling Snapshot Views berkala tiap 30 menit
-cron.schedule('*/30 * * * *', () => {
+// Polling Snapshot Views berkala tiap 10 menit (Memastikan jendela presisi ±15 menit tercapai)
+cron.schedule('*/10 * * * *', () => {
   recordPeriodicSnapshots().catch(e => console.warn('[Snapshot Cron Error]:', e.message));
 });
 

@@ -44,9 +44,9 @@ function isAskingAboutBot(text) {
  * Dilarang mengarang pengalaman pribadi palsu!
  */
 async function generateEngagementReply(storyTitle, netizenComment, authorUsername) {
-  // Jika ditanya langsung apakah ini bot/AI: Jawab jujur dan transparan!
+  // Jika ditanya langsung apakah ini bot/AI: Jawab lugas dan transparan!
   if (isAskingAboutBot(netizenComment)) {
-    return 'Halo! Akun ini kurasi cerita fiksi & menfess yang dibantu AI untuk merapikan teksnya. Tapi keresahan dan situasinya terinspirasi dari realitas sehari-hari warganet :)';
+    return 'Ceritanya fiksi dan ditulis dengan bantuan AI.';
   }
 
   const prompt = `

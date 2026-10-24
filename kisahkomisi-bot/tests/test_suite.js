@@ -99,7 +99,7 @@ async function runTests() {
   assert(isCommentSafe('Dasar tolol goblok') === false, 'Toxic comment rejected');
   assert(isAskingAboutBot('Ini bot ya?') === true, 'Bot question detected for honest disclosure');
   const honestReply = await generateEngagementReply('Test Judul', 'Akun ini bot kan?', 'budi');
-  assert(honestReply.includes('dibantu AI'), 'Must honestly disclose AI assistance');
+  assert(honestReply === 'Ceritanya fiksi dan ditulis dengan bantuan AI.', 'Must return exact honest AI disclosure');
 
   db.logAutoReply({
     threadsMediaId: 'mock_test_media',

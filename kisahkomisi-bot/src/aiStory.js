@@ -234,36 +234,36 @@ async function generateStory(options = {}) {
   let prompt = '';
 
   if (isFormatA) {
-    // FORMAT A: Single Post Curhat Ringkas (Maksimal 240 karakter teks asli agar pas ≤280 chars setelah ditambah header)
+    // FORMAT A: Single Post Curhat Ringkas + Pertanyaan Pengalaman Terbuka (≤240 karakter teks asli agar pas ≤280 chars dengan header)
     prompt = `
 Kamu adalah kurator di Threads @ceritakikiii. Bio: "In this economy mau nulis cerita orang-orang aja lah".
 Tuliskan SATU (1) POSTINGAN CURHAT TUNGGAL (Single Post Menfess, TIDAK BERSAMBUNG, HANYA 1 SLIDE).
-Panjang teks cerita: 150 - 240 karakter.
+Panjang KETAT teks cerita: 140 - 190 karakter (DILARANG lebih dari 190 karakter agar pertanyaan penutup tidak terpotong saat dipasang header!).
 
 ADEGAN/TOPIK NYATA:
 ${topic}
 
-ATURAN GAYA PENULISAN:
-1. FORMAT ADEGAN KONKRET: Tampilkan kejadian nyata langsung di tempat (dialog langsung atau reaksi spontan). JANGAN menulis esai, nasihat bijak, atau teori.
-2. Gunakan bahasa sehari-hari warganet santai (lu-gue/aku-kamu, istilah wajar seperti "bgt", "anteng", "ngelunjak", "ga habis fikri 🫠").
-3. DILARANG membuat cerita sinetron fiktif lebay (hantu, dukun, melodrama).
-4. DILARANG MENULIS HEADER SEPERTI "[Cerita Fiksi]" ATAU PENOMORAN. Header akan ditempel oleh sistem kode.
-5. DILARANG menyisipkan promosi produk, link, atau iklan apapun. 100% nol iklan.
+STRUKTUR DAN ATURAN WAJIB:
+1. LANGSUNG KE ADEGAN SPESIFIK: Tampilkan kejadian nyata langsung dengan nama orang konkret (misal: Dimas, Rian, Rendy, Sarah, Bima). DILARANG pakai sebutan generik "si A" atau "si B".
+2. AKHIRI DENGAN PERTANYAAN PENGALAMAN TERBUKA: Wajib ada pertanyaan penutup berbasis pengalaman warganet (bukan biner). Contoh: "Kalian pernah ngalamin gini juga di kos? Gimana akhirnya?"
+3. Bahasa warganet santai, ringkas, dan emosional (lu-gue/aku-kamu, "bgt", "anteng", "ngelunjak").
+4. DILARANG MENULIS HEADER SEPERTI "[Cerita Fiksi]". Header akan ditempel oleh sistem kode.
+5. DILARANG iklan/promosi apapun. 100% nol iklan.
 
 Keluarkan HANYA JSON:
 {
   "title": "Judul Menfess Singkat (Maksimal 6 kata)",
   "topic": "${topic}",
   "story_parts": [
-    "Teks curhat tunggal 150-240 karakter..."
+    "Teks curhat adegan konkret + pertanyaan pengalaman warganet (160-240 karakter)..."
   ]
 }
 `;
   } else {
-    // FORMAT B: Micro-Thread Tepat 3 Part (Bukan 5 part, bukan 4 part)
+    // FORMAT B: Micro-Thread Tepat 3 Part (Persis 3 slide)
     // Part 1: Hook momen menggantung (100-160 chars)
-    // Part 2: Eskalasi konflik / kejadian (150-250 chars)
-    // Part 3: Pertanyaan dilema / debat warganet (100-180 chars)
+    // Part 2: Eskalasi kejadian dengan nama spesifik (150-250 chars)
+    // Part 3: Pertanyaan pengalaman terbuka warganet (100-180 chars)
     prompt = `
 Kamu adalah kurator di Threads @ceritakikiii. Bio: "In this economy mau nulis cerita orang-orang aja lah".
 Tuliskan SATU UTAS MICRO-THREAD TEPAT 3 PART (PERSIS 3 SLIDE).
@@ -273,29 +273,29 @@ ${topic}
 
 STRUKTUR 3 PART:
 1. PART 1 (Hook Kejadian Menggantung):
-   - Langsung ke tengah adegan / dialog awal yang memicu rasa penasaran.
+   - Langsung ke tengah adegan yang memicu rasa penasaran dengan nama tokoh spesifik (misal: Dimas, Rian, Rendy).
    - Panjang KETAT: 100 - 160 karakter (wajib ringkas karena akan ditempel header).
 2. PART 2 (Eskalasi Kejadian / Dialog Lanjutan):
-   - Respons orang yang bersangkutan atau kejadian lanjutan yang bikin gregetan/kesal.
+   - Reaksi orang bersangkutan atau dialog lanjutan yang bikin gregetan. Gunakan nama spesifik, DILARANG "si A / si B".
    - Panjang: 150 - 250 karakter.
-3. PART 3 (Pertanyaan Dilema Warganet):
-   - Momen di mana kamu bingung harus bersikap apa, lalu lempar pertanyaan konkret ke warganet.
-   - Panjang: 100 - 180 karakter. Contoh: "Kalau kalian di posisi gue, mending langsung tegor depan mukanya atau diem-diem lapor pengelola?"
+3. PART 3 (Pertanyaan Pengalaman Terbuka):
+   - Momen refleksi yang dilempar ke pengalaman warganet (pertanyaan terbuka, BUKAN pilihan biner a vs b).
+   - Panjang: 100 - 180 karakter. Contoh: "Ada yang pernah ngalamin lauk kulkas kosan raib kayak gini juga? Gimana akhirnya kalian nyelesaiinnya?"
 
 ATURAN KETAT:
 - DILARANG MENULIS ANGKA PENOMORAN (seperti "1/3", "Part 1", dll).
-- DILARANG MENULIS HEADER SEPERTI "[Cerita Fiksi]". Header akan dipasang otomatis oleh sistem kode.
+- DILARANG MENULIS HEADER SEPERTI "[Cerita Fiksi]". Header akan dipasang otomatis oleh kode.
 - DILARANG menyisipkan link promosi atau barang. 100% nol iklan.
-- Gunakan bahasa manusia alami, relatable, dan emosi yang terasa nyata.
+- Gunakan bahasa manusia alami dan nama tokoh spesifik.
 
 Keluarkan HANYA JSON:
 {
   "title": "Judul Utas (Maksimal 6-8 kata)",
   "topic": "${topic}",
   "story_parts": [
-    "Part 1 hook menggantung ringkas (100-160 chars)...",
-    "Part 2 eskalasi kejadian (150-250 chars)...",
-    "Part 3 pertanyaan dilema (100-180 chars)..."
+    "Part 1 hook menggantung (100-160 chars)...",
+    "Part 2 eskalasi adegan dengan nama spesifik (150-250 chars)...",
+    "Part 3 pertanyaan pengalaman terbuka warganet (100-180 chars)..."
   ]
 }
 `;
@@ -405,7 +405,7 @@ Keluarkan HANYA JSON:
   } else {
     // Format B: Tepat 3 part
     if (cleanParts.length < 3) {
-      cleanParts.push('Gimana menurut kalian kalau di posisi kayak gini? Mending tegor langsung atau lapor pengelola?');
+      cleanParts.push('Ada yang pernah ngalamin kejadian kayak gini juga? Gimana akhirnya kalian nyelesaiinnya?');
     }
     cleanParts = cleanParts.slice(0, 3);
   }

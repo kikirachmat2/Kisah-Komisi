@@ -156,6 +156,15 @@ function initSchema() {
     db.exec(`ALTER TABLE post_snapshots ADD COLUMN external_replies INTEGER DEFAULT 0;`);
   } catch (e) {}
 
+  try {
+    db.exec(`ALTER TABLE post_snapshots ADD COLUMN is_backfill INTEGER DEFAULT 0;`);
+  } catch (e) {}
+
+  // Tandai seluruh snapshot awal historis sebagai backfill
+  try {
+    db.exec(`UPDATE post_snapshots SET is_backfill = 1 WHERE recorded_at <= '2026-10-24 05:00:00';`);
+  } catch (e) {}
+
   db.exec(`
     CREATE TABLE IF NOT EXISTS experiment_schedule (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -269,11 +278,11 @@ module.exports = {
     return info.lastInsertRowid;
   },
 
-  recordPostSnapshot: (storyId, mediaId, interval, views, likes, replies, reposts, quotes, externalReplies = 0) => {
+  recordPostSnapshot: (storyId, mediaId, interval, views, likes, replies, reposts, quotes, externalReplies = 0, isBackfill = 0) => {
     return db.prepare(`
-      INSERT INTO post_snapshots (story_id, threads_media_id, snapshot_interval, views, likes, replies, reposts, quotes, external_replies)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
-    `).run(storyId, mediaId, interval, views, likes, replies, reposts, quotes, externalReplies);
+      INSERT INTO post_snapshots (story_id, threads_media_id, snapshot_interval, views, likes, replies, reposts, quotes, external_replies, is_backfill)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    `).run(storyId, mediaId, interval, views, likes, replies, reposts, quotes, externalReplies, isBackfill);
   },
 
   hasPostSnapshot: (mediaId, interval) => {
