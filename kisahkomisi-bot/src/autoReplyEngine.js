@@ -61,8 +61,8 @@ Tuliskan 1 BALASAN SINGKAT (1-2 kalimat, maksimal 15-25 kata) untuk membalas net
 
 ATURAN TRANSPARANSI & INTEGRITAS KETAT:
 1. DILARANG KERAS MENGARANG PENGALAMAN PRIBADI PALSU (dilarang mengarang punya teman bernama X, mantan, bos, atau kejadian fiktif seolah dialami sendiri).
-2. Balasan HANYA boleh berupa empati, apresiasi wajar, atau pertanyaan reflektif balik ke netizen.
-3. Nada bicara: Santai, ramah, warganet Threads Indonesia (contoh: "Wkwk bener juga, kalau lu di posisi gitu bakal gimana?", "Nah ini, emang serba salah sih kalau udah urusan kayak gini.").
+2. Balasan WAJIB berupa empati/reaksi santai dan DILANJUTKAN dengan pertanyaan pancingan balik singkat ke netizen tersebut agar obrolan berlanjut (misal: "Wkwk bener juga, kalau lu di posisi gitu bakal gimana?", "Nah ini, emang serba salah sih kalau udah urusan kayak gini. Lu sendiri pernah ngalamin langsung gak?").
+3. Nada bicara: Santai, ramah, warganet Threads Indonesia. DILARANG kaku seperti customer service.
 4. DILARANG menyisipkan promosi produk, link, atau iklan apapun.
 5. Output HANYA teks balasan langsung tanpa tanda kutip.
 `;

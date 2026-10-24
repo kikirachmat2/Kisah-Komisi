@@ -113,8 +113,8 @@ function generateContextualAd(product, trackedUrl) {
   // Kategori: Botol Minum / Tumbler / Gaya Hidup
   if (cat.includes('botol') || cat.includes('tumbler') || name.toLowerCase().includes('tumbler') || name.toLowerCase().includes('termos')) {
     const templates = [
-      `Btw di tengah pusingnya kerjaan dan drama kantor, hal kecil yang bikin gue tetep waras itu sedia tumbler air es di meja biar ga dehidrasi pas lembur: ${trackedUrl}. Beneran nahan dingin seharian.`,
-      `Btw buat yang kerjanya di ruangan AC seharian dan sering lupa minum air, gue selalu bawa tumbler ini di tas kantor: ${trackedUrl}. Lumayan banget biar ga gampang lemes.`
+      `Btw di tengah pusingnya lembur kerja dan drama kantor, investasi receh under 50rb yang bikin gue tetep waras itu tumbler air es di meja: ${trackedUrl}. Nahan dingin seharian.`,
+      `Btw buat yang seharian di ruangan AC dan gampang lemes, tumbler fungsional harga ramah kantong ini lifesaver banget nemenin ngantor: ${trackedUrl}.`
     ];
     return templates[Math.floor(Math.random() * templates.length)];
   }
@@ -122,8 +122,8 @@ function generateContextualAd(product, trackedUrl) {
   // Kategori: Elektronik & Gadget (Charger, Kabel, Kipas)
   if (cat.includes('elektronik') || cat.includes('gadget') || name.toLowerCase().includes('charger') || name.toLowerCase().includes('kabel') || name.toLowerCase().includes('kipas')) {
     const templates = [
-      `Btw buat yang seharian mobile atau sering lembur dan baterai HP sekarat mulu, charger fast charging kayak gini lifesaver banget di tas kerja: ${trackedUrl}. Daripada minjem sana-sini.`,
-      `Btw daripada pusing kabel kusut atau nunggu ngecas berjam-jam pas lagi dikejar deadline kantor, gue andelin ini di meja: ${trackedUrl}. Ngecas cepet dan ga ribet.`
+      `Btw buat yang seharian mobile atau sering lembur, kepala charger fast charging under 50rb kayak gini lifesaver banget di tas kerja: ${trackedUrl}. Daripada minjem sana-sini pas sekarat.`,
+      `Btw daripada pusing kabel kusut pas dikejar deadline kantor, barang printilan receh tapi fungsional ini kepake banget di meja: ${trackedUrl}. Ngecas cepet dan ga ribet.`
     ];
     return templates[Math.floor(Math.random() * templates.length)];
   }
@@ -131,8 +131,8 @@ function generateContextualAd(product, trackedUrl) {
   // Kategori: Skincare & Grooming / Perawatan Diri
   if (cat.includes('skincare') || cat.includes('grooming') || cat.includes('perawatan') || name.toLowerCase().includes('wash') || name.toLowerCase().includes('deodorant') || name.toLowerCase().includes('serum')) {
     const templates = [
-      `Btw seharian dihajar stres kerjaan sama polusi jalanan komuter, muka kuyu jangan sampai dibiarin. Gue biasa cuci muka pake ini pas istirahat biar seger lagi: ${trackedUrl}.`,
-      `Btw di tengah capeknya tuntutan kerja, ngerawat diri sendiri itu bentuk self-respect paling realistis. Buat daily care yang ga ribet pas ngantor: ${trackedUrl}.`
+      `Btw seharian dihajar stres kerjaan sama polusi jalanan komuter, self-care receh gak sampe seharga kopi kekinian tapi muka langsung seger lagi: ${trackedUrl}.`,
+      `Btw di tengah capeknya tuntutan kerja, ngerawat diri sendiri itu bentuk self-respect paling realistis. Buat daily wash under 40rb yang ga ribet pas ngantor: ${trackedUrl}.`
     ];
     return templates[Math.floor(Math.random() * templates.length)];
   }
@@ -140,8 +140,8 @@ function generateContextualAd(product, trackedUrl) {
   // Kategori: Parfum & Wewangian
   if (cat.includes('parfum') || cat.includes('wewangian')) {
     const templates = [
-      `Btw salah satu booster mood kerja paling ampuh pas lagi pusing itu aroma yang calming. Buat yang nyari wewangian subtle dan awet buat ngantor: ${trackedUrl}.`,
-      `Btw di tengah hecticnya meeting dan rutinitas kantor, wangi yang seger tuh ngaruh banget ke rasa percaya diri. Yang ini lumayan oke buat daily: ${trackedUrl}.`
+      `Btw salah satu booster mood kerja paling ampuh pas lagi pusing itu aroma calming. Parfum daily wangi seger under 50rb yang awet buat ngantor: ${trackedUrl}.`,
+      `Btw di tengah hecticnya meeting, wangi yang seger tuh ngaruh banget ke rasa percaya diri. Yang ini harganya ramah kantong tapi wanginya mewah: ${trackedUrl}.`
     ];
     return templates[Math.floor(Math.random() * templates.length)];
   }
@@ -149,8 +149,8 @@ function generateContextualAd(product, trackedUrl) {
   // Kategori: Camilan & Minuman
   if (cat.includes('camilan') || cat.includes('makanan') || cat.includes('teh') || cat.includes('lemon')) {
     const templates = [
-      `Btw buat nemenin fokus di depan laptop atau ngusir ngantuk pas jam rawan siang di kantor, stok minuman/camilan ini lumayan bikin melek: ${trackedUrl}.`,
-      `Btw pas lagi mumet ngerjain revisian malam hari, yang paling ngebantu ya asupan yang seger-seger kayak gini di meja: ${trackedUrl}.`
+      `Btw buat nemenin fokus di depan laptop atau ngusir ngantuk pas jam rawan siang di kantor, cemilan renyah under 25rb ini lumayan bikin melek: ${trackedUrl}.`,
+      `Btw pas lagi mumet ngerjain revisian malam hari, asupan seger-seger harga receh kayak gini lifesaver banget di meja: ${trackedUrl}.`
     ];
     return templates[Math.floor(Math.random() * templates.length)];
   }
@@ -158,14 +158,14 @@ function generateContextualAd(product, trackedUrl) {
   // Kategori: Rumah Tangga & Kosan (Tissue, Gantungan, Keset, dll.)
   if (cat.includes('kosan') || cat.includes('rumah')) {
     const templates = [
-      `Btw buat anak kos atau yang tinggal di kontrakan dan butuh barang esensial biar kamar ga berantakan: ${trackedUrl}. Simple tapi fungsional banget.`,
-      `Btw salah satu investasi kecil buat kenyamanan tempat istirahat setelah seharian cape kerja di luar: ${trackedUrl}.`
+      `Btw buat anak kos atau kontrakan, barang printilan fungsional under 30rb kayak gini simple tapi kepake banget biar kamar gak berantakan: ${trackedUrl}.`,
+      `Btw salah satu investasi kecil under 50rb buat kenyamanan tempat istirahat setelah seharian cape kerja di luar: ${trackedUrl}.`
     ];
     return templates[Math.floor(Math.random() * templates.length)];
   }
 
   // Fallback netral & manusiawi
-  return `Btw buat yang lagi cari rekomendasi barang fungsional buat nemenin rutinitas harian biar lebih praktis: ${trackedUrl}. Lumayan kepake banget.`;
+  return `Btw buat yang lagi cari rekomendasi barang fungsional harga ramah dompet buat nemenin rutinitas harian biar lebih praktis: ${trackedUrl}. Lumayan kepake banget.`;
 }
 
 /**
@@ -312,7 +312,7 @@ ${topic}
 
 STRUKTUR DAN ATURAN WAJIB:
 1. LANGSUNG KE ADEGAN SPESIFIK: Tampilkan kejadian nyata langsung dengan nama orang konkret (misal: Dimas, Rian, Rendy, Sarah, Bima). DILARANG pakai sebutan generik "si A" atau "si B".
-2. AKHIRI DENGAN PERTANYAAN PENGALAMAN TERBUKA: Wajib ada pertanyaan penutup berbasis pengalaman warganet (bukan biner). Contoh: "Kalian pernah ngalamin gini juga di kos? Gimana akhirnya?"
+2. AKHIRI DENGAN PERTANYAAN DILEMA 2-KUBU (THREAD WAR BAIT): Wajib ada pertanyaan penutup yang membelah audiens menjadi 2 kubu (Tim A vs Tim B) agar terpicu membalas. Contoh: "Kalau di posisi Rian, kalian tim langsung konfrontasi atau tim pendam cari aman? Kenapa?"
 3. Bahasa warganet santai, ringkas, dan emosional (lu-gue/aku-kamu, "bgt", "anteng", "ngelunjak").
 4. DILARANG MENULIS HEADER SEPERTI "[Cerita Fiksi]". Header akan ditempel oleh sistem kode.
 5. DILARANG iklan/promosi apapun. 100% nol iklan.
@@ -322,7 +322,7 @@ Keluarkan HANYA JSON:
   "title": "Judul Menfess Singkat (Maksimal 6 kata)",
   "topic": "${topic}",
   "story_parts": [
-    "Teks curhat adegan konkret + pertanyaan pengalaman warganet (160-240 karakter)..."
+    "Teks curhat adegan konkret + pertanyaan dilema 2-kubu warganet (160-240 karakter)..."
   ]
 }
 `;
@@ -330,7 +330,7 @@ Keluarkan HANYA JSON:
     // FORMAT B: Micro-Thread Tepat 3 Part (Persis 3 slide)
     // Part 1: Hook momen menggantung (100-160 chars)
     // Part 2: Eskalasi kejadian dengan nama spesifik (150-250 chars)
-    // Part 3: Pertanyaan pengalaman terbuka warganet (100-180 chars)
+    // Part 3: Pertanyaan dilema 2-kubu warganet (100-180 chars)
     prompt = `
 Kamu adalah kurator di Threads @ceritakikiii. Bio: "In this economy mau nulis cerita orang-orang aja lah".
 Tuliskan SATU UTAS MICRO-THREAD TEPAT 3 PART (PERSIS 3 SLIDE).
@@ -345,9 +345,9 @@ STRUKTUR 3 PART:
 2. PART 2 (Eskalasi Kejadian / Dialog Lanjutan):
    - Reaksi orang bersangkutan atau dialog lanjutan yang bikin gregetan. Gunakan nama spesifik, DILARANG "si A / si B".
    - Panjang: 150 - 250 karakter.
-3. PART 3 (Pertanyaan Pengalaman Terbuka):
-   - Momen refleksi yang dilempar ke pengalaman warganet (pertanyaan terbuka, BUKAN pilihan biner a vs b).
-   - Panjang: 100 - 180 karakter. Contoh: "Ada yang pernah ngalamin lauk kulkas kosan raib kayak gini juga? Gimana akhirnya kalian nyelesaiinnya?"
+3. PART 3 (Pertanyaan Dilema 2-Kubu / Thread War Bait):
+   - Momen perdebatan yang membelah audiens menjadi 2 kubu realistis (Tim A vs Tim B).
+   - Panjang: 100 - 180 karakter. Contoh: "Kalau kalian di posisi Rendy, kalian tim 'langsung tolak chat bos jam 10 malam' atau tim 'iyain aja demi cari aman'? Coba jelasin alasan logisnya."
 
 ATURAN KETAT:
 - DILARANG MENULIS ANGKA PENOMORAN (seperti "1/3", "Part 1", dll).
