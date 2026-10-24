@@ -139,13 +139,16 @@ async function sendDatabaseBackup(targetChatId = null) {
 function renderHelpMenu(name = 'Kawan') {
   return (
     `👋 Halo *${name}*! Selamat datang di *Kisah Komisi Autopilot Engine*.\n\n` +
+    `🚀 *Strategi Autopilot (6 Post/Hari + Jitter Alami):*\n` +
+    `• *3 Slot Insight Organik*: Hot Take, Menfess Spill, Financial Breakdown (0% link, dongkrak jangkauan & repost)\n` +
+    `• *3 Slot Shopee Affiliate*: Cerita kontekstual, anchoring under 50rb, 2-kubu closing bait\n\n` +
     `🤖 *Kontrol Otomatisasi Threads:*\n` +
-    `• \`/insight\` : Cek analitik penayangan & strategi AI terkini\n` +
-    `• \`/veto\` : Batalkan penerbitan draf dalam 30-menit veto window\n` +
+    `• \`/insight\` : Cek analitik penayangan & evaluasi tren terkini\n` +
+    `• \`/veto\` : Batalkan penerbitan draf dalam 15-menit veto window\n` +
     `• \`/bikin_cerita\` : AI buat 1 cerita menfess viral (Lolos Kurasi QC)\n` +
-    `• \`/isi_stok\` : Trigger otomatis isi buffer stok (Target 9 cerita / 3 hari)\n` +
-    `• \`/stok\` : Cek status buffer stok\n` +
-    `• \`/post_sekarang\` : Terbitkan 1 cerita antrean ke Threads sekarang\n` +
+    `• \`/isi_stok\` : Trigger otomatis isi buffer stok (Target 18 konten / 3 hari)\n` +
+    `• \`/stok\` : Cek status & komposisi buffer stok (Affiliate vs Viral)\n` +
+    `• \`/post_sekarang\` : Terbitkan 1 konten antrean ke Threads sekarang\n` +
     `• \`/cek_limit\` : Cek sisa kuota posting & replies Meta Threads\n` +
     `• \`/status\` : Cek kesehatan sistem, token, & database\n\n` +
     `🔄 *Pemeliharaan & Keamanan:*\n` +
@@ -295,15 +298,15 @@ bot.command('bikin_cerita', async (ctx) => {
 
 // Command: /isi_stok
 bot.command('isi_stok', async (ctx) => {
-  await ctx.reply('⏳ Menjalankan pengisian stok buffer otomatis (Target: 9 cerita / 3 hari)...');
+  await ctx.reply('⏳ Menjalankan pengisian stok buffer otomatis (Target: 18 konten / 3 hari)...');
   try {
-    const res = await replenishStockBuffer(9);
+    const res = await replenishStockBuffer(18);
     if (res.status === 'full') {
-      safeReplyMarkdown(ctx, `✅ *Stok Antrean Sudah Penuh!*\n\nSaat ini sudah ada *${res.currentCount} cerita* terkurasi yang siap tayang.`);
+      safeReplyMarkdown(ctx, `✅ *Stok Antrean Sudah Penuh!*\n\nSaat ini sudah ada *${res.currentCount} konten* terkurasi yang siap tayang.`);
     } else if (res.status === 'busy') {
       ctx.reply('⏳ Proses kurasi stok sedang berjalan di background, silakan tunggu sebentar.');
     } else {
-      safeReplyMarkdown(ctx, `🎉 *Pengisian Stok Selesai!*\n\nBerhasil menambahkan *${res.added} cerita baru* yang telah lolos QC.\nTotal stok siap tayang sekarang: *${res.currentCount} cerita*.`);
+      safeReplyMarkdown(ctx, `🎉 *Pengisian Stok Selesai!*\n\nBerhasil menambahkan *${res.added} konten baru* yang telah lolos QC.\nTotal stok siap tayang sekarang: *${res.currentCount} konten*.`);
     }
   } catch (err) {
     console.error('Error isi_stok:', err);
@@ -316,19 +319,45 @@ bot.command('stok', (ctx) => {
   try {
     const count = db.getQueuedStoriesCount();
     const upcoming = db.getUpcomingStories(6);
+    const breakdown = db.getQueuedFormatBreakdown ? db.getQueuedFormatBreakdown() : {};
 
-    let msg = `📦 *Status Buffer Stok Cerita Otomatis:*\n`;
-    msg += `Total Cerita Siap Tayang: *${count} Cerita*\n`;
-    msg += `Status Buffer: *${count >= 9 ? '🟢 SEHAT (Aman 3 Hari)' : (count >= 3 ? '🟡 CUKUP (Aman 1-2 Hari)' : '🔴 RENDAH (Auto-Restock Aktif)')}*\n\n`;
+    const affCount = breakdown['story_affiliate'] || 0;
+    const hotCount = breakdown['hot_take'] || 0;
+    const menfessCount = breakdown['menfess_spill'] || 0;
+    const finCount = breakdown['financial_breakdown'] || 0;
+    const viralCount = hotCount + menfessCount + finCount;
+
+    let msg = `📦 *Status Buffer Stok Konten Autopilot:*\n`;
+    msg += `Total Konten Siap Tayang: *${count} Konten* (Target: 18 / 3 Hari)\n`;
+    msg += `Status Buffer: *${count >= 18 ? '🟢 PENUH & AMAN (3 Hari)' : (count >= 6 ? '🟡 CUKUP (1-2 Hari)' : '🔴 PERLU REPLENISH (Auto-Restock Aktif)')}*\n\n`;
+
+    msg += `📊 *Komposisi Format:*\n`;
+    msg += `• 🛍️ Shopee Affiliate Story: *${affCount}*\n`;
+    msg += `• 🔥 Hot Takes (Organik): *${hotCount}*\n`;
+    msg += `• 🗣️ Menfess Spill (Organik): *${menfessCount}*\n`;
+    msg += `• 💸 Financial Breakdown (Organik): *${finCount}*\n`;
+    msg += `_Rasio: ${affCount} Affiliate : ${viralCount} Viral Insight_\n\n`;
 
     if (upcoming.length > 0) {
-      msg += `📋 *Cerita Terdekat yang Siap Tayang:*\n`;
+      msg += `📋 *6 Konten Terdekat Siap Tayang:*\n`;
       upcoming.forEach(s => {
+        let icon = '📖';
+        if (s.format_type === 'hot_take') icon = '🔥';
+        else if (s.format_type === 'menfess_spill') icon = '🗣️';
+        else if (s.format_type === 'financial_breakdown') icon = '💸';
+
         const scoreTag = s.qc_score ? ` ⭐ ${s.qc_score}/10` : '';
-        msg += `• *#${s.id}* - ${s.title}${scoreTag} (${s.product_name || 'Cerita'})\n`;
+        const prodTag = s.product_name ? ` [Shopee: ${s.product_name.slice(0, 15)}...]` : ' [0% Ad]';
+        msg += `• ${icon} *#${s.id}* - ${s.title.slice(0, 32)}...${scoreTag}${prodTag}\n`;
       });
-      msg += `\n⏰ *Jadwal Tayang Otomatis (3x Sehari WIB):*\n• Pagi: 07:30 WIB\n• Siang: 12:30 WIB\n• Malam: 20:00 WIB\n\n`;
-      msg += `_Sistem autopilot otomatis menjaga minimal 9 cerita di background tanpa perlu intervensi manual._`;
+      msg += `\n⏰ *Jadwal Tayang (6x Sehari WIB):*\n`;
+      msg += `• 07:15 WIB: 🔥 Hot Take (0% Ad)\n`;
+      msg += `• 10:00 WIB: 🗣️ Menfess Spill (0% Ad)\n`;
+      msg += `• 12:30 WIB: 🛍️ Story + Shopee Affiliate\n`;
+      msg += `• 16:30 WIB: 💸 Financial Breakdown (0% Ad)\n`;
+      msg += `• 19:30 WIB: 🛍️ Story + Shopee Affiliate\n`;
+      msg += `• 21:45 WIB: 🛍️ Story + Shopee Affiliate\n\n`;
+      msg += `_Setiap postingan memiliki random human jitter 1-6 menit._`;
     } else {
       msg += `_Antrean sedang kosong. Sistem autopilot akan segera mengisi otomatis di background, atau ketik \`/isi_stok\`!_`;
     }
@@ -532,7 +561,7 @@ bot.command('rekap', (ctx) => {
   safeReplyMarkdown(ctx, `📊 *Rekap Komisi:* Total *${formatRupiah(total)}*`);
 });
 
-// Command: /veto (30-Minute Veto Window Controller)
+// Command: /veto (Veto Window Controller untuk 6 Slot Harian)
 bot.command('veto', async (ctx) => {
   const nowWIB = new Date(new Date().toLocaleString('en-US', { timeZone: 'Asia/Jakarta' }));
   const dateStr = nowWIB.toISOString().slice(0, 10);
@@ -540,36 +569,57 @@ bot.command('veto', async (ctx) => {
   const currentMin = nowWIB.getMinutes();
   const currentTimeVal = currentHour * 60 + currentMin;
 
-  // Window: 06:00 - 07:05 -> slot 07:00, 20:30 - 21:35 -> slot 21:30
+  const SLOTS = [
+    { time: '07:15', vetoTime: '07:00', label: 'SLOT 1 - PAGI KOMUTER (07:15 WIB)' },
+    { time: '10:00', vetoTime: '09:45', label: 'SLOT 2 - COFFEE BREAK (10:00 WIB)' },
+    { time: '12:30', vetoTime: '12:15', label: 'SLOT 3 - MAKAN SIANG (12:30 WIB)' },
+    { time: '16:30', vetoTime: '16:15', label: 'SLOT 4 - SORE PULANG KANTOR (16:30 WIB)' },
+    { time: '19:30', vetoTime: '19:15', label: 'SLOT 5 - MALAM SANTAI (19:30 WIB)' },
+    { time: '21:45', vetoTime: '21:30', label: 'SLOT 6 - PEAK REBAHAN (21:45 WIB)' }
+  ];
+
   let targetSlot = null;
-  if (currentTimeVal >= 360 && currentTimeVal <= 425) {
-    targetSlot = '07:00';
-  } else if (currentTimeVal >= 1230 && currentTimeVal <= 1300) {
-    targetSlot = '21:30';
-  } else {
-    // Di luar window presisi, cari slot eksperimen pending terdekat hari ini
-    const slotMorning = db.getExperimentSlot(dateStr, '07:00');
-    const slotNight = db.getExperimentSlot(dateStr, '21:30');
-    if (slotMorning && slotMorning.status === 'pending') targetSlot = '07:00';
-    else if (slotNight && slotNight.status === 'pending') targetSlot = '21:30';
+  let targetLabel = '';
+
+  // 1. Cek apakah saat ini berada dalam jendela veto aktif (vetoTime s/d postTime + 10 menit)
+  for (const s of SLOTS) {
+    const [vh, vm] = s.vetoTime.split(':').map(Number);
+    const [ph, pm] = s.time.split(':').map(Number);
+    const vetoVal = vh * 60 + vm;
+    const postVal = ph * 60 + pm;
+
+    if (currentTimeVal >= vetoVal && currentTimeVal <= postVal + 10) {
+      targetSlot = s.time;
+      targetLabel = s.label;
+      break;
+    }
+  }
+
+  // 2. Jika di luar jendela aktif, cari slot mendatang berikutnya hari ini
+  if (!targetSlot) {
+    for (const s of SLOTS) {
+      const [ph, pm] = s.time.split(':').map(Number);
+      const postVal = ph * 60 + pm;
+      if (currentTimeVal < postVal) {
+        targetSlot = s.time;
+        targetLabel = s.label;
+        break;
+      }
+    }
   }
 
   if (!targetSlot) {
-    return safeReplyMarkdown(ctx, '⚠️ Tidak ada slot postingan eksperimen pending yang dapat dibatalkan saat ini.');
+    return safeReplyMarkdown(ctx, '⚠️ Tidak ada slot postingan hari ini yang masih pending untuk diveto.');
   }
 
   const vetoKey = `VETO_SLOT_${dateStr}_${targetSlot}`;
   db.setSetting(vetoKey, 'vetoed');
-  const expSlot = db.getExperimentSlot(dateStr, targetSlot);
-  if (expSlot) {
-    db.updateExperimentSlot(expSlot.id, 'failed');
-  }
 
   safeReplyMarkdown(
     ctx,
     `🛑 *VETO BERHASIL DIAKTIFKAN!*\n\n` +
-    `Slot tayang *${targetSlot} WIB* (${dateStr}) telah *DIBATALKAN*.\n` +
-    `Bot TIDAK akan memposting cerita ini ke Threads.`
+    `Slot tayang *${targetLabel}* (${dateStr}) telah *DIBATALKAN*.\n` +
+    `Bot TIDAK akan memposting konten ini ke Threads.`
   );
 });
 
@@ -785,61 +835,53 @@ async function checkTokenExpiryReminder() {
 }
 
 // ==========================================
-// ⏳ PREPARE & NOTIFY 30-MINUTE VETO WINDOW
-// Dijalankan 30 menit sebelum jam tayang:
-// - Pagi: 06:30 WIB (untuk slot 07:00)
-// - Malam: 21:00 WIB (untuk slot 21:30)
+// 📅 JADWAL 6 KONTEN HARIAN (GOLDEN HOURS WIB)
+// Strategi:
+// 1. Gedein Insight (Organik 0 Link): Slot 1, 2, 4 (Hot Take, Menfess Spill, Financial Breakdown)
+// 2. Jualan Affiliate (Shopee Contextual): Slot 3, 5, 6 (Story + Shopee Anchor Under 50k + 2-Kubu Closing)
+// 3. Fully Otomatis + Jitter Manusiawi (1-6 Menit)
 // ==========================================
-async function prepareAndNotifyVetoSlot(slotTime, label) {
+const DAILY_SLOTS = [
+  { slotNumber: 1, time: '07:15', vetoTime: '07:00', label: 'SLOT 1 - PAGI KOMUTER (07:15 WIB)', defaultFormat: 'hot_take', hasAffiliate: false },
+  { slotNumber: 2, time: '10:00', vetoTime: '09:45', label: 'SLOT 2 - COFFEE BREAK (10:00 WIB)', defaultFormat: 'menfess_spill', hasAffiliate: false },
+  { slotNumber: 3, time: '12:30', vetoTime: '12:15', label: 'SLOT 3 - MAKAN SIANG (12:30 WIB)', defaultFormat: 'story_affiliate', hasAffiliate: true },
+  { slotNumber: 4, time: '16:30', vetoTime: '16:15', label: 'SLOT 4 - SORE PULANG KANTOR (16:30 WIB)', defaultFormat: 'financial_breakdown', hasAffiliate: false },
+  { slotNumber: 5, time: '19:30', vetoTime: '19:15', label: 'SLOT 5 - MALAM SANTAI (19:30 WIB)', defaultFormat: 'story_affiliate', hasAffiliate: true },
+  { slotNumber: 6, time: '21:45', vetoTime: '21:30', label: 'SLOT 6 - PEAK REBAHAN (21:45 WIB)', defaultFormat: 'story_affiliate', hasAffiliate: true }
+];
+
+// ==========================================
+// ⏳ PREPARE & NOTIFY 15-MINUTE VETO WINDOW
+// Dijalankan 15 menit sebelum setiap slot tayang
+// ==========================================
+async function prepareAndNotifyVetoSlot(slotTime, label, slotNumber = null) {
   try {
     const nowWIB = new Date(new Date().toLocaleString('en-US', { timeZone: 'Asia/Jakarta' }));
     const dateStr = nowWIB.toISOString().slice(0, 10);
-    const experimentSlot = db.getExperimentSlot ? db.getExperimentSlot(dateStr, slotTime) : null;
+    const slotConf = DAILY_SLOTS.find(s => s.time === slotTime) || {
+      slotNumber: slotNumber || 1,
+      hasAffiliate: false,
+      defaultFormat: 'hot_take'
+    };
+
     let story = null;
     let storyId = null;
-    let topicTag = 'curhat';
-    let variantDesc = 'Format B (Micro-Thread)';
 
-    if (experimentSlot && (experimentSlot.status === 'pending' || experimentSlot.status === 'running')) {
-      storyId = experimentSlot.story_id;
-      if (storyId) {
-        story = db.getStoryById(storyId);
-      }
+    // Cek apakah sudah ada story yang disiapkan sebelumnya
+    const preparedId = db.getSetting(`PREPARED_STORY_${dateStr}_${slotTime}`);
+    if (preparedId) {
+      story = db.getStoryById(preparedId);
+      if (story && story.status !== 'queued') story = null;
+    }
+
+    if (!story) {
+      const targetFormat = slotConf.hasAffiliate ? 'story_affiliate' : slotConf.defaultFormat;
+      story = db.getNextQueuedStory ? db.getNextQueuedStory(targetFormat) : null;
 
       if (!story) {
-        console.log(`[VetoWindow] Memproduksi draf cerita untuk slot ${label} (Day ${experimentSlot.day_number}, Format ${experimentSlot.variant})...`);
+        console.log(`[VetoWindow] Antrean kosong untuk format ${targetFormat}, memproduksi langsung untuk slot ${label}...`);
         const curated = await produceCuratedStory({
-          topic: experimentSlot.theme,
-          variant: experimentSlot.variant,
-          origin: experimentSlot.origin || 'fiction',
-          topicTag: experimentSlot.topic_tag
-        });
-
-        storyId = db.addStoryToQueue({
-          title: curated.title,
-          topic: curated.topic,
-          slides: curated.slides,
-          productName: curated.product_name || null,
-          productUrl: curated.product_url || null,
-          scheduledFor: `${dateStr}T${slotTime}:00+07:00`,
-          qcScore: curated.qcScore,
-          qcNotes: curated.qcNotes,
-          origin: curated.origin,
-          topicTag: curated.topicTag,
-          variant: curated.variant
-        });
-
-        db.updateExperimentSlot(experimentSlot.id, 'pending', storyId);
-        story = db.getStoryById(storyId);
-      }
-      topicTag = experimentSlot.topic_tag || 'curhat';
-      variantDesc = experimentSlot.variant === 'A' ? 'Format A (Single Menfess)' : 'Format B (3-Part Micro-Thread)';
-    } else {
-      // MODE OPERASI NORMAL AUTOPILOT (Ambil dari antrean buffer)
-      story = db.getNextQueuedStory ? db.getNextQueuedStory() : null;
-      if (!story) {
-        console.log(`[VetoWindow] Antrean kosong, memproduksi 1 cerita terkurasi langsung untuk slot ${label}...`);
-        const curated = await produceCuratedStory({
+          formatType: targetFormat,
           variant: 'B',
           origin: 'fiction'
         });
@@ -854,35 +896,44 @@ async function prepareAndNotifyVetoSlot(slotTime, label) {
           qcNotes: curated.qcNotes,
           origin: curated.origin || 'fiction',
           topicTag: curated.topic_tag || curated.topicTag || 'curhat',
-          variant: curated.variant || 'B'
+          variant: curated.variant || 'B',
+          formatType: curated.format_type || targetFormat
         });
         story = db.getStoryById(storyId);
       }
-      topicTag = story.topic_tag || 'curhat';
-      variantDesc = story.variant === 'A' ? 'Format A (Single Menfess)' : 'Format B (Micro-Thread)';
+
+      if (story) {
+        db.setSetting(`PREPARED_STORY_${dateStr}_${slotTime}`, String(story.id));
+      }
     }
 
     if (!story) {
-      console.log(`[VetoWindow] Tidak ada cerita siap tayang untuk ${dateStr} ${slotTime}.`);
+      console.log(`[VetoWindow] Tidak ada konten siap tayang untuk ${dateStr} ${slotTime}.`);
       return;
     }
 
     const slides = JSON.parse(story.slides_json);
     const firstSlide = slides[0] || '';
+    const formatType = story.format_type || (story.product_url ? 'story_affiliate' : 'hot_take');
+
+    let formatBadge = '📖 Cerita Relate + Shopee Affiliate';
+    if (formatType === 'hot_take') formatBadge = '🔥 Hot Take (1-Liner Sarcasm & Relatable Truth)';
+    else if (formatType === 'menfess_spill') formatBadge = '🗣️ Menfess Spill (Crowdsourcing Reply Magnet)';
+    else if (formatType === 'financial_breakdown') formatBadge = '💸 Financial Breakdown (In This Economy)';
 
     const sent = await sendAdminAlert(
-      `⏳ *[30-MIN VETO WINDOW]* Draf Siap Tayang Jam ${slotTime} WIB!\n\n` +
+      `⏳ *[15-MIN VETO WINDOW]* Draf Siap Tayang Jam *${slotTime} WIB*!\n\n` +
       `⏰ *Slot*: ${label}\n` +
-      `🏷️ *Format*: *${variantDesc}*\n` +
-      `🔖 *Topic Tag*: \`#${topicTag}\`\n` +
+      `🏷️ *Format*: *${formatBadge}*\n` +
+      `🔖 *Topic Tag*: \`#${story.topic_tag || 'threads'}\`\n` +
       `📖 *Judul*: ${story.title}\n\n` +
       `*Pratinjau Hook / Post Utama:*\n` +
       `_"${firstSlide}"_\n\n` +
-      (slides.length > 1 ? `_Total ${slides.length} bagian micro-thread._\n\n` : '') +
-      (story.product_name ? `🛍️ *Rekomendasi Shopee*: ${story.product_name}\n🔗 *Link*: \`${story.product_url || '-'}\`\n\n` : '') +
+      (slides.length > 1 ? `_Total ${slides.length} bagian thread._\n\n` : '') +
+      (story.product_name ? `🛍️ *Rekomendasi Shopee*: ${story.product_name}\n🔗 *Link*: \`${story.product_url || '-'}\`\n\n` : '✨ *Murni Insight Organik* (0% Link Iklan - Memaksimalkan Reach & Repost)\n\n') +
       `⚠️ *Opsi Kontrol Owner:*\n` +
-      `Bot akan otomatis menerbitkan post ini tepat jam *${slotTime} WIB*.\n` +
-      `Ketik \`/veto\` untuk membatalkan tayang dalam 30 menit ke depan.`
+      `Bot akan otomatis menerbitkan post ini sekitar jam *${slotTime} WIB* (dengan random human jitter 1-6 menit).\n` +
+      `Ketik \`/veto\` untuk membatalkan tayang dalam 15 menit ke depan.`
     );
 
     if (sent) {
@@ -898,11 +949,10 @@ async function prepareAndNotifyVetoSlot(slotTime, label) {
 }
 
 // ==========================================
-// ⏰ EKSEKUTOR EXPERIMENT PAIRED A/B SCHEDULER
-// 2 Slot Tayang: Pagi 07:00:00 WIB & Malam 21:30:00 WIB
-// Jitter: 0s (Dinonaktifkan agar presisi sesuai protokol A/B)
+// ⏰ EKSEKUTOR POSTING DENGAN RANDOM HUMAN JITTER
+// Jitter acak 1-6 menit (60.000 - 360.000 ms) agar natural & bebas pola robotik
 // ==========================================
-async function executeScheduledPosting(slotTime, label) {
+async function executeScheduledPosting(slotTime, label, slotNumber = null) {
   const nowWIB = new Date(new Date().toLocaleString('en-US', { timeZone: 'Asia/Jakarta' }));
   const dateStr = nowWIB.toISOString().slice(0, 10);
   const vetoKey = `VETO_SLOT_${dateStr}_${slotTime}`;
@@ -910,26 +960,7 @@ async function executeScheduledPosting(slotTime, label) {
   // Cek apakah slot ini telah diveto oleh owner
   if (db.getSetting(vetoKey) === 'vetoed') {
     console.log(`[Scheduler] Slot ${label} (${slotTime}) DIBATALKAN oleh veto owner.`);
-    const experimentSlot = db.getExperimentSlot(dateStr, slotTime);
-    if (experimentSlot) {
-      db.updateExperimentSlot(experimentSlot.id, 'failed');
-    }
     await sendAdminAlert(`🛑 *[VETO DIPROSES]* Slot tayang *${label}* telah dilewati dan tidak diterbitkan ke Threads sesuai veto owner.`);
-    return;
-  }
-
-  // Cek apakah ada jadwal eksperimen terdaftar untuk hari & slot ini
-  const experimentSlot = db.getExperimentSlot(dateStr, slotTime);
-
-  // FAIL-CLOSED 3 HARI PERTAMA: Jika Hari 1-3 dan notifikasi veto Telegram gagal terkirim, JANGAN TAYANG OTOMATIS!
-  const isFirst3Days = experimentSlot && experimentSlot.day_number <= 3;
-  const alertDelivered = db.getSetting(`VETO_ALERT_DELIVERED_${dateStr}_${slotTime}`);
-  if (isFirst3Days && alertDelivered !== 'success') {
-    console.error(`[Scheduler] FAIL-CLOSED ACTIVE: Notifikasi veto belum/gagal terkirim ke Telegram pada Hari ke-${experimentSlot.day_number} (${label}). Posting dibatalkan demi keamanan.`);
-    if (experimentSlot) {
-      db.updateExperimentSlot(experimentSlot.id, 'failed');
-    }
-    await sendAdminAlert(`🛑 *[FAIL-CLOSED SAFETY]* Slot ${label} (Hari ke-${experimentSlot.day_number}) DIBATALKAN otomatis karena notifikasi draf veto Telegram gagal terkirim.`);
     return;
   }
 
@@ -940,7 +971,21 @@ async function executeScheduledPosting(slotTime, label) {
 
   isPostingInProgress = true;
   try {
-    console.log(`[Scheduler] Memulai eksekusi posting presisi untuk slot ${label} (0s jitter)...`);
+    // RANDOM JITTER MANUSIAWI (1 s/d 6 menit: 60.000 - 360.000 ms)
+    // Menghindari footprint posting kaku/robotik pada detik :00 agar aman dari deteksi algoritma Meta
+    const jitterMs = Math.floor(Math.random() * (360000 - 60000 + 1)) + 60000;
+    const jitterSec = Math.round(jitterMs / 1000);
+    const jitterMin = (jitterMs / 60000).toFixed(1);
+    console.log(`[Scheduler] Random jitter manusiawi aktif untuk ${label}: menunggu ${jitterMin} menit (${jitterSec} detik)...`);
+    await new Promise(r => setTimeout(r, jitterMs));
+
+    // Cek kembali veto pasca-jitter (siapa tahu owner veto saat jitter berjalan)
+    if (db.getSetting(vetoKey) === 'vetoed') {
+      console.log(`[Scheduler] Slot ${label} (${slotTime}) diveto saat masa jitter.`);
+      await sendAdminAlert(`🛑 *[VETO DIPROSES]* Slot tayang *${label}* dibatalkan sesuai veto owner.`);
+      return;
+    }
+
     const userId = process.env.THREADS_USER_ID;
     const token = getActiveAccessToken();
 
@@ -950,47 +995,51 @@ async function executeScheduledPosting(slotTime, label) {
       return;
     }
 
+    const slotConf = DAILY_SLOTS.find(s => s.time === slotTime) || {
+      slotNumber: slotNumber || 1,
+      hasAffiliate: false,
+      defaultFormat: 'hot_take'
+    };
+
     let story = null;
-    let storyId = null;
-
-    if (experimentSlot && (experimentSlot.status === 'pending' || experimentSlot.status === 'running')) {
-      console.log(`[Scheduler] Menjalankan eksperimen Hari ke-${experimentSlot.day_number} (${experimentSlot.variant}): "${experimentSlot.theme}"...`);
-      db.updateExperimentSlot(experimentSlot.id, 'running');
-
-      if (experimentSlot.story_id) {
-        story = db.getStoryById(experimentSlot.story_id);
-      }
-
-      if (!story) {
-        const curated = await produceCuratedStory({
-          topic: experimentSlot.theme,
-          variant: experimentSlot.variant,
-          origin: experimentSlot.origin || 'fiction',
-          topicTag: experimentSlot.topic_tag
-        });
-
-        storyId = db.addStoryToQueue({
-          title: curated.title,
-          topic: curated.topic,
-          slides: curated.slides,
-          productName: curated.product_name || null,
-          productUrl: curated.product_url || null,
-          scheduledFor: new Date().toISOString(),
-          qcScore: curated.qcScore,
-          qcNotes: curated.qcNotes,
-          origin: curated.origin,
-          topicTag: curated.topicTag,
-          variant: curated.variant
-        });
-
-        story = db.getStoryById(storyId);
-      }
-    } else {
-      story = db.getNextQueuedStory();
+    const preparedId = db.getSetting(`PREPARED_STORY_${dateStr}_${slotTime}`);
+    if (preparedId) {
+      story = db.getStoryById(preparedId);
+      if (story && story.status !== 'queued') story = null;
     }
 
     if (!story) {
-      console.log('[Scheduler] Tidak ada jadwal eksperimen pending atau antrean kosong.');
+      const targetFormat = slotConf.hasAffiliate ? 'story_affiliate' : slotConf.defaultFormat;
+      story = db.getNextQueuedStory ? db.getNextQueuedStory(targetFormat) : null;
+    }
+
+    if (!story) {
+      console.log(`[Scheduler] Antrean darurat kosong untuk slot ${label}, memproduksi langsung...`);
+      const targetFormat = slotConf.hasAffiliate ? 'story_affiliate' : slotConf.defaultFormat;
+      const curated = await produceCuratedStory({
+        formatType: targetFormat,
+        variant: 'B',
+        origin: 'fiction'
+      });
+      const storyId = db.addStoryToQueue({
+        title: curated.title,
+        topic: curated.topic,
+        slides: curated.slides,
+        productName: curated.product_name || null,
+        productUrl: curated.product_url || null,
+        scheduledFor: `${dateStr}T${slotTime}:00+07:00`,
+        qcScore: curated.qcScore,
+        qcNotes: curated.qcNotes,
+        origin: curated.origin || 'fiction',
+        topicTag: curated.topic_tag || curated.topicTag || 'curhat',
+        variant: curated.variant || 'B',
+        formatType: curated.format_type || targetFormat
+      });
+      story = db.getStoryById(storyId);
+    }
+
+    if (!story) {
+      console.log(`[Scheduler] Tidak ada konten yang dapat diposting untuk slot ${label}.`);
       return;
     }
 
@@ -1009,50 +1058,45 @@ async function executeScheduledPosting(slotTime, label) {
       const permalink = typeof publishResult === 'object' ? publishResult.permalink : `https://www.threads.net/@ceritakikiii`;
 
       db.markStoryPublished(story.id, postId, lastId, permalink);
-      if (experimentSlot) {
-        db.updateExperimentSlot(experimentSlot.id, 'completed', story.id);
-      }
-      console.log(`[Scheduler] Sukses terbit postingan #${story.id} (${label}, Format ${story.variant || 'Standard'}): ${postId}`);
+      console.log(`[Scheduler] Sukses terbit postingan #${story.id} (${label}, Format ${story.format_type || 'story'}): ${postId}`);
+
+      const formatType = story.format_type || (story.product_url ? 'story_affiliate' : 'hot_take');
+      let formatBadge = '📖 Cerita Relate + Shopee Affiliate';
+      if (formatType === 'hot_take') formatBadge = '🔥 Hot Take (1-Liner Sarcasm & Relatable Truth)';
+      else if (formatType === 'menfess_spill') formatBadge = '🗣️ Menfess Spill (Crowdsourcing Reply Magnet)';
+      else if (formatType === 'financial_breakdown') formatBadge = '💸 Financial Breakdown (In This Economy)';
 
       await sendAdminAlert(
-        `🎉 *BERHASIL TAYANG DI THREADS (EKSPERIMEN)*\n\n` +
+        `🎉 *BERHASIL TAYANG DI THREADS!*\n\n` +
         `⏰ *Slot*: ${label}\n` +
-        `🏷️ *Format*: *${story.variant === 'A' ? 'Format A (Single Menfess)' : 'Format B (3-Part Micro-Thread)'}*\n` +
+        `⏱️ *Random Jitter*: +${jitterMin} menit (${jitterSec}s)\n` +
+        `🏷️ *Format*: *${formatBadge}*\n` +
         `📖 *Judul*: ${story.title}\n` +
-        `🔖 *Topic Tag*: \`#${story.topic_tag || 'none'}\`\n` +
+        (story.product_name ? `🛍️ *Produk Shopee*: ${story.product_name}\n` : `✨ *Organik*: 0% Link (Growth Magnet)\n`) +
+        `🔖 *Topic Tag*: \`#${story.topic_tag || 'threads'}\`\n` +
         `🆔 *Post ID*: \`${postId}\`\n\n` +
         `🔗 [Buka Postingan Threads](${permalink})\n` +
         `Akun: *@ceritakikiii*`
       );
     } catch (err) {
-      console.error(`[Scheduler] Gagal posting cerita #${story.id} (${story.title}) slot ${label}:`, err.message);
+      console.error(`[Scheduler] Gagal posting konten #${story.id} (${story.title}) slot ${label}:`, err.message);
       db.markStoryFailed(story.id, err.message);
-      if (experimentSlot) {
-        db.updateExperimentSlot(experimentSlot.id, 'failed', story.id);
-      }
 
-      // Deteksi error fatal Meta (190, 200, 368): JANGAN RETRY BUTA!
       const isFatal = err.metaCode === 190 || err.metaCode === 200 || err.metaCode === 368 ||
                       /190|200|368/.test(err.message);
 
       if (isFatal) {
         const code = err.metaCode || 'FATAL_META_ERROR';
         console.error(`[Scheduler] MENDETEKSI ERROR FATAL META (${code}). RETRY BUTA DIBATALKAN DEMI KEAMANAN AKUN.`);
-        
         await sendAdminAlert(
           `🚨 *ALERT PUBLISH META ERROR [KODE ${code}]!*\n\n` +
           `Publish pada slot *${label}* GAGAL dan *TIDAK diretry buta* untuk mencegah pembatasan akun lebih lanjut.\n\n` +
-          `📖 *Cerita*: ${story.title}\n` +
-          `❌ *Pesan Error*: ${err.message}\n\n` +
-          `*Tindakan yang Diperlukan:*\n` +
-          (code === 190 ? `• Token expired / deauthorized. Buka Telegram bot dan update token baru.\n` : '') +
-          (code === 200 ? `• App review / permissions missing. Owner buka dashboard Meta for Developers dan cek alert/Data Use Checkup.\n` : '') +
-          (code === 368 ? `• Akun dibatasi sementara oleh filter spam Meta. Jeda posting selama 24 jam.\n` : '')
+          `📖 *Konten*: ${story.title}\n` +
+          `❌ *Pesan Error*: ${err.message}`
         );
         return;
       }
 
-      // Jika error sementara (bukan kode fatal), beri alert biasa
       await sendAdminAlert(
         `🚨 *GAGAL AUTO-POSTING KE THREADS!*\n\n` +
         `⏰ *Slot*: ${label}\n` +
@@ -1066,37 +1110,65 @@ async function executeScheduledPosting(slotTime, label) {
 }
 
 // ==========================================
-// ⏳ CRON 30-MINUTE VETO WINDOW (WIB)
-// Slot Pagi: Notifikasi 06:30 WIB -> Tayang 07:00 WIB
-// Slot Malam: Notifikasi 21:00 WIB -> Tayang 21:30 WIB
+// ⏰ CRON 6 SLOT HARIAN DENGAN 15-MINUTE VETO WINDOW (WIB)
 // ==========================================
-cron.schedule('30 6 * * *', () => prepareAndNotifyVetoSlot('07:00', 'PAGI 07:00 WIB'), {
+
+// SLOT 1: PAGI KOMUTER (07:15 WIB) -> Veto 07:00 WIB
+cron.schedule('0 7 * * *', () => prepareAndNotifyVetoSlot('07:15', 'SLOT 1 - PAGI KOMUTER (07:15 WIB)', 1), {
+  scheduled: true,
+  timezone: 'Asia/Jakarta'
+});
+cron.schedule('15 7 * * *', () => executeScheduledPosting('07:15', 'SLOT 1 - PAGI KOMUTER (07:15 WIB)', 1), {
   scheduled: true,
   timezone: 'Asia/Jakarta'
 });
 
-cron.schedule('0 7 * * *', () => executeScheduledPosting('07:00', 'PAGI 07:00 WIB'), {
+// SLOT 2: COFFEE BREAK (10:00 WIB) -> Veto 09:45 WIB
+cron.schedule('45 9 * * *', () => prepareAndNotifyVetoSlot('10:00', 'SLOT 2 - COFFEE BREAK (10:00 WIB)', 2), {
+  scheduled: true,
+  timezone: 'Asia/Jakarta'
+});
+cron.schedule('0 10 * * *', () => executeScheduledPosting('10:00', 'SLOT 2 - COFFEE BREAK (10:00 WIB)', 2), {
   scheduled: true,
   timezone: 'Asia/Jakarta'
 });
 
-// Slot Siang: Notifikasi 12:00 WIB -> Tayang 12:30 WIB
-cron.schedule('0 12 * * *', () => prepareAndNotifyVetoSlot('12:30', 'SIANG 12:30 WIB'), {
+// SLOT 3: MAKAN SIANG (12:30 WIB) -> Veto 12:15 WIB [AFFILIATE #1]
+cron.schedule('15 12 * * *', () => prepareAndNotifyVetoSlot('12:30', 'SLOT 3 - MAKAN SIANG (12:30 WIB)', 3), {
+  scheduled: true,
+  timezone: 'Asia/Jakarta'
+});
+cron.schedule('30 12 * * *', () => executeScheduledPosting('12:30', 'SLOT 3 - MAKAN SIANG (12:30 WIB)', 3), {
   scheduled: true,
   timezone: 'Asia/Jakarta'
 });
 
-cron.schedule('30 12 * * *', () => executeScheduledPosting('12:30', 'SIANG 12:30 WIB'), {
+// SLOT 4: SORE PULANG KANTOR (16:30 WIB) -> Veto 16:15 WIB
+cron.schedule('15 16 * * *', () => prepareAndNotifyVetoSlot('16:30', 'SLOT 4 - SORE PULANG KANTOR (16:30 WIB)', 4), {
+  scheduled: true,
+  timezone: 'Asia/Jakarta'
+});
+cron.schedule('30 16 * * *', () => executeScheduledPosting('16:30', 'SLOT 4 - SORE PULANG KANTOR (16:30 WIB)', 4), {
   scheduled: true,
   timezone: 'Asia/Jakarta'
 });
 
-cron.schedule('0 21 * * *', () => prepareAndNotifyVetoSlot('21:30', 'MALAM 21:30 WIB'), {
+// SLOT 5: MALAM SANTAI (19:30 WIB) -> Veto 19:15 WIB [AFFILIATE #2]
+cron.schedule('15 19 * * *', () => prepareAndNotifyVetoSlot('19:30', 'SLOT 5 - MALAM SANTAI (19:30 WIB)', 5), {
+  scheduled: true,
+  timezone: 'Asia/Jakarta'
+});
+cron.schedule('30 19 * * *', () => executeScheduledPosting('19:30', 'SLOT 5 - MALAM SANTAI (19:30 WIB)', 5), {
   scheduled: true,
   timezone: 'Asia/Jakarta'
 });
 
-cron.schedule('30 21 * * *', () => executeScheduledPosting('21:30', 'MALAM 21:30 WIB'), {
+// SLOT 6: PEAK REBAHAN (21:45 WIB) -> Veto 21:30 WIB [AFFILIATE #3]
+cron.schedule('30 21 * * *', () => prepareAndNotifyVetoSlot('21:45', 'SLOT 6 - PEAK REBAHAN (21:45 WIB)', 6), {
+  scheduled: true,
+  timezone: 'Asia/Jakarta'
+});
+cron.schedule('45 21 * * *', () => executeScheduledPosting('21:45', 'SLOT 6 - PEAK REBAHAN (21:45 WIB)', 6), {
   scheduled: true,
   timezone: 'Asia/Jakarta'
 });
@@ -1115,18 +1187,18 @@ cron.schedule('0 8 * * *', () => {
 });
 
 // ==========================================
-// 📦 AUTO-REPLENISH BUFFER STOK (Dijeda selama eksperimen paired 14 hari)
-// Selama eksperimen, cerita diproduksi on-demand per slot jadwal A/B
+// 📦 AUTO-REPLENISH BUFFER STOK (Target 18 Konten / 3 Hari Buffer)
+// Menjaga keseimbangan 50% Shopee Affiliate & 50% Viral Growth Insight
 // ==========================================
 cron.schedule('0 */2 * * *', async () => {
-  console.log('[Scheduler] Menjalankan auto-replenish buffer stok berkala...');
+  console.log('[Scheduler] Menjalankan auto-replenish buffer stok berkala (Target 18 konten)...');
   try {
-    const res = await replenishStockBuffer(9);
+    const res = await replenishStockBuffer(18);
     if (res.added > 0) {
       await sendAdminAlert(
         `📦 *[Auto-Stockpile] Stok Berhasil Ditambah!*\n\n` +
-        `Dewan Redaksi AI (Gemini Creator + Groq QC) baru saja menambahkan *${res.added} cerita terkurasi + Shopee Affiliate* ke antrean.\n` +
-        `Total stok siap tayang sekarang: *${res.currentCount} cerita*.`
+        `Dewan Redaksi AI baru saja menambahkan *${res.added} konten terkurasi* ke antrean.\n` +
+        `Total stok siap tayang sekarang: *${res.currentCount} konten* (Target 18 untuk buffer 3 hari).`
       );
     }
   } catch (err) {
@@ -1334,10 +1406,10 @@ bot.catch((err, ctx) => {
 // Start Bot
 bot.launch().then(() => {
   console.log('🚀 Kisah Komisi Autopilot Engine AKTIF (Timezone: Asia/Jakarta)!');
-  // Trigger otomatis di startup: cek & isi buffer stok bila kurang dari 9
+  // Trigger otomatis di startup: cek & isi buffer stok bila kurang dari 18
   setTimeout(() => {
     console.log('[Autopilot] Memeriksa stok awal saat startup...');
-    replenishStockBuffer(9).catch(e => console.warn('[Autopilot] Startup replenish:', e.message));
+    replenishStockBuffer(18).catch(e => console.warn('[Autopilot] Startup replenish:', e.message));
   }, 5000);
 }).catch(err => {
   console.error('FATAL bot.launch:', err);

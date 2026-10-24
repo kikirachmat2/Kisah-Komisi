@@ -266,6 +266,17 @@ async function produceCuratedStory(options = null) {
     }
   }
 
+  const formatType = storyOpts.formatType || storyOpts.format_type || 'story_affiliate';
+  if (formatType && formatType !== 'story_affiliate') {
+    const { generateMixedPost } = require('./contentMixer');
+    const mixed = await generateMixedPost(formatType, storyOpts);
+    return {
+      ...mixed,
+      qcScore: 9.0,
+      qcNotes: `[ContentMixer] Format ${formatType} disetujui kurator otomatis.`
+    };
+  }
+
   const maxAttempts = 2;
   let lastDraft = null;
   let lastQC = null;
@@ -273,6 +284,7 @@ async function produceCuratedStory(options = null) {
   for (let attempt = 1; attempt <= maxAttempts; attempt++) {
     console.log(`[EditorialBoard] Memproduksi draf cerita (Percobaan ${attempt}/${maxAttempts})...`);
     const draft = await generateStory(storyOpts);
+    draft.format_type = 'story_affiliate';
     const qc = await evaluateStoryWithQC(draft);
 
     console.log(`[EditorialBoard] Hasil QC (${qc.provider}): Skor ${qc.total_score} | Approved: ${qc.approved}`);
@@ -294,6 +306,7 @@ async function produceCuratedStory(options = null) {
   console.log('[EditorialBoard] Ambang batas disesuaikan untuk memastikan pasokan antrean tidak macet.');
   return {
     ...lastDraft,
+    format_type: 'story_affiliate',
     qcScore: lastQC?.total_score || 7.2,
     qcNotes: `[Auto-Approved] ${lastQC?.curator_note || 'Lolos kriteria batas toleransi.'}`
   };
@@ -301,10 +314,10 @@ async function produceCuratedStory(options = null) {
 
 /**
  * Pengisi Stok Otomatis (Autonomous Stockpile Replenisher)
- * Memastikan minimal ada TARGET_BUFFER cerita siap tayang di antrean database.
- * Default 9 cerita (~3 hari buffer untuk 3x posting sehari).
+ * Memastikan minimal ada TARGET_BUFFER konten siap tayang di antrean database.
+ * Default 18 konten (~3 hari buffer untuk 6x posting sehari).
  */
-async function replenishStockBuffer(targetBuffer = 9) {
+async function replenishStockBuffer(targetBuffer = 18) {
   if (isReplenishing) {
     console.log('[EditorialBoard] Proses replenish sedang berjalan di background, skip panggilan ganda.');
     return { status: 'busy', added: 0, currentCount: db.getQueuedStoriesCount() };
@@ -313,7 +326,7 @@ async function replenishStockBuffer(targetBuffer = 9) {
   isReplenishing = true;
   try {
     const currentCount = db.getQueuedStoriesCount();
-    console.log(`[EditorialBoard] Cek stok antrean: Ada ${currentCount} cerita (Target buffer: ${targetBuffer}).`);
+    console.log(`[EditorialBoard] Cek stok antrean: Ada ${currentCount} konten (Target buffer: ${targetBuffer}).`);
 
     if (currentCount >= targetBuffer) {
       return { status: 'full', added: 0, currentCount };
@@ -322,12 +335,27 @@ async function replenishStockBuffer(targetBuffer = 9) {
     const needed = targetBuffer - currentCount;
     // Batasi maksimal 3 cerita per run agar tidak terkena rate limit
     const toCreate = Math.min(needed, 3);
-    console.log(`[EditorialBoard] Memulai pembuatan ${toCreate} cerita terkurasi baru...`);
+    console.log(`[EditorialBoard] Memulai pembuatan ${toCreate} konten terkurasi baru...`);
+
+    // Cek komposisi antrean yang sudah ada
+    const breakdown = db.getQueuedFormatBreakdown ? db.getQueuedFormatBreakdown() : {};
+    const affiliateCount = breakdown['story_affiliate'] || 0;
+    const viralCount = (breakdown['hot_take'] || 0) + (breakdown['menfess_spill'] || 0) + (breakdown['financial_breakdown'] || 0);
+
+    const viralFormats = ['hot_take', 'menfess_spill', 'financial_breakdown'];
 
     let addedCount = 0;
     for (let i = 0; i < toCreate; i++) {
       try {
-        const story = await produceCuratedStory();
+        // Jaga keseimbangan 50% affiliate, 50% viral insight
+        let chosenFormat;
+        if (affiliateCount + (addedCount > 0 ? 1 : 0) <= viralCount) {
+          chosenFormat = 'story_affiliate';
+        } else {
+          chosenFormat = viralFormats[Math.floor(Math.random() * viralFormats.length)];
+        }
+
+        const story = await produceCuratedStory({ formatType: chosenFormat });
         const id = db.addStoryToQueue({
           title: story.title,
           topic: story.topic,
@@ -339,14 +367,15 @@ async function replenishStockBuffer(targetBuffer = 9) {
           qcNotes: story.qcNotes,
           topicTag: story.topic_tag || story.topicTag || 'curhat',
           variant: story.variant || 'B',
-          origin: story.origin || 'fiction'
+          origin: story.origin || 'fiction',
+          formatType: story.format_type || chosenFormat
         });
         addedCount++;
-        console.log(`[EditorialBoard] Cerita #${id} ("${story.title}") berhasil dikurasi & dimasukkan ke antrean!`);
+        console.log(`[EditorialBoard] Konten #${id} (${story.format_type || chosenFormat}: "${story.title}") berhasil dikurasi & dimasukkan ke antrean!`);
         // Jeda 2 detik antar pembuatan
         await new Promise(r => setTimeout(r, 2000));
       } catch (err) {
-        console.error(`[EditorialBoard] Gagal memproduksi cerita ke-${i + 1}:`, err.message);
+        console.error(`[EditorialBoard] Gagal memproduksi konten ke-${i + 1}:`, err.message);
       }
     }
 

@@ -151,6 +151,9 @@ function initSchema() {
   try {
     db.exec(`ALTER TABLE stories ADD COLUMN variant TEXT;`);
   } catch (e) {}
+  try {
+    db.exec(`ALTER TABLE stories ADD COLUMN format_type TEXT DEFAULT 'story';`);
+  } catch (e) {}
 
   try {
     db.exec(`ALTER TABLE post_snapshots ADD COLUMN external_replies INTEGER DEFAULT 0;`);
@@ -259,8 +262,8 @@ module.exports = {
   // Stories helpers
   addStoryToQueue: (story) => {
     const stmt = db.prepare(`
-      INSERT INTO stories (title, topic, slides_json, product_name, product_url, scheduled_for, status, qc_score, qc_notes, origin, topic_tag, variant)
-      VALUES (?, ?, ?, ?, ?, ?, 'queued', ?, ?, ?, ?, ?)
+      INSERT INTO stories (title, topic, slides_json, product_name, product_url, scheduled_for, status, qc_score, qc_notes, origin, topic_tag, variant, format_type)
+      VALUES (?, ?, ?, ?, ?, ?, 'queued', ?, ?, ?, ?, ?, ?)
     `);
     const info = stmt.run(
       story.title,
@@ -273,7 +276,8 @@ module.exports = {
       story.qcNotes || null,
       story.origin || 'fiction',
       story.topicTag || null,
-      story.variant || null
+      story.variant || null,
+      story.formatType || story.format_type || 'story_affiliate'
     );
     return info.lastInsertRowid;
   },
@@ -349,11 +353,29 @@ module.exports = {
     return db.prepare(`SELECT count(*) as count FROM stories WHERE status = 'queued'`).get().count;
   },
 
-  getNextQueuedStory: () => {
+  getQueuedFormatBreakdown: () => {
+    const rows = db.prepare(`SELECT format_type, count(*) as count FROM stories WHERE status = 'queued' GROUP BY format_type`).all();
+    const res = {};
+    rows.forEach(r => {
+      res[r.format_type || 'story_affiliate'] = r.count;
+    });
+    return res;
+  },
+
+  getNextQueuedStory: (formatType = null) => {
+    if (formatType) {
+      const match = db.prepare(`
+        SELECT * FROM stories 
+        WHERE status = 'queued' AND format_type = ? 
+        ORDER BY id ASC 
+        LIMIT 1
+      `).get(formatType);
+      if (match) return match;
+    }
     return db.prepare(`
       SELECT * FROM stories 
       WHERE status = 'queued' 
-      ORDER BY scheduled_for ASC, id ASC 
+      ORDER BY id ASC 
       LIMIT 1
     `).get();
   },
@@ -362,12 +384,12 @@ module.exports = {
     return db.prepare(`SELECT * FROM stories WHERE id = ?`).get(id);
   },
 
-  getUpcomingStories: (limit = 5) => {
+  getUpcomingStories: (limit = 6) => {
     return db.prepare(`
-      SELECT id, title, topic, product_name, scheduled_for, status, qc_score, qc_notes 
+      SELECT id, title, topic, product_name, format_type, scheduled_for, status, qc_score, qc_notes 
       FROM stories 
       WHERE status = 'queued' 
-      ORDER BY scheduled_for ASC 
+      ORDER BY id ASC 
       LIMIT ?
     `).all(limit);
   },
