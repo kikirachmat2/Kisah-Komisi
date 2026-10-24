@@ -152,6 +152,10 @@ function initSchema() {
     db.exec(`ALTER TABLE stories ADD COLUMN variant TEXT;`);
   } catch (e) {}
 
+  try {
+    db.exec(`ALTER TABLE post_snapshots ADD COLUMN external_replies INTEGER DEFAULT 0;`);
+  } catch (e) {}
+
   db.exec(`
     CREATE TABLE IF NOT EXISTS experiment_schedule (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -175,6 +179,7 @@ function initSchema() {
       views INTEGER DEFAULT 0,
       likes INTEGER DEFAULT 0,
       replies INTEGER DEFAULT 0,
+      external_replies INTEGER DEFAULT 0,
       reposts INTEGER DEFAULT 0,
       quotes INTEGER DEFAULT 0,
       recorded_at DATETIME DEFAULT CURRENT_TIMESTAMP
@@ -264,11 +269,11 @@ module.exports = {
     return info.lastInsertRowid;
   },
 
-  recordPostSnapshot: (storyId, mediaId, interval, views, likes, replies, reposts, quotes) => {
+  recordPostSnapshot: (storyId, mediaId, interval, views, likes, replies, reposts, quotes, externalReplies = 0) => {
     return db.prepare(`
-      INSERT INTO post_snapshots (story_id, threads_media_id, snapshot_interval, views, likes, replies, reposts, quotes)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-    `).run(storyId, mediaId, interval, views, likes, replies, reposts, quotes);
+      INSERT INTO post_snapshots (story_id, threads_media_id, snapshot_interval, views, likes, replies, reposts, quotes, external_replies)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+    `).run(storyId, mediaId, interval, views, likes, replies, reposts, quotes, externalReplies);
   },
 
   hasPostSnapshot: (mediaId, interval) => {
@@ -342,6 +347,10 @@ module.exports = {
       ORDER BY scheduled_for ASC, id ASC 
       LIMIT 1
     `).get();
+  },
+
+  getStoryById: (id) => {
+    return db.prepare(`SELECT * FROM stories WHERE id = ?`).get(id);
   },
 
   getUpcomingStories: (limit = 5) => {

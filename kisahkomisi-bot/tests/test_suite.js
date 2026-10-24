@@ -93,11 +93,13 @@ async function runTests() {
 
   // TEST 6: Auto-Reply Engine Guardrails & DB helpers
   console.log('\n[Test 6] Testing Auto-Reply Engine & Guardrails...');
-  const { isCommentSafe } = require('../src/autoReplyEngine');
+  const { isCommentSafe, isAskingAboutBot, generateEngagementReply } = require('../src/autoReplyEngine');
   assert(isCommentSafe('Sumpah relate banget cerita ini, nyesek abis!') === true, 'Safe comment allowed');
-  assert(isCommentSafe('Ini bot ya? Dasar robot jelek') === false, 'Bot accusation rejected');
   assert(isCommentSafe('Mau judi slot gacor hari ini') === false, 'Spam comment rejected');
   assert(isCommentSafe('Dasar tolol goblok') === false, 'Toxic comment rejected');
+  assert(isAskingAboutBot('Ini bot ya?') === true, 'Bot question detected for honest disclosure');
+  const honestReply = await generateEngagementReply('Test Judul', 'Akun ini bot kan?', 'budi');
+  assert(honestReply.includes('dibantu AI'), 'Must honestly disclose AI assistance');
 
   db.logAutoReply({
     threadsMediaId: 'mock_test_media',

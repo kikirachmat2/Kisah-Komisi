@@ -13,7 +13,8 @@ const {
   getActiveAccessToken, 
   refreshThreadsToken,
   deletePost,
-  getPostUrl
+  getPostUrl,
+  getExternalReplyCount
 } = require('./threads');
 const { runAutoEngagementScan } = require('./autoReplyEngine');
 const { executeThreadBump } = require('./threadBumper');
@@ -137,9 +138,10 @@ function renderHelpMenu(name = 'Kawan') {
     `👋 Halo *${name}*! Selamat datang di *Kisah Komisi Autopilot Engine*.\n\n` +
     `🤖 *Kontrol Otomatisasi Threads:*\n` +
     `• \`/insight\` : Cek analitik penayangan & strategi AI terkini\n` +
+    `• \`/veto\` : Batalkan penerbitan draf dalam 30-menit veto window\n` +
     `• \`/bikin_cerita\` : AI buat 1 cerita menfess viral (Lolos Kurasi QC)\n` +
     `• \`/isi_stok\` : Trigger otomatis isi buffer stok (Target 9 cerita / 3 hari)\n` +
-    `• \`/stok\` : Cek status buffer stok (07:30, 12:30, & 20:00 WIB)\n` +
+    `• \`/stok\` : Cek status buffer stok\n` +
     `• \`/post_sekarang\` : Terbitkan 1 cerita antrean ke Threads sekarang\n` +
     `• \`/cek_limit\` : Cek sisa kuota posting & replies Meta Threads\n` +
     `• \`/status\` : Cek kesehatan sistem, token, & database\n\n` +
@@ -179,10 +181,11 @@ bot.command('status', async (ctx) => {
     msg += `🟢 *Status Bot*: Aktif & Berjalan Normal\n`;
     msg += `⏱️ *Uptime Server*: ${uptimeHours} jam ${uptimeMin} menit\n`;
     msg += `📦 *Antrean Stok Cerita*: *${queueCount} cerita*\n`;
-    msg += `🛍️ *Produk Affiliate Aktif*: *${productsCount} produk*\n`;
+    msg += `🛍️ *Produk Affiliate*: *${productsCount} produk (100% Beku / Frozen selama Eksperimen)*\n`;
     msg += `🔑 *Terakhir Token Di-refresh*: ${lastRefresh}\n`;
-    msg += `🛡️ *Anti-Bot Jitter*: Aktif (Acak 1-10 menit tiap jadwal tayang)\n`;
-    msg += `\n⏰ *Jadwal Tayang Golden Hours (3x Sehari):*\n• Pagi: 07:30 WIB (+ Jitter)\n• Siang: 12:30 WIB (+ Jitter)\n• Malam: 20:00 WIB (+ Jitter)`;
+    msg += `🛡️ *Jitter Posting*: Dinonaktifkan (0s - Presisi Waktu Eksperimen Paired A/B)\n`;
+    msg += `⏳ *Veto Window*: Aktif (Preview draf dikirim jam 06:30 & 21:00 WIB)\n`;
+    msg += `\n⏰ *Jadwal Tayang Paired A/B (2x Sehari WIB):*\n• Pagi: 07:00:00 WIB (Veto cutoff: 06:30 - 07:00 WIB)\n• Malam: 21:30:00 WIB (Veto cutoff: 21:00 - 21:30 WIB)`;
 
     safeReplyMarkdown(ctx, msg);
   } catch (err) {
@@ -526,6 +529,47 @@ bot.command('rekap', (ctx) => {
   safeReplyMarkdown(ctx, `📊 *Rekap Komisi:* Total *${formatRupiah(total)}*`);
 });
 
+// Command: /veto (30-Minute Veto Window Controller)
+bot.command('veto', async (ctx) => {
+  const nowWIB = new Date(new Date().toLocaleString('en-US', { timeZone: 'Asia/Jakarta' }));
+  const dateStr = nowWIB.toISOString().slice(0, 10);
+  const currentHour = nowWIB.getHours();
+  const currentMin = nowWIB.getMinutes();
+  const currentTimeVal = currentHour * 60 + currentMin;
+
+  // Window: 06:00 - 07:05 -> slot 07:00, 20:30 - 21:35 -> slot 21:30
+  let targetSlot = null;
+  if (currentTimeVal >= 360 && currentTimeVal <= 425) {
+    targetSlot = '07:00';
+  } else if (currentTimeVal >= 1230 && currentTimeVal <= 1300) {
+    targetSlot = '21:30';
+  } else {
+    // Di luar window presisi, cari slot eksperimen pending terdekat hari ini
+    const slotMorning = db.getExperimentSlot(dateStr, '07:00');
+    const slotNight = db.getExperimentSlot(dateStr, '21:30');
+    if (slotMorning && slotMorning.status === 'pending') targetSlot = '07:00';
+    else if (slotNight && slotNight.status === 'pending') targetSlot = '21:30';
+  }
+
+  if (!targetSlot) {
+    return safeReplyMarkdown(ctx, '⚠️ Tidak ada slot postingan eksperimen pending yang dapat dibatalkan saat ini.');
+  }
+
+  const vetoKey = `VETO_SLOT_${dateStr}_${targetSlot}`;
+  db.setSetting(vetoKey, 'vetoed');
+  const expSlot = db.getExperimentSlot(dateStr, targetSlot);
+  if (expSlot) {
+    db.updateExperimentSlot(expSlot.id, 'failed');
+  }
+
+  safeReplyMarkdown(
+    ctx,
+    `🛑 *VETO BERHASIL DIAKTIFKAN!*\n\n` +
+    `Slot tayang *${targetSlot} WIB* (${dateStr}) telah *DIBATALKAN*.\n` +
+    `Bot TIDAK akan memposting cerita ini ke Threads.`
+  );
+});
+
 // ==========================================
 // 💬 COMMAND /bantu_komen (HUMAN-IN-THE-LOOP COMMENT ASSISTANT)
 // Guardrails ketat: DILARANG mengarang pengalaman pribadi palsu atas nama owner!
@@ -666,9 +710,17 @@ async function recordPeriodicSnapshots() {
             if (m.name === 'quotes') quotes = m.values?.[0]?.value || 0;
           });
         }
+
+        let externalReplies = 0;
+        try {
+          externalReplies = await getExternalReplyCount(story.threads_media_id, 'ceritakikiii', token);
+        } catch (ere) {
+          console.warn(`[Snapshot] Gagal fetch external replies untuk ${story.threads_media_id}:`, ere.message);
+        }
+
         for (const interval of intervalsToCheck) {
-          db.recordPostSnapshot(story.id, story.threads_media_id, interval, views, likes, replies, reposts, quotes);
-          console.log(`[Snapshot] Tersimpan interval ${interval} untuk cerita #${story.id} (${views} views, ${likes} likes, ${replies} replies)`);
+          db.recordPostSnapshot(story.id, story.threads_media_id, interval, views, likes, replies, reposts, quotes, externalReplies);
+          console.log(`[Snapshot] Tersimpan interval ${interval} untuk cerita #${story.id} (${views} views, ${likes} likes, ${replies} replies, ${externalReplies} ext replies)`);
         }
       } catch (err) {
         console.warn(`[Snapshot] Gagal fetch insights untuk ${story.threads_media_id}:`, err.message);
@@ -698,47 +750,31 @@ async function checkTokenExpiryReminder() {
 }
 
 // ==========================================
-// ⏰ EKSEKUTOR EXPERIMENT PAIRED A/B SCHEDULER
-// 2 Slot Tayang: Pagi 07:00 WIB & Malam 21:30 WIB
+// ⏳ PREPARE & NOTIFY 30-MINUTE VETO WINDOW
+// Dijalankan 30 menit sebelum jam tayang:
+// - Pagi: 06:30 WIB (untuk slot 07:00)
+// - Malam: 21:00 WIB (untuk slot 21:30)
 // ==========================================
-async function executeScheduledPosting(slotTime, label) {
-  // Tambahkan jitter acak antara 1 s/d 5 menit agar tidak terbaca bot presisi
-  const jitterMinutes = Math.floor(Math.random() * 5) + 1;
-  const jitterMs = jitterMinutes * 60 * 1000;
-  console.log(`[Scheduler] Slot ${label} (${slotTime}) aktif! Anti-bot jitter menunggu ${jitterMinutes} menit...`);
-  
-  await new Promise(r => setTimeout(r, jitterMs));
-
-  if (isPostingInProgress) {
-    console.warn(`[Scheduler] Sedang ada proses posting lain, menunda slot ${label} selama 30 detik...`);
-    await new Promise(r => setTimeout(r, 30000));
-  }
-
-  isPostingInProgress = true;
+async function prepareAndNotifyVetoSlot(slotTime, label) {
   try {
-    console.log(`[Scheduler] Memulai eksekusi posting untuk slot ${label}...`);
-    const userId = process.env.THREADS_USER_ID;
-    const token = getActiveAccessToken();
+    const nowWIB = new Date(new Date().toLocaleString('en-US', { timeZone: 'Asia/Jakarta' }));
+    const dateStr = nowWIB.toISOString().slice(0, 10);
+    const experimentSlot = db.getExperimentSlot(dateStr, slotTime);
 
-    if (!userId || !token) {
-      console.warn('[Scheduler] Threads credentials missing.');
-      await sendAdminAlert(`⚠️ *[Scheduler] Gagal Posting (${label})*: Kredensial Threads API belum lengkap di server.`);
+    if (!experimentSlot || experimentSlot.status !== 'pending') {
+      console.log(`[VetoWindow] Tidak ada slot eksperimen pending untuk ${dateStr} ${slotTime}.`);
       return;
     }
 
-    const nowWIB = new Date(new Date().toLocaleString('en-US', { timeZone: 'Asia/Jakarta' }));
-    const dateStr = nowWIB.toISOString().slice(0, 10);
-
-    // Cek apakah ada jadwal eksperimen terdaftar untuk hari & slot ini
-    const experimentSlot = db.getExperimentSlot(dateStr, slotTime);
-
     let story = null;
-    let storyId = null;
+    let storyId = experimentSlot.story_id;
 
-    if (experimentSlot && experimentSlot.status === 'pending') {
-      console.log(`[Scheduler] Menjalankan eksperimen Hari ke-${experimentSlot.day_number} (${experimentSlot.variant}): "${experimentSlot.theme}"...`);
-      db.updateExperimentSlot(experimentSlot.id, 'running');
+    if (storyId) {
+      story = db.getStoryById(storyId);
+    }
 
+    if (!story) {
+      console.log(`[VetoWindow] Memproduksi draf cerita untuk slot ${label} (Day ${experimentSlot.day_number}, Format ${experimentSlot.variant})...`);
       const curated = await produceCuratedStory({
         topic: experimentSlot.theme,
         variant: experimentSlot.variant,
@@ -752,7 +788,7 @@ async function executeScheduledPosting(slotTime, label) {
         slides: curated.slides,
         productName: null,
         productUrl: null,
-        scheduledFor: new Date().toISOString(),
+        scheduledFor: `${dateStr}T${slotTime}:00+07:00`,
         qcScore: curated.qcScore,
         qcNotes: curated.qcNotes,
         origin: curated.origin,
@@ -760,16 +796,109 @@ async function executeScheduledPosting(slotTime, label) {
         variant: curated.variant
       });
 
-      story = {
-        id: storyId,
-        title: curated.title,
-        slides_json: JSON.stringify(curated.slides),
-        product_name: null,
-        product_url: null,
-        origin: curated.origin,
-        topic_tag: curated.topicTag,
-        variant: curated.variant
-      };
+      db.updateExperimentSlot(experimentSlot.id, 'pending', storyId);
+      story = db.getStoryById(storyId);
+    }
+
+    const slides = JSON.parse(story.slides_json);
+    const firstSlide = slides[0] || '';
+    const variantDesc = experimentSlot.variant === 'A' ? 'Format A (Single Menfess)' : 'Format B (3-Part Micro-Thread)';
+
+    await sendAdminAlert(
+      `⏳ *[30-MIN VETO WINDOW]* Draf Siap Tayang Jam ${slotTime} WIB!\n\n` +
+      `⏰ *Slot*: ${label}\n` +
+      `📅 *Hari Eksperimen*: Hari ke-${experimentSlot.day_number}\n` +
+      `🏷️ *Format*: *${variantDesc}*\n` +
+      `🔖 *Topic Tag*: \`#${experimentSlot.topic_tag}\`\n` +
+      `📖 *Judul*: ${story.title}\n\n` +
+      `*Pratinjau Hook / Post Utama:*\n` +
+      `_"${firstSlide}"_\n\n` +
+      (slides.length > 1 ? `_Total ${slides.length} bagian micro-thread._\n\n` : '') +
+      `⚠️ *Opsi Kontrol Owner:*\n` +
+      `Bot akan otomatis menerbitkan post ini tepat jam *${slotTime} WIB*.\n` +
+      `Ketik \`/veto\` untuk membatalkan tayang dalam 30 menit ke depan.`
+    );
+  } catch (err) {
+    console.error(`[VetoWindow] Gagal menyiapkan draf veto untuk slot ${label}:`, err.message);
+  }
+}
+
+// ==========================================
+// ⏰ EKSEKUTOR EXPERIMENT PAIRED A/B SCHEDULER
+// 2 Slot Tayang: Pagi 07:00:00 WIB & Malam 21:30:00 WIB
+// Jitter: 0s (Dinonaktifkan agar presisi sesuai protokol A/B)
+// ==========================================
+async function executeScheduledPosting(slotTime, label) {
+  const nowWIB = new Date(new Date().toLocaleString('en-US', { timeZone: 'Asia/Jakarta' }));
+  const dateStr = nowWIB.toISOString().slice(0, 10);
+  const vetoKey = `VETO_SLOT_${dateStr}_${slotTime}`;
+
+  // Cek apakah slot ini telah diveto oleh owner
+  if (db.getSetting(vetoKey) === 'vetoed') {
+    console.log(`[Scheduler] Slot ${label} (${slotTime}) DIBATALKAN oleh veto owner.`);
+    const experimentSlot = db.getExperimentSlot(dateStr, slotTime);
+    if (experimentSlot) {
+      db.updateExperimentSlot(experimentSlot.id, 'failed');
+    }
+    await sendAdminAlert(`🛑 *[VETO DIPROSES]* Slot tayang *${label}* telah dilewati dan tidak diterbitkan ke Threads sesuai veto owner.`);
+    return;
+  }
+
+  if (isPostingInProgress) {
+    console.warn(`[Scheduler] Sedang ada proses posting lain, menunda slot ${label} selama 30 detik...`);
+    await new Promise(r => setTimeout(r, 30000));
+  }
+
+  isPostingInProgress = true;
+  try {
+    console.log(`[Scheduler] Memulai eksekusi posting presisi untuk slot ${label} (0s jitter)...`);
+    const userId = process.env.THREADS_USER_ID;
+    const token = getActiveAccessToken();
+
+    if (!userId || !token) {
+      console.warn('[Scheduler] Threads credentials missing.');
+      await sendAdminAlert(`⚠️ *[Scheduler] Gagal Posting (${label})*: Kredensial Threads API belum lengkap di server.`);
+      return;
+    }
+
+    // Cek apakah ada jadwal eksperimen terdaftar untuk hari & slot ini
+    const experimentSlot = db.getExperimentSlot(dateStr, slotTime);
+
+    let story = null;
+    let storyId = null;
+
+    if (experimentSlot && (experimentSlot.status === 'pending' || experimentSlot.status === 'running')) {
+      console.log(`[Scheduler] Menjalankan eksperimen Hari ke-${experimentSlot.day_number} (${experimentSlot.variant}): "${experimentSlot.theme}"...`);
+      db.updateExperimentSlot(experimentSlot.id, 'running');
+
+      if (experimentSlot.story_id) {
+        story = db.getStoryById(experimentSlot.story_id);
+      }
+
+      if (!story) {
+        const curated = await produceCuratedStory({
+          topic: experimentSlot.theme,
+          variant: experimentSlot.variant,
+          origin: experimentSlot.origin || 'fiction',
+          topicTag: experimentSlot.topic_tag
+        });
+
+        storyId = db.addStoryToQueue({
+          title: curated.title,
+          topic: curated.topic,
+          slides: curated.slides,
+          productName: null,
+          productUrl: null,
+          scheduledFor: new Date().toISOString(),
+          qcScore: curated.qcScore,
+          qcNotes: curated.qcNotes,
+          origin: curated.origin,
+          topicTag: curated.topicTag,
+          variant: curated.variant
+        });
+
+        story = db.getStoryById(storyId);
+      }
     } else {
       story = db.getNextQueuedStory();
     }
@@ -851,11 +980,21 @@ async function executeScheduledPosting(slotTime, label) {
 }
 
 // ==========================================
-// ⏰ 2 SLOT TAYANG RESMI EKSPERIMEN PAIRED A/B (WIB)
-// Slot 1: PAGI 07:00 WIB
-// Slot 2: MALAM 21:30 WIB
+// ⏳ CRON 30-MINUTE VETO WINDOW (WIB)
+// Slot Pagi: Notifikasi 06:30 WIB -> Tayang 07:00 WIB
+// Slot Malam: Notifikasi 21:00 WIB -> Tayang 21:30 WIB
 // ==========================================
+cron.schedule('30 6 * * *', () => prepareAndNotifyVetoSlot('07:00', 'PAGI 07:00 WIB'), {
+  scheduled: true,
+  timezone: 'Asia/Jakarta'
+});
+
 cron.schedule('0 7 * * *', () => executeScheduledPosting('07:00', 'PAGI 07:00 WIB'), {
+  scheduled: true,
+  timezone: 'Asia/Jakarta'
+});
+
+cron.schedule('0 21 * * *', () => prepareAndNotifyVetoSlot('21:30', 'MALAM 21:30 WIB'), {
   scheduled: true,
   timezone: 'Asia/Jakarta'
 });

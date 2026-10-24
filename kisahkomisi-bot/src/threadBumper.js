@@ -28,26 +28,22 @@ function isValidBump(text) {
  * untuk menyundul kembali thread yang mulai melandai di feed For You
  */
 async function generateBumpUpdate(story) {
+  // Selama eksperimen, Thread Bumper dinonaktifkan 100%
+  if (process.env.EXPERIMENT_PAUSE_EXTRAS !== 'false') {
+    return null;
+  }
+
   const prompt = `
-Kamu adalah Kiki Rachmat (@ceritakikiii).
-Bio kamu: "In this economy mau nulis cerita orang-orang aja lah".
-Kamu adalah kurator cerita menfess / curhatan kehidupan nyata anak muda di Threads.
+Kamu adalah kurator di Threads @ceritakikiii. Bio: "In this economy mau nulis cerita orang-orang aja lah".
+Utas sebelumnya berjudul: "${story.title}" (Topik: ${story.topic}).
 
-Beberapa jam lalu kamu mengunggah cerita menfess berantai berjudul:
-"${story.title}" (Topik: ${story.topic})
-
-Tugasmu: Tuliskan SATU (1) slide balasan singkat (1-2 kalimat utuh, panjang 80-200 karakter) sebagai "UPDATE KELANJUTAN CERITA" yang menyambung langsung di utas tersebut.
-
-Tujuan:
-Menyundul kembali postingan ke puncak feed Threads seolah-olah kamu baru saja mendapat kabar lanjutan dari pengirim cerita atau merespons reaksi seru netizen di kolom reply.
-
-ATURAN SANGAT KETAT:
-1. Awali dengan variasi pembuka santai: "Update dikit:", "Btw ada update lanjutan:", "Banyak yang salfok di komen:", atau "Barusan dapet kabar tambahan:".
-2. Tulis kalimat LENGKAP sampai tuntas dan diakhiri tanda baca titik (.) atau tanda tanya (?) atau tanda seru (!). DILARANG KERAS MENGGANTUNG ATAU KEPOTONG!
-3. Nada bicara: Santai, manusiawi, khas tongkrongan Indonesia (contoh: "Update dikit: Ternyata si pelaku udah dipanggil HRD tadi siang dan sekarang lagi nangis-nangis di tangga darurat wkwk. Gimana menurut kalian?").
-4. DILARANG KERAS menyebut produk jualan atau menyisipkan link apapun! Murni kelanjutan cerita.
-5. Panjang 80-200 karakter.
-6. Output HANYA teks balasan langsung tanpa tanda kutip.
+Tugas: Tuliskan SATU (1) balasan tindak lanjut netral (1-2 kalimat, panjang 80-160 karakter).
+ATURAN KETAT INTEGRITAS:
+1. DILARANG KERAS mengarang kelanjutan fiktif seolah dapat kabar lanjutan (dilarang bilang 'pelaku nangis', 'dapet kabar baru', dsb).
+2. DILARANG menggunakan klausa palsu seperti 'Banyak yang salfok di komen:'.
+3. Balasan HANYA berupa pertanyaan lanjutan seputar dilema atau perspektif alternatif bagi warganet yang baru membaca utas ini.
+4. Nol link, nol promosi produk.
+5. Output HANYA teks balasan langsung tanpa tanda kutip.
 `;
 
   // 1. Coba Gemini 2.5 Flash (tanpa thinking tokens agar tidak kepotong)

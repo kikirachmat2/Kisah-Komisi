@@ -14,9 +14,8 @@ const MAX_REPLIES_PER_POST = 3;
 const MIN_COMMENT_AGE_MINUTES = 8; // Menunggu minimal 8 menit agar tidak terkesan bot instan
 const MAX_COMMENT_AGE_HOURS = 24;
 
-// Filter kata sensitif & toxic (Jika ada kata ini, sistem memilih DIAM)
-const UNSAFE_KEYWORDS = [
-  'bot', 'ai', 'robot', 'chatgpt', 'gemini', 'groq', 'otomatis', 'copas',
+// Filter kata toxic / SARA / spam (sistem tidak membalas komentar toxic)
+const TOXIC_KEYWORDS = [
   'judi', 'slot', 'gacor', 'open bo', 'porn', 'bokep', 'sange', 'bugil',
   'anjing', 'babi', 'tolol', 'goblok', 'bangsat', 'kontol', 'memek',
   'jokowi', 'prabowo', 'gibran', 'anies', 'ganjar', 'pemerintah', 'politik',
@@ -26,31 +25,45 @@ const UNSAFE_KEYWORDS = [
 function isCommentSafe(text) {
   if (!text || text.length < 3) return false;
   const lower = text.toLowerCase();
-  for (const word of UNSAFE_KEYWORDS) {
+  for (const word of TOXIC_KEYWORDS) {
     if (lower.includes(word)) return false;
   }
   return true;
 }
 
+function isAskingAboutBot(text) {
+  if (!text) return false;
+  const lower = text.toLowerCase();
+  const botWords = ['bot', 'ai', 'robot', 'chatgpt', 'gemini', 'groq', 'otomatis'];
+  return botWords.some(w => lower.includes(w));
+}
+
 /**
- * Generate balasan santai ala Kiki Rachmat (@ceritakikiii)
+ * Generate balasan santai ala kurator @ceritakikiii
+ * Aturan transparansi: jika ditanya bot/AI, WAJIB jujur atau netral tanpa menyangkal.
+ * Dilarang mengarang pengalaman pribadi palsu!
  */
 async function generateEngagementReply(storyTitle, netizenComment, authorUsername) {
+  // Jika ditanya langsung apakah ini bot/AI: Jawab jujur dan transparan!
+  if (isAskingAboutBot(netizenComment)) {
+    return 'Halo! Akun ini kurasi cerita fiksi & menfess yang dibantu AI untuk merapikan teksnya. Tapi keresahan dan situasinya terinspirasi dari realitas sehari-hari warganet :)';
+  }
+
   const prompt = `
-Kamu adalah Kiki Rachmat (@ceritakikiii).
+Kamu adalah kurator di Threads @ceritakikiii.
 Bio akun kamu: "In this economy mau nulis cerita orang-orang aja lah".
-Kamu adalah kurator cerita menfess / curhatan kehidupan nyata anak muda di Threads.
+Kamu mengunggah cerita/menfess realitas kehidupan anak muda di Threads.
 
 Netizen (@${authorUsername}) baru saja berkomentar pada cerita yang kamu unggah (Judul Cerita: "${storyTitle}"):
 Komentar netizen: "${netizenComment}"
 
 Tuliskan 1 BALASAN SINGKAT (1-2 kalimat, maksimal 15-25 kata) untuk membalas netizen tersebut.
 
-ATURAN SANGAT KETAT:
-1. Nada bicara: Santai, ramah, manusiawi, khas tongkrongan Indonesia (contoh: "Wkwk bener juga sih, tapi kalau di posisi lu bakal gimana?", "Nah ini dia, banyak yang sepemikiran sama lu di atas.").
-2. DILARANG KERAS menyisipkan link promosi atau menyebut produk apapun.
-3. DILARANG terdengar kaku atau seperti robot customer service ("Terima kasih atas tanggapan Anda").
-4. Jangan memakai emoji berlebih (maksimal 1 emoji natural jika perlu).
+ATURAN TRANSPARANSI & INTEGRITAS KETAT:
+1. DILARANG KERAS MENGARANG PENGALAMAN PRIBADI PALSU (dilarang mengarang punya teman bernama X, mantan, bos, atau kejadian fiktif seolah dialami sendiri).
+2. Balasan HANYA boleh berupa empati, apresiasi wajar, atau pertanyaan reflektif balik ke netizen.
+3. Nada bicara: Santai, ramah, warganet Threads Indonesia (contoh: "Wkwk bener juga, kalau lu di posisi gitu bakal gimana?", "Nah ini, emang serba salah sih kalau udah urusan kayak gini.").
+4. DILARANG menyisipkan promosi produk, link, atau iklan apapun.
 5. Output HANYA teks balasan langsung tanpa tanda kutip.
 `;
 
@@ -275,5 +288,6 @@ async function runAutoEngagementScan(userId) {
 module.exports = {
   runAutoEngagementScan,
   isCommentSafe,
+  isAskingAboutBot,
   generateEngagementReply
 };

@@ -387,6 +387,27 @@ function getPostUrl(mediaId, username = 'ceritakikiii') {
   return `https://www.threads.net/@${username}`;
 }
 
+/**
+ * Mengambil jumlah reply organik HANYA dari akun netizen lain (mengecualikan self-replies akun sendiri)
+ * Menghilangkan bias inherent pada Format B (yang secara default memiliki 2 reply bersambung buatan sendiri)
+ */
+async function getExternalReplyCount(mediaId, myUsername = 'ceritakikiii', accessToken = null) {
+  if (!mediaId) return 0;
+  const tokenToUse = getActiveAccessToken() || accessToken;
+  if (!tokenToUse) return 0;
+  try {
+    const url = `${THREADS_API_BASE}/${mediaId}/replies?fields=id,username&access_token=${tokenToUse}`;
+    const res = await fetch(url);
+    if (!res.ok) return 0;
+    const json = await res.json();
+    if (!json.data || !Array.isArray(json.data)) return 0;
+    const external = json.data.filter(r => r.username && r.username.toLowerCase() !== myUsername.toLowerCase());
+    return external.length;
+  } catch (e) {
+    return 0;
+  }
+}
+
 module.exports = {
   publishTextPost,
   publishStoryToThreads,
@@ -396,6 +417,7 @@ module.exports = {
   refreshThreadsToken,
   getAccountInsights,
   getMediaInsights,
+  getExternalReplyCount,
   deletePost,
   mediaIdToShortcode,
   fetchPostPermalink,
