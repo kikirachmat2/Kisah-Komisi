@@ -220,7 +220,7 @@ async function generateStory(options = {}) {
     forcedTopic = options;
   } else if (typeof options === 'object' && options !== null) {
     forcedTopic = options.topic || options.forcedTopic || null;
-    variant = (options.variant || 'A').toUpperCase();
+    variant = (options.variant || 'B').toUpperCase();
     origin = options.origin || 'fiction';
     topicTag = options.topicTag || null;
   }
@@ -231,6 +231,46 @@ async function generateStory(options = {}) {
   }
 
   const isFormatA = (variant === 'A');
+  const withProduct = options.withProduct !== false && !isFormatA;
+
+  let product = null;
+  let trackedProductUrl = null;
+
+  if (withProduct) {
+    let relevantCategories = [];
+    const tLower = (topic || '').toLowerCase();
+    if (tLower.includes('kantor') || tLower.includes('kerja') || tLower.includes('gaji') || tLower.includes('lembur') || tLower.includes('bos')) {
+      relevantCategories = ['Elektronik & Gadget', 'Gaya Hidup & Botol', 'Kerja & Kantor', 'Camilan & Makanan', 'Parfum & Wewangian'];
+    } else if (tLower.includes('kos') || tLower.includes('kontrakan') || tLower.includes('teman') || tLower.includes('kulkas') || tLower.includes('kamar')) {
+      relevantCategories = ['Rumah Tangga & Kosan', 'Gaya Hidup & Botol', 'Elektronik & Gadget', 'Perabot & Kosan'];
+    } else if (tLower.includes('kencan') || tLower.includes('pacar') || tLower.includes('pasangan') || tLower.includes('suami') || tLower.includes('istri')) {
+      relevantCategories = ['Parfum & Wewangian', 'Skincare & Perawatan', 'Skincare Pria', 'Fashion & Outfit'];
+    } else if (tLower.includes('krl') || tLower.includes('stasiun') || tLower.includes('jalan') || tLower.includes('komuter')) {
+      relevantCategories = ['Gaya Hidup & Botol', 'Elektronik & Gadget', 'Kesehatan', 'Skincare & Perawatan'];
+    }
+
+    product = db.getRandomProduct(relevantCategories);
+    if (product && product.affiliate_url) {
+      const nowWIB = new Date(new Date().toLocaleString('en-US', { timeZone: 'Asia/Jakarta' }));
+      const currentHour = nowWIB.getHours();
+      let slotTag = 'malam';
+      if (currentHour < 11) slotTag = 'pagi';
+      else if (currentHour < 17) slotTag = 'siang';
+
+      const catSlug = (product.category || 'umum')
+        .toLowerCase()
+        .replace(/[^a-z0-9]+/g, '_')
+        .slice(0, 15);
+
+      trackedProductUrl = appendSubId(product.affiliate_url, {
+        sub_id1: 'threads_ceritakiki',
+        sub_id2: catSlug,
+        sub_id3: slotTag,
+        sub_id4: product.id ? `p${product.id}` : undefined
+      });
+    }
+  }
+
   let prompt = '';
 
   if (isFormatA) {
@@ -410,11 +450,27 @@ Keluarkan HANYA JSON:
     cleanParts = cleanParts.slice(0, 3);
   }
 
+  // SEMATKAN REKOMENDASI PRODUK KONTEKSTUAL SHOPEE (Bila withProduct aktif)
+  if (product && trackedProductUrl && !isFormatA) {
+    const contextualAd = generateContextualAd(product, trackedProductUrl);
+    // Masukkan sebelum slide pertanyaan penutup
+    if (cleanParts.length >= 3) {
+      cleanParts = [
+        cleanParts[0],
+        cleanParts[1],
+        contextualAd,
+        cleanParts[2]
+      ];
+    } else {
+      cleanParts.push(contextualAd);
+    }
+  }
+
   // SEMATKAN HEADER KETAT DARI KODE (Bukan dari prompt AI)
   const header = (origin === 'submitted') ? '[Kiriman Warganet]\n\n' : '[Cerita Fiksi]\n\n';
   cleanParts[0] = header + cleanParts[0].replace(/^\[(Cerita Fiksi|Kiriman Warganet)\]\s*/i, '').trim();
 
-  // Batasi karakter agar sesuai dengan aturan eksperimen:
+  // Batasi karakter agar sesuai dengan aturan:
   // Format A: Maksimal 280 karakter total
   if (isFormatA && cleanParts[0].length > 280) {
     cleanParts[0] = cleanParts[0].substring(0, 275) + '...';
@@ -436,8 +492,8 @@ Keluarkan HANYA JSON:
   return {
     title: sanitizeText(parsed.title),
     topic: parsed.topic || topic,
-    product_name: null,
-    product_url: null, // Bekukan 100% affiliate
+    product_name: product ? product.name : null,
+    product_url: trackedProductUrl,
     slides: cleanParts,
     variant: variant,
     origin: origin,

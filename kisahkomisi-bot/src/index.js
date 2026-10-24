@@ -821,8 +821,8 @@ async function prepareAndNotifyVetoSlot(slotTime, label) {
         title: curated.title,
         topic: curated.topic,
         slides: curated.slides,
-        productName: null,
-        productUrl: null,
+        productName: curated.product_name || null,
+        productUrl: curated.product_url || null,
         scheduledFor: `${dateStr}T${slotTime}:00+07:00`,
         qcScore: curated.qcScore,
         qcNotes: curated.qcNotes,
@@ -849,6 +849,7 @@ async function prepareAndNotifyVetoSlot(slotTime, label) {
       `*Pratinjau Hook / Post Utama:*\n` +
       `_"${firstSlide}"_\n\n` +
       (slides.length > 1 ? `_Total ${slides.length} bagian micro-thread._\n\n` : '') +
+      (story.product_name ? `🛍️ *Rekomendasi Shopee*: ${story.product_name}\n🔗 *Link*: \`${story.product_url || '-'}\`\n\n` : '') +
       `⚠️ *Opsi Kontrol Owner:*\n` +
       `Bot akan otomatis menerbitkan post ini tepat jam *${slotTime} WIB*.\n` +
       `Ketik \`/veto\` untuk membatalkan tayang dalam 30 menit ke depan.`
@@ -942,8 +943,8 @@ async function executeScheduledPosting(slotTime, label) {
           title: curated.title,
           topic: curated.topic,
           slides: curated.slides,
-          productName: null,
-          productUrl: null,
+          productName: curated.product_name || null,
+          productUrl: curated.product_url || null,
           scheduledFor: new Date().toISOString(),
           qcScore: curated.qcScore,
           qcNotes: curated.qcNotes,
@@ -1049,6 +1050,17 @@ cron.schedule('0 7 * * *', () => executeScheduledPosting('07:00', 'PAGI 07:00 WI
   timezone: 'Asia/Jakarta'
 });
 
+// Slot Siang: Notifikasi 12:00 WIB -> Tayang 12:30 WIB
+cron.schedule('0 12 * * *', () => prepareAndNotifyVetoSlot('12:30', 'SIANG 12:30 WIB'), {
+  scheduled: true,
+  timezone: 'Asia/Jakarta'
+});
+
+cron.schedule('30 12 * * *', () => executeScheduledPosting('12:30', 'SIANG 12:30 WIB'), {
+  scheduled: true,
+  timezone: 'Asia/Jakarta'
+});
+
 cron.schedule('0 21 * * *', () => prepareAndNotifyVetoSlot('21:30', 'MALAM 21:30 WIB'), {
   scheduled: true,
   timezone: 'Asia/Jakarta'
@@ -1077,17 +1089,13 @@ cron.schedule('0 8 * * *', () => {
 // Selama eksperimen, cerita diproduksi on-demand per slot jadwal A/B
 // ==========================================
 cron.schedule('0 */2 * * *', async () => {
-  if (process.env.EXPERIMENT_MODE !== 'inactive') {
-    // Dijeda agar tidak menumpuk cerita generik di luar jadwal A/B
-    return;
-  }
   console.log('[Scheduler] Menjalankan auto-replenish buffer stok berkala...');
   try {
     const res = await replenishStockBuffer(9);
     if (res.added > 0) {
       await sendAdminAlert(
         `📦 *[Auto-Stockpile] Stok Berhasil Ditambah!*\n\n` +
-        `Dewan Redaksi AI (Gemini Creator + Groq QC) baru saja menambahkan *${res.added} cerita terkurasi* ke antrean.\n` +
+        `Dewan Redaksi AI (Gemini Creator + Groq QC) baru saja menambahkan *${res.added} cerita terkurasi + Shopee Affiliate* ke antrean.\n` +
         `Total stok siap tayang sekarang: *${res.currentCount} cerita*.`
       );
     }

@@ -60,8 +60,8 @@ ${slides.map((s, idx) => `[Part ${idx + 1}]: ${s}`).join('\n\n')}
 KRITERIA PENILAIAN (Skala 1 - 10):
 1. realism_score: Apakah ini adegan konkret relatable yang dialami orang dewasa/pekerja Indonesia (kosan, teman, keluarga, transportasi, kantor)? TOLAK jika terasa seperti esai opini atau melodrama sinetron.
 2. human_tone_score: Apakah gaya bahasa 100% natural warganet Threads Indonesia (lu-gue/aku-kamu, santai, ceplas-ceplos)? TOLAK jika ada bau klise AI (seperti "tidak disangka-sangka", "pada akhirnya aku menyadari").
-3. format_pacing_score: Apakah alur ringkas dan padat (Format A tepat 1 slide ≤280 chars; Format B tepat 3 slide bersambung)?
-4. affiliate_score: Nol iklan bernilai 10.
+3. format_pacing_score: Apakah alur cerita ringkas dan padat (slide 1 hook menarik tanpa link, slide lanjutan mengalir)?
+4. affiliate_score: Apakah penempatan rekomendasi produk Shopee terasa natural dan kontekstual di dalam thread (bukan hard-selling spam di slide 1)? Jika cerita tanpa link bernilai 9, jika rekomendasi produk halus dan nyambung bernilai 10.
 5. debate_score: Apakah memancing netizen untuk berdebat atau menceritakan pengalamannya di kolom reply?
 
 Berikan output HANYA berupa JSON valid persis seperti format ini:
