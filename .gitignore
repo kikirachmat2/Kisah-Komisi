@@ -1,0 +1,11 @@
+node_modules/
+.env
+data/*.db
+data/*.db-wal
+data/*.db-shm
+*.log
+.DS_Store
+SERVER_ACCESS_GUIDE.md
+*.png
+*.jpg
+.playwright-mcp/

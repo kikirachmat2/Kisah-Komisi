@@ -1,9 +1,9 @@
 #!/bin/bash
 set -e
 
-SERVER_USER="ubuntu"
-SERVER_IP="152.69.218.198"
-SSH_KEY="/Users/kiki/.ssh/manake_singapore"
+SERVER_USER="${VPS_USER:-ubuntu}"
+SERVER_IP="${VPS_HOST:-152.69.218.198}"
+SSH_KEY="${SSH_KEY_PATH:-$HOME/.ssh/manake_singapore}"
 REMOTE_DIR="/home/ubuntu/kisahkomisi-bot"
 
 echo "🚀 [1/3] Syncing code to Server 1 (SG1)..."
