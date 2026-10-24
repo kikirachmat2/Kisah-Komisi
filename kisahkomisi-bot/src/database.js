@@ -142,6 +142,61 @@ function initSchema() {
   try {
     db.exec(`ALTER TABLE stories ADD COLUMN permalink TEXT;`);
   } catch (e) {}
+  try {
+    db.exec(`ALTER TABLE stories ADD COLUMN origin TEXT DEFAULT 'fiction';`);
+  } catch (e) {}
+  try {
+    db.exec(`ALTER TABLE stories ADD COLUMN topic_tag TEXT;`);
+  } catch (e) {}
+  try {
+    db.exec(`ALTER TABLE stories ADD COLUMN variant TEXT;`);
+  } catch (e) {}
+
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS experiment_schedule (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      day_number INTEGER NOT NULL,
+      scheduled_date DATE NOT NULL,
+      slot_time TEXT NOT NULL,
+      variant TEXT CHECK(variant IN ('A', 'B')) NOT NULL,
+      theme TEXT NOT NULL,
+      topic_tag TEXT NOT NULL,
+      origin TEXT CHECK(origin IN ('fiction', 'submitted')) DEFAULT 'fiction',
+      status TEXT CHECK(status IN ('pending', 'running', 'completed', 'failed')) DEFAULT 'pending',
+      story_id INTEGER,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+    );
+
+    CREATE TABLE IF NOT EXISTS post_snapshots (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      story_id INTEGER NOT NULL,
+      threads_media_id TEXT NOT NULL,
+      snapshot_interval TEXT CHECK(snapshot_interval IN ('1h', '6h', '24h', '72h', 'cumulative')) NOT NULL,
+      views INTEGER DEFAULT 0,
+      likes INTEGER DEFAULT 0,
+      replies INTEGER DEFAULT 0,
+      reposts INTEGER DEFAULT 0,
+      quotes INTEGER DEFAULT 0,
+      recorded_at DATETIME DEFAULT CURRENT_TIMESTAMP
+    );
+
+    CREATE TABLE IF NOT EXISTS daily_experiment_logs (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      log_date DATE UNIQUE NOT NULL,
+      day_number INTEGER NOT NULL,
+      variant_a_views_24h INTEGER DEFAULT 0,
+      variant_b_views_24h INTEGER DEFAULT 0,
+      owner_comments_count INTEGER DEFAULT 0,
+      new_followers_count INTEGER DEFAULT 0,
+      publish_failed_flag INTEGER DEFAULT 0,
+      notes TEXT,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+    );
+
+    CREATE INDEX IF NOT EXISTS idx_snapshots_media ON post_snapshots(threads_media_id);
+    CREATE INDEX IF NOT EXISTS idx_snapshots_interval ON post_snapshots(snapshot_interval);
+    CREATE INDEX IF NOT EXISTS idx_exp_schedule_date ON experiment_schedule(scheduled_date, slot_time);
+  `);
 }
 
 initSchema();
@@ -190,8 +245,8 @@ module.exports = {
   // Stories helpers
   addStoryToQueue: (story) => {
     const stmt = db.prepare(`
-      INSERT INTO stories (title, topic, slides_json, product_name, product_url, scheduled_for, status, qc_score, qc_notes)
-      VALUES (?, ?, ?, ?, ?, ?, 'queued', ?, ?)
+      INSERT INTO stories (title, topic, slides_json, product_name, product_url, scheduled_for, status, qc_score, qc_notes, origin, topic_tag, variant)
+      VALUES (?, ?, ?, ?, ?, ?, 'queued', ?, ?, ?, ?, ?)
     `);
     const info = stmt.run(
       story.title,
@@ -201,9 +256,79 @@ module.exports = {
       story.productUrl || null,
       story.scheduledFor,
       story.qcScore || null,
-      story.qcNotes || null
+      story.qcNotes || null,
+      story.origin || 'fiction',
+      story.topicTag || null,
+      story.variant || null
     );
     return info.lastInsertRowid;
+  },
+
+  recordPostSnapshot: (storyId, mediaId, interval, views, likes, replies, reposts, quotes) => {
+    return db.prepare(`
+      INSERT INTO post_snapshots (story_id, threads_media_id, snapshot_interval, views, likes, replies, reposts, quotes)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+    `).run(storyId, mediaId, interval, views, likes, replies, reposts, quotes);
+  },
+
+  hasPostSnapshot: (mediaId, interval) => {
+    const row = db.prepare(`
+      SELECT id FROM post_snapshots WHERE threads_media_id = ? AND snapshot_interval = ?
+    `).get(mediaId, interval);
+    return Boolean(row);
+  },
+
+  getPostSnapshots: (storyId) => {
+    return db.prepare(`
+      SELECT * FROM post_snapshots WHERE story_id = ? ORDER BY id ASC
+    `).all(storyId);
+  },
+
+  getPublishedStoriesForSnapshots: () => {
+    return db.prepare(`
+      SELECT id, title, published_at, threads_media_id, origin, topic_tag, variant
+      FROM stories
+      WHERE status = 'published' AND threads_media_id IS NOT NULL
+      ORDER BY id DESC
+    `).all();
+  },
+
+  getExperimentSlot: (dateStr, slotTime) => {
+    return db.prepare(`
+      SELECT * FROM experiment_schedule 
+      WHERE scheduled_date = ? AND slot_time = ?
+    `).get(dateStr, slotTime);
+  },
+
+  updateExperimentSlot: (id, status, storyId = null) => {
+    return db.prepare(`
+      UPDATE experiment_schedule 
+      SET status = ?, story_id = COALESCE(?, story_id) 
+      WHERE id = ?
+    `).run(status, storyId, id);
+  },
+
+  upsertDailyExperimentLog: (log) => {
+    return db.prepare(`
+      INSERT INTO daily_experiment_logs (log_date, day_number, variant_a_views_24h, variant_b_views_24h, owner_comments_count, new_followers_count, publish_failed_flag, notes)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+      ON CONFLICT(log_date) DO UPDATE SET
+        variant_a_views_24h = excluded.variant_a_views_24h,
+        variant_b_views_24h = excluded.variant_b_views_24h,
+        owner_comments_count = excluded.owner_comments_count,
+        new_followers_count = excluded.new_followers_count,
+        publish_failed_flag = excluded.publish_failed_flag,
+        notes = excluded.notes
+    `).run(
+      log.date,
+      log.dayNumber,
+      log.variantAViews24h || 0,
+      log.variantBViews24h || 0,
+      log.ownerCommentsCount || 0,
+      log.newFollowersCount || 0,
+      log.publishFailedFlag || 0,
+      log.notes || null
+    );
   },
 
   getQueuedStoriesCount: () => {

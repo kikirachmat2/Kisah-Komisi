@@ -527,14 +527,185 @@ bot.command('rekap', (ctx) => {
 });
 
 // ==========================================
-// ⏰ AUTO SCHEDULER DENGAN ANTI-BOT JITTER
-// Slot Pagi 07:30, Siang 12:30, Malam 20:00 WIB
+// 💬 COMMAND /bantu_komen (HUMAN-IN-THE-LOOP COMMENT ASSISTANT)
+// Guardrails ketat: DILARANG mengarang pengalaman pribadi palsu atas nama owner!
 // ==========================================
-async function executeScheduledPosting(label) {
-  // Tambahkan jitter acak antara 1 s/d 10 menit agar tidak terbaca bot oleh filter Meta
-  const jitterMinutes = Math.floor(Math.random() * 10) + 1;
+bot.command('bantu_komen', async (ctx) => {
+  const input = ctx.message.text.replace('/bantu_komen', '').trim();
+  if (!input) {
+    return safeReplyMarkdown(
+      ctx,
+      '⚠️ *Format salah!*\n\n' +
+      'Ketik `/bantu_komen <isi postingan warganet atau konteks curhat>`\n\n' +
+      'Contoh:\n' +
+      '`/bantu_komen Temen sekamar kosan suka minjem motor tapi bensin ga pernah diganti.`'
+    );
+  }
+
+  await ctx.reply('✍️ Menyusun 2 draf komentar bernilai tambah (dengan guardrails pengalaman asli)...');
+
+  const commentPrompt = `
+Kamu adalah asisten komentar Threads untuk akun @ceritakikiii (milik Kiki Rachmat).
+Tugasmu adalah menyusun DUA (2) opsi draf balasan komentar yang bernilai tambah, santai, dan memancing percakapan balik warganet.
+
+POSTINGAN SASARAN:
+"${input}"
+
+ATURAN GUARDRAILS KETAT (AMANAH OWNER):
+1. DILARANG KERAS MENGARANG PENGALAMAN PRIBADI PALSU (seperti mengarang nama teman, pekerjaan fiktif, atau kejadian palsu), karena owner memposting atas nama dirinya sendiri.
+2. Gunakan sudut pandang penanya yang penasaran, empati wajar, atau sudut pandang pihak ketiga.
+3. JIKA memerlukan konteks pengalaman pribadi nyata, sediakan placeholder bertanda kurung siku seperti "[tambah pengalaman asli lo pas di kosan]" atau "[sebut nominal bensin]" agar diisi sendiri oleh owner sebelum diposting.
+4. Gaya bahasa: santai, ceplas-ceplos warganet Threads Indonesia (lu-gue/aku-kamu, singkat, padat, tanpa penomoran).
+
+Keluarkan HANYA JSON:
+{
+  "opsi_1": "Draf komentar 1 (fokus empati / pertanyaan penasaran)...",
+  "opsi_2": "Draf komentar 2 (fokus tanggapan santai + placeholder pengalaman asli lo)..."
+}
+`;
+
+  try {
+    let resultJson = null;
+
+    if (process.env.GROQ_API_KEY) {
+      try {
+        const groqRes = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${process.env.GROQ_API_KEY}`,
+            'Content-Type': 'application/json'
+          },
+          signal: AbortSignal.timeout(10000),
+          body: JSON.stringify({
+            model: 'openai/gpt-oss-120b',
+            messages: [{ role: 'user', content: commentPrompt }],
+            response_format: { type: 'json_object' },
+            temperature: 0.7
+          })
+        });
+        if (groqRes.ok) {
+          const gData = await groqRes.json();
+          resultJson = JSON.parse(gData.choices?.[0]?.message?.content || '{}');
+        }
+      } catch (ge) {}
+    }
+
+    if (!resultJson && process.env.GEMINI_API_KEY) {
+      const gemRes = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${process.env.GEMINI_API_KEY}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        signal: AbortSignal.timeout(10000),
+        body: JSON.stringify({
+          contents: [{ parts: [{ text: commentPrompt }] }],
+          generationConfig: { responseMimeType: 'application/json', temperature: 0.7 }
+        })
+      });
+      if (gemRes.ok) {
+        const gmData = await gemRes.json();
+        const text = gmData.candidates?.[0]?.content?.parts?.[0]?.text;
+        if (text) resultJson = JSON.parse(text);
+      }
+    }
+
+    if (!resultJson || (!resultJson.opsi_1 && !resultJson.opsi_2)) {
+      return ctx.reply('❌ Gagal menyusun komentar otomatis saat ini. Coba lagi sebentar.');
+    }
+
+    let replyMsg = `💬 *Draf Rekomendasi Komentar Threads:*\n\n`;
+    if (resultJson.opsi_1) {
+      replyMsg += `*Opsi 1 (Pertanyaan/Empati):*\n\`${resultJson.opsi_1}\`\n\n`;
+    }
+    if (resultJson.opsi_2) {
+      replyMsg += `*Opsi 2 (Santai + Placeholder):*\n\`${resultJson.opsi_2}\`\n\n`;
+    }
+    replyMsg += `_Tips: Salin salah satu teks di atas, sesuaikan bagian [tanda kurung] dengan pengalaman aslimu sebelum membalas di Threads!_`;
+
+    safeReplyMarkdown(ctx, replyMsg);
+  } catch (err) {
+    console.error('Error /bantu_komen:', err);
+    ctx.reply(`❌ Terjadi error: ${err.message}`);
+  }
+});
+
+// ==========================================
+// 📸 JOB PERIODIC SNAPSHOTS VIEWS POSTINGAN
+// Interval evaluasi: 1h, 6h, 24h, 72h
+// ==========================================
+async function recordPeriodicSnapshots() {
+  const userId = process.env.THREADS_USER_ID;
+  const token = getActiveAccessToken();
+  if (!userId || !token) return;
+
+  const published = db.getPublishedStoriesForSnapshots();
+  const now = Date.now();
+
+  for (const story of published) {
+    if (!story.threads_media_id) continue;
+    const pubTime = new Date(story.published_at).getTime();
+    if (isNaN(pubTime)) continue;
+    const ageHours = (now - pubTime) / (1000 * 60 * 60);
+
+    const intervalsToCheck = [];
+    if (ageHours >= 1 && !db.hasPostSnapshot(story.threads_media_id, '1h')) intervalsToCheck.push('1h');
+    if (ageHours >= 6 && !db.hasPostSnapshot(story.threads_media_id, '6h')) intervalsToCheck.push('6h');
+    if (ageHours >= 24 && !db.hasPostSnapshot(story.threads_media_id, '24h')) intervalsToCheck.push('24h');
+    if (ageHours >= 72 && !db.hasPostSnapshot(story.threads_media_id, '72h')) intervalsToCheck.push('72h');
+
+    if (intervalsToCheck.length > 0) {
+      try {
+        const insUrl = `https://graph.threads.net/v1.0/${story.threads_media_id}/insights?metric=views,likes,replies,reposts,quotes`;
+        const res = await fetch(insUrl, { headers: { Authorization: `Bearer ${token}` } });
+        const json = await res.json();
+        let views = 0, likes = 0, replies = 0, reposts = 0, quotes = 0;
+        if (json.data) {
+          json.data.forEach(m => {
+            if (m.name === 'views') views = m.values?.[0]?.value || 0;
+            if (m.name === 'likes') likes = m.values?.[0]?.value || 0;
+            if (m.name === 'replies') replies = m.values?.[0]?.value || 0;
+            if (m.name === 'reposts') reposts = m.values?.[0]?.value || 0;
+            if (m.name === 'quotes') quotes = m.values?.[0]?.value || 0;
+          });
+        }
+        for (const interval of intervalsToCheck) {
+          db.recordPostSnapshot(story.id, story.threads_media_id, interval, views, likes, replies, reposts, quotes);
+          console.log(`[Snapshot] Tersimpan interval ${interval} untuk cerita #${story.id} (${views} views, ${likes} likes, ${replies} replies)`);
+        }
+      } catch (err) {
+        console.warn(`[Snapshot] Gagal fetch insights untuk ${story.threads_media_id}:`, err.message);
+      }
+    }
+  }
+}
+
+// ==========================================
+// 🛡️ PENGINGAT KEDALUWARSA TOKEN META THREADS
+// Alert dikirim harian jika masa aktif < 15 hari
+// ==========================================
+async function checkTokenExpiryReminder() {
+  const refreshedAtStr = db.getSetting('THREADS_TOKEN_REFRESHED_AT');
+  if (!refreshedAtStr) return;
+  const refreshedAt = new Date(refreshedAtStr).getTime();
+  const elapsedDays = (Date.now() - refreshedAt) / (1000 * 86400);
+  const remainingDays = Math.max(0, Math.round(60 - elapsedDays));
+
+  if (remainingDays <= 15) {
+    await sendAdminAlert(
+      `⚠️ *[PENGINGAT TOKEN THREADS]*\n\n` +
+      `Masa aktif token tersisa *${remainingDays} hari lagi* (Refreshed: ${refreshedAtStr.slice(0, 10)}).\n` +
+      `Sistem akan mencoba auto-refresh terjadwal, namun pantau terus dashboard untuk memastikan tidak ada auth error.`
+    );
+  }
+}
+
+// ==========================================
+// ⏰ EKSEKUTOR EXPERIMENT PAIRED A/B SCHEDULER
+// 2 Slot Tayang: Pagi 07:00 WIB & Malam 21:30 WIB
+// ==========================================
+async function executeScheduledPosting(slotTime, label) {
+  // Tambahkan jitter acak antara 1 s/d 5 menit agar tidak terbaca bot presisi
+  const jitterMinutes = Math.floor(Math.random() * 5) + 1;
   const jitterMs = jitterMinutes * 60 * 1000;
-  console.log(`[Scheduler] Slot ${label} aktif! Anti-bot jitter menunggu ${jitterMinutes} menit sebelum eksekusi...`);
+  console.log(`[Scheduler] Slot ${label} (${slotTime}) aktif! Anti-bot jitter menunggu ${jitterMinutes} menit...`);
   
   await new Promise(r => setTimeout(r, jitterMs));
 
@@ -545,7 +716,7 @@ async function executeScheduledPosting(label) {
 
   isPostingInProgress = true;
   try {
-    console.log(`[Scheduler] Memulai auto-posting untuk slot ${label}...`);
+    console.log(`[Scheduler] Memulai eksekusi posting untuk slot ${label}...`);
     const userId = process.env.THREADS_USER_ID;
     const token = getActiveAccessToken();
 
@@ -555,105 +726,124 @@ async function executeScheduledPosting(label) {
       return;
     }
 
-    let story = db.getNextQueuedStory();
-    // Jika stok habis, minta AI bikin 1 cerita terkurasi secara on-the-fly!
-    if (!story) {
-      console.log('[Scheduler] Stok kosong! Men-generate cerita darurat via Creator Gemini + QC Groq...');
-      try {
-        const generated = await produceCuratedStory();
-        db.addStoryToQueue({
-          title: generated.title,
-          topic: generated.topic,
-          slides: generated.slides,
-          productName: generated.product_name,
-          productUrl: generated.product_url,
-          scheduledFor: new Date().toISOString(),
-          qcScore: generated.qcScore,
-          qcNotes: generated.qcNotes
-        });
-        story = db.getNextQueuedStory();
-      } catch (e) {
-        console.error('[Scheduler] Gagal generate cerita darurat:', e);
-        await sendAdminAlert(`🚨 *[Scheduler] Error (${label})*: Stok cerita kosong dan gagal auto-generate cerita via AI: ${e.message}`);
-        return;
-      }
+    const nowWIB = new Date(new Date().toLocaleString('en-US', { timeZone: 'Asia/Jakarta' }));
+    const dateStr = nowWIB.toISOString().slice(0, 10);
+
+    // Cek apakah ada jadwal eksperimen terdaftar untuk hari & slot ini
+    const experimentSlot = db.getExperimentSlot(dateStr, slotTime);
+
+    let story = null;
+    let storyId = null;
+
+    if (experimentSlot && experimentSlot.status === 'pending') {
+      console.log(`[Scheduler] Menjalankan eksperimen Hari ke-${experimentSlot.day_number} (${experimentSlot.variant}): "${experimentSlot.theme}"...`);
+      db.updateExperimentSlot(experimentSlot.id, 'running');
+
+      const curated = await produceCuratedStory({
+        topic: experimentSlot.theme,
+        variant: experimentSlot.variant,
+        origin: experimentSlot.origin || 'fiction',
+        topicTag: experimentSlot.topic_tag
+      });
+
+      storyId = db.addStoryToQueue({
+        title: curated.title,
+        topic: curated.topic,
+        slides: curated.slides,
+        productName: null,
+        productUrl: null,
+        scheduledFor: new Date().toISOString(),
+        qcScore: curated.qcScore,
+        qcNotes: curated.qcNotes,
+        origin: curated.origin,
+        topicTag: curated.topicTag,
+        variant: curated.variant
+      });
+
+      story = {
+        id: storyId,
+        title: curated.title,
+        slides_json: JSON.stringify(curated.slides),
+        product_name: null,
+        product_url: null,
+        origin: curated.origin,
+        topic_tag: curated.topicTag,
+        variant: curated.variant
+      };
+    } else {
+      story = db.getNextQueuedStory();
     }
 
-    if (story) {
-      try {
-        const slides = JSON.parse(story.slides_json);
-        const publishResult = await publishStoryToThreads(userId, token, {
-          title: story.title,
-          slides: slides,
-          product_name: story.product_name,
-          product_url: story.product_url
-        });
-        const postId = typeof publishResult === 'object' ? publishResult.rootPostId : publishResult;
-        const lastId = typeof publishResult === 'object' ? publishResult.lastPostId : postId;
-        const permalink = typeof publishResult === 'object' ? publishResult.permalink : `https://www.threads.net/@ceritakikiii`;
+    if (!story) {
+      console.log('[Scheduler] Tidak ada jadwal eksperimen pending atau antrean kosong.');
+      return;
+    }
 
-        db.markStoryPublished(story.id, postId, lastId, permalink);
-        console.log(`[Scheduler] Sukses posting slot ${label} (Post ID: ${postId})`);
+    try {
+      const slides = JSON.parse(story.slides_json);
+      const publishResult = await publishStoryToThreads(userId, token, {
+        title: story.title,
+        slides: slides,
+        product_name: story.product_name,
+        product_url: story.product_url,
+        topic_tag: story.topic_tag || null
+      });
 
-        const remainingStock = db.getQueuedStoriesCount();
-        await sendAdminAlert(
-          `🎉 *BERHASIL AUTO-POSTING KE THREADS!*\n\n` +
-          `⏰ *Slot*: ${label}\n` +
-          `📖 *Judul*: ${story.title}\n` +
-          `🛍️ *Produk*: ${story.product_name || 'Murni Cerita'}\n` +
-          `📦 *Sisa Stok Antrean*: *${remainingStock} cerita*\n\n` +
-          `🔗 [Buka Postingan Threads](${permalink})\n` +
-          `Akun: *@ceritakikiii*`
-        );
+      const postId = typeof publishResult === 'object' ? publishResult.rootPostId : publishResult;
+      const lastId = typeof publishResult === 'object' ? publishResult.lastPostId : postId;
+      const permalink = typeof publishResult === 'object' ? publishResult.permalink : `https://www.threads.net/@ceritakikiii`;
 
-        // Otomatis isi ulang stok buffer di background agar antrean selalu aman
-        replenishStockBuffer(9).catch(e => console.warn('[Scheduler] Auto-replenish error:', e.message));
-      } catch (err) {
-        console.error(`[Scheduler] Gagal posting cerita #${story.id} (${story.title}) slot ${label}:`, err.message);
-        db.markStoryFailed(story.id, err.message);
-
-        // Coba 1x pemulihan otomatis dengan cerita berikutnya di antrean
-        const fallbackStory = db.getNextQueuedStory();
-        if (fallbackStory) {
-          console.log(`[Scheduler] Mencoba mempublikasikan cerita cadangan #${fallbackStory.id} ("${fallbackStory.title}")...`);
-          try {
-            const fallbackSlides = JSON.parse(fallbackStory.slides_json);
-            const fallbackResult = await publishStoryToThreads(userId, token, {
-              title: fallbackStory.title,
-              slides: fallbackSlides,
-              product_name: fallbackStory.product_name,
-              product_url: fallbackStory.product_url
-            });
-            const fallbackPostId = typeof fallbackResult === 'object' ? fallbackResult.rootPostId : fallbackResult;
-            const fallbackLastId = typeof fallbackResult === 'object' ? fallbackResult.lastPostId : fallbackPostId;
-            const fallbackPermalink = typeof fallbackResult === 'object' ? fallbackResult.permalink : `https://www.threads.net/@ceritakikiii`;
-
-            db.markStoryPublished(fallbackStory.id, fallbackPostId, fallbackLastId, fallbackPermalink);
-            console.log(`[Scheduler] Cerita cadangan #${fallbackStory.id} sukses terbit (Post ID: ${fallbackPostId})`);
-            
-            await sendAdminAlert(
-              `🎉 *AUTO-POSTING BERHASIL (RECOVERY CADANGAN)!*\n\n` +
-              `⏰ *Slot*: ${label}\n` +
-              `📖 *Judul*: ${fallbackStory.title}\n` +
-              `🆔 *Post ID*: \`${fallbackPostId}\`\n\n` +
-              `🔗 [Buka Postingan Threads](${fallbackPermalink})\n\n` +
-              `_Catatan: Cerita utama sebelumnya gagal (${err.message}) dan telah digantikan otomatis oleh antrean berikutnya._`
-            );
-            replenishStockBuffer(9).catch(e => console.warn('[Scheduler] Auto-replenish error:', e.message));
-            return;
-          } catch (fErr) {
-            console.error('[Scheduler] Cerita cadangan juga gagal:', fErr.message);
-            db.markStoryFailed(fallbackStory.id, fErr.message);
-          }
-        }
-
-        await sendAdminAlert(
-          `🚨 *GAGAL AUTO-POSTING KE THREADS!*\n\n` +
-          `⏰ *Slot*: ${label}\n` +
-          `📖 *Judul*: ${story.title}\n` +
-          `❌ *Error*: ${err.message}`
-        );
+      db.markStoryPublished(story.id, postId, lastId, permalink);
+      if (experimentSlot) {
+        db.updateExperimentSlot(experimentSlot.id, 'completed', story.id);
       }
+      console.log(`[Scheduler] Sukses terbit postingan #${story.id} (${label}, Format ${story.variant || 'Standard'}): ${postId}`);
+
+      await sendAdminAlert(
+        `🎉 *BERHASIL TAYANG DI THREADS (EKSPERIMEN)*\n\n` +
+        `⏰ *Slot*: ${label}\n` +
+        `🏷️ *Format*: *${story.variant === 'A' ? 'Format A (Single Menfess)' : 'Format B (3-Part Micro-Thread)'}*\n` +
+        `📖 *Judul*: ${story.title}\n` +
+        `🔖 *Topic Tag*: \`#${story.topic_tag || 'none'}\`\n` +
+        `🆔 *Post ID*: \`${postId}\`\n\n` +
+        `🔗 [Buka Postingan Threads](${permalink})\n` +
+        `Akun: *@ceritakikiii*`
+      );
+    } catch (err) {
+      console.error(`[Scheduler] Gagal posting cerita #${story.id} (${story.title}) slot ${label}:`, err.message);
+      db.markStoryFailed(story.id, err.message);
+      if (experimentSlot) {
+        db.updateExperimentSlot(experimentSlot.id, 'failed', story.id);
+      }
+
+      // Deteksi error fatal Meta (190, 200, 368): JANGAN RETRY BUTA!
+      const isFatal = err.metaCode === 190 || err.metaCode === 200 || err.metaCode === 368 ||
+                      /190|200|368/.test(err.message);
+
+      if (isFatal) {
+        const code = err.metaCode || 'FATAL_META_ERROR';
+        console.error(`[Scheduler] MENDETEKSI ERROR FATAL META (${code}). RETRY BUTA DIBATALKAN DEMI KEAMANAN AKUN.`);
+        
+        await sendAdminAlert(
+          `🚨 *ALERT PUBLISH META ERROR [KODE ${code}]!*\n\n` +
+          `Publish pada slot *${label}* GAGAL dan *TIDAK diretry buta* untuk mencegah pembatasan akun lebih lanjut.\n\n` +
+          `📖 *Cerita*: ${story.title}\n` +
+          `❌ *Pesan Error*: ${err.message}\n\n` +
+          `*Tindakan yang Diperlukan:*\n` +
+          (code === 190 ? `• Token expired / deauthorized. Buka Telegram bot dan update token baru.\n` : '') +
+          (code === 200 ? `• App review / permissions missing. Owner buka dashboard Meta for Developers dan cek alert/Data Use Checkup.\n` : '') +
+          (code === 368 ? `• Akun dibatasi sementara oleh filter spam Meta. Jeda posting selama 24 jam.\n` : '')
+        );
+        return;
+      }
+
+      // Jika error sementara (bukan kode fatal), beri alert biasa
+      await sendAdminAlert(
+        `🚨 *GAGAL AUTO-POSTING KE THREADS!*\n\n` +
+        `⏰ *Slot*: ${label}\n` +
+        `📖 *Judul*: ${story.title}\n` +
+        `❌ *Error*: ${err.message}`
+      );
     }
   } finally {
     isPostingInProgress = false;
@@ -661,32 +851,42 @@ async function executeScheduledPosting(label) {
 }
 
 // ==========================================
-// ⏰ 3 SLOT TAYANG GOLDEN HOURS INDONESIA (WIB)
-// Setiap slot disertai anti-bot jitter acak 1-10 menit
+// ⏰ 2 SLOT TAYANG RESMI EKSPERIMEN PAIRED A/B (WIB)
+// Slot 1: PAGI 07:00 WIB
+// Slot 2: MALAM 21:30 WIB
 // ==========================================
-// Slot 1: PAGI 07:30 WIB - Jam komuter & perjalanan kerja
-cron.schedule('30 7 * * *', () => executeScheduledPosting('PAGI 07:30 WIB'), {
+cron.schedule('0 7 * * *', () => executeScheduledPosting('07:00', 'PAGI 07:00 WIB'), {
   scheduled: true,
   timezone: 'Asia/Jakarta'
 });
 
-// Slot 2: SIANG 12:30 WIB - Jam istirahat makan siang
-cron.schedule('30 12 * * *', () => executeScheduledPosting('SIANG 12:30 WIB'), {
+cron.schedule('30 21 * * *', () => executeScheduledPosting('21:30', 'MALAM 21:30 WIB'), {
   scheduled: true,
   timezone: 'Asia/Jakarta'
 });
 
-// Slot 3: MALAM 20:00 WIB - Jam prime time rebahan malam
-cron.schedule('0 20 * * *', () => executeScheduledPosting('MALAM 20:00 WIB'), {
+// Polling Snapshot Views berkala tiap 30 menit
+cron.schedule('*/30 * * * *', () => {
+  recordPeriodicSnapshots().catch(e => console.warn('[Snapshot Cron Error]:', e.message));
+});
+
+// Pengecekan Kedaluwarsa Token Harian jam 08:00 WIB
+cron.schedule('0 8 * * *', () => {
+  checkTokenExpiryReminder().catch(e => console.warn('[Token Check Error]:', e.message));
+}, {
   scheduled: true,
   timezone: 'Asia/Jakarta'
 });
 
 // ==========================================
-// 📦 AUTO-REPLENISH BUFFER STOK (Setiap 2 Jam Sekali)
-// Menjaga antrean minimal 9 cerita (~3 hari buffer untuk 3x posting sehari)
+// 📦 AUTO-REPLENISH BUFFER STOK (Dijeda selama eksperimen paired 14 hari)
+// Selama eksperimen, cerita diproduksi on-demand per slot jadwal A/B
 // ==========================================
 cron.schedule('0 */2 * * *', async () => {
+  if (process.env.EXPERIMENT_MODE !== 'inactive') {
+    // Dijeda agar tidak menumpuk cerita generik di luar jadwal A/B
+    return;
+  }
   console.log('[Scheduler] Menjalankan auto-replenish buffer stok berkala...');
   try {
     const res = await replenishStockBuffer(9);
@@ -814,6 +1014,10 @@ cron.schedule('30 3 * * *', () => {
 // 3. Malam: 23:00 WIB (jam netizen begadang)
 // ==========================================
 async function runScheduledThreadBump(slotLabel) {
+  if (process.env.EXPERIMENT_PAUSE_EXTRAS !== 'false') {
+    // Dijeda selama eksperimen 14 hari agar tidak mengaburkan metrik A/B
+    return;
+  }
   const userId = process.env.THREADS_USER_ID;
   if (!userId) return;
   console.log(`[ThreadBumper] Menjalankan bump cerdas untuk slot ${slotLabel}...`);
@@ -856,6 +1060,10 @@ cron.schedule('0 23 * * *', () => runScheduledThreadBump('MALAM (23:00 WIB)'), {
 // 2. Sore: 15:30 WIB (Keresahan finansial / In This Economy)
 // ==========================================
 async function runScheduledHotTake(slotLabel) {
+  if (process.env.EXPERIMENT_PAUSE_EXTRAS !== 'false') {
+    // Dijeda selama eksperimen 14 hari agar tidak mengaburkan metrik A/B
+    return;
+  }
   const userId = process.env.THREADS_USER_ID;
   if (!userId) return;
   console.log(`[HotTakes] Menjalankan opini santai untuk slot ${slotLabel}...`);

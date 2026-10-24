@@ -200,133 +200,102 @@ function getThematicVibe(category) {
 
 /**
  * Generate postingan Threads viral "Orang Banget"
- * Mendukung 2 mode:
- * 1. Thread Utas Tajam 4-5 Part (Career / Labor Rights / Social Reality + Rekomendasi Solusi)
- * 2. Single Menfess Curhat 1 Part (Intimate / Marriage Reality, 100% Zero Ad, Viral Magnet)
+ * Mendukung 2 mode pengujian A/B resmi:
+ * 1. Format A: Single Post Menfess 1 Part (≤ 280 karakter total termasuk header)
+ * 2. Format B: Micro-Thread Tepat 3 Part (Part 1 ≤ 200 karakter termasuk header, Part 2 eskalasi, Part 3 debat)
+ * Afiliasi Shopee DIBEKUKAN 100% (0 link) selama masa eksperimen.
+ * Header [Cerita Fiksi] / [Kiriman Warganet] disematkan KETAT DARI KODE, bukan prompt.
  */
-async function generateStory(forcedTopic = null) {
+async function generateStory(options = {}) {
   if (!GEMINI_API_KEY) {
     throw new Error('GEMINI_API_KEY belum diset di .env');
   }
 
-  // Tentukan apakah postingan ini Single Menfess (25%) atau Thread Utas Berbobot (75%)
-  const isSingleMenfess = !forcedTopic && Math.random() < 0.25;
+  let forcedTopic = null;
+  let variant = 'A';
+  let origin = 'fiction';
+  let topicTag = null;
+
+  if (typeof options === 'string') {
+    forcedTopic = options;
+  } else if (typeof options === 'object' && options !== null) {
+    forcedTopic = options.topic || options.forcedTopic || null;
+    variant = (options.variant || 'A').toUpperCase();
+    origin = options.origin || 'fiction';
+    topicTag = options.topicTag || null;
+  }
 
   let topic = forcedTopic;
-  let categoryGroup = 'corporate';
-
   if (!topic) {
-    if (isSingleMenfess) {
-      categoryGroup = 'intimate';
-      topic = TOPICS_INTIMATE_MENFESS[Math.floor(Math.random() * TOPICS_INTIMATE_MENFESS.length)];
-    } else {
-      // Prioritas adaptif dari database jika ada
-      const priorityJson = db.getSetting('PRIORITY_TOPICS');
-      if (priorityJson && Math.random() < 0.6) {
-        try {
-          const priorities = JSON.parse(priorityJson);
-          if (Array.isArray(priorities) && priorities.length > 0) {
-            const chosen = priorities[Math.floor(Math.random() * priorities.length)];
-            const matched = TOPICS.find(t => t.toLowerCase().includes(chosen.toLowerCase()));
-            if (matched) topic = matched;
-          }
-        } catch (e) {}
-      }
-
-      if (!topic) {
-        // 60% Corporate Reality, 40% Social Dilemma
-        if (Math.random() < 0.6) {
-          categoryGroup = 'corporate';
-          topic = TOPICS_CORPORATE[Math.floor(Math.random() * TOPICS_CORPORATE.length)];
-        } else {
-          categoryGroup = 'social';
-          topic = TOPICS_SOCIAL_DILEMMA[Math.floor(Math.random() * TOPICS_SOCIAL_DILEMMA.length)];
-        }
-      }
-    }
+    topic = TOPICS[Math.floor(Math.random() * TOPICS.length)];
   }
 
-  const nowWIB = new Date(new Date().toLocaleString('en-US', { timeZone: 'Asia/Jakarta' }));
-  const currentHour = nowWIB.getHours();
-  let slotTag = 'malam';
-  if (currentHour < 11) slotTag = 'pagi';
-  else if (currentHour < 17) slotTag = 'siang';
-
-  // Pilih produk affiliate HANYA jika bukan Single Menfess
-  let product = null;
-  if (!isSingleMenfess) {
-    let relevantCategories = ['Elektronik & Gadget', 'Gaya Hidup & Botol', 'Skincare & Perawatan', 'Skincare Pria', 'Parfum & Wewangian', 'Camilan & Makanan'];
-    if (categoryGroup === 'social') {
-      relevantCategories = ['Rumah Tangga & Kosan', 'Gaya Hidup & Botol', 'Elektronik & Gadget', 'Camilan & Makanan'];
-    }
-    product = db.getRandomProduct(relevantCategories);
-  }
-  const themeHint = product ? getThematicVibe(product.category) : 'realitas hidup pekerja dan anak muda';
-
+  const isFormatA = (variant === 'A');
   let prompt = '';
 
-  if (isSingleMenfess) {
-    // Mode Single Menfess Curhat (Gaya Screenshot 3: @aku.siapa1616)
+  if (isFormatA) {
+    // FORMAT A: Single Post Curhat Ringkas (Maksimal 240 karakter teks asli agar pas ≤280 chars setelah ditambah header)
     prompt = `
-Kamu adalah kurator menfess di Threads @ceritakikiii. Bio: "In this economy mau nulis cerita orang-orang aja lah".
+Kamu adalah kurator di Threads @ceritakikiii. Bio: "In this economy mau nulis cerita orang-orang aja lah".
 Tuliskan SATU (1) POSTINGAN CURHAT TUNGGAL (Single Post Menfess, TIDAK BERSAMBUNG, HANYA 1 SLIDE).
-Panjang: 180 - 280 karakter.
+Panjang teks cerita: 150 - 240 karakter.
 
-TOPIK:
+ADEGAN/TOPIK NYATA:
 ${topic}
 
-STANDAR GAYA PENULISAN (PERSIS SEPERTI POSTINGAN MANUSIA ASLI VIRAL DI THREADS):
-1. Format murni teks curhat polos, jujur, mengeluh tapi ada analogi kocak/sarkasme hidup.
-2. Gunakan istilah asli warganet Indonesia (seperti: "HB", "bgt", "anteng-anteng aja", "ga ngajak duluan", "diatur jadwalnya kayak mau ketemu menteri 🫠", "ga habis fikri").
-3. Boleh huruf kecil santai di awal kalimat, selayaknya orang mengetik curhat di HP malam hari.
-4. Akhiri dengan emoji pasrah yang tepat seperti 🫠 atau analogi menggelitik yang memicu ratusan netizen ingin ikut berkomentar.
-5. DILARANG KERAS menyisipkan link promosi atau produk apapun. Ini 100% curhat murni!
-6. DILARANG membuat cerita fiktif sinetron (seperti peramal, hantu, atau plot sinetron).
+ATURAN GAYA PENULISAN:
+1. FORMAT ADEGAN KONKRET: Tampilkan kejadian nyata langsung di tempat (dialog langsung atau reaksi spontan). JANGAN menulis esai, nasihat bijak, atau teori.
+2. Gunakan bahasa sehari-hari warganet santai (lu-gue/aku-kamu, istilah wajar seperti "bgt", "anteng", "ngelunjak", "ga habis fikri 🫠").
+3. DILARANG membuat cerita sinetron fiktif lebay (hantu, dukun, melodrama).
+4. DILARANG MENULIS HEADER SEPERTI "[Cerita Fiksi]" ATAU PENOMORAN. Header akan ditempel oleh sistem kode.
+5. DILARANG menyisipkan promosi produk, link, atau iklan apapun. 100% nol iklan.
 
 Keluarkan HANYA JSON:
 {
   "title": "Judul Menfess Singkat (Maksimal 6 kata)",
   "topic": "${topic}",
   "story_parts": [
-    "Teks curhat tunggal 180-280 karakter..."
+    "Teks curhat tunggal 150-240 karakter..."
   ]
 }
 `;
   } else {
-    // Mode Thread Utas Berbobot 4 Part (Gaya Screenshot 1 & 2: @adabangwira & @zialaava)
+    // FORMAT B: Micro-Thread Tepat 3 Part (Bukan 5 part, bukan 4 part)
+    // Part 1: Hook momen menggantung (100-160 chars)
+    // Part 2: Eskalasi konflik / kejadian (150-250 chars)
+    // Part 3: Pertanyaan dilema / debat warganet (100-180 chars)
     prompt = `
 Kamu adalah kurator di Threads @ceritakikiii. Bio: "In this economy mau nulis cerita orang-orang aja lah".
-Tuliskan SATU UTAS THREAD PENDEK & BERBOBOT (PERSIS 4 PART).
+Tuliskan SATU UTAS MICRO-THREAD TEPAT 3 PART (PERSIS 3 SLIDE).
 
-TOPIK SPESIFIK:
+ADEGAN/TOPIK NYATA:
 ${topic}
-Konteks Masalah: ${themeHint}
 
-STANDAR GAYA PENULISAN (PERSIS GAYA @adabangwira & @zialaava):
-1. PART 1 (Hook Realitas / Dialog Nyata):
-   - Tanpa basa-basi! Langsung sajikan dialog tajam bos vs karyawan, atau pengamatan nyata di kantor/lingkungan.
-   - Contoh gaya: "Di kantor gue ada anak magang. Udah 3 bulan, diperpanjang lagi 3 bulan. Dia nolak dan minta kepastian: diangkat officer atau resign." atau "Manajer: Jam kerja Senin sampai Sabtu, jam 8 sampai 5 ya. Karyawan: Itu 48 jam seminggu, Pak."
-2. PART 2 (Realitas / Aturan / Fakta di Balik Kejadian):
-   - Bongkar fakta/aturan sebenarnya. Boleh sebut aturan riil seperti PP 35/2021 tentang batas kerja 40 jam atau logika gaji/tanggung jawab yang timpang.
-3. PART 3 (Opini Kritis & Insight Tajam):
-   - Penjelasan kenapa tindakan tersebut merugikan atau bagaimana pekerja harus bersikap.
-4. PART 4 (Pertanyaan Dilema Penutup):
-   - Pertanyaan yang memancing perdebatan di kolom reply: "Kalau kalian di posisi ini, mending speak-up atau cari aman sambil cari loker lain?"
+STRUKTUR 3 PART:
+1. PART 1 (Hook Kejadian Menggantung):
+   - Langsung ke tengah adegan / dialog awal yang memicu rasa penasaran.
+   - Panjang KETAT: 100 - 160 karakter (wajib ringkas karena akan ditempel header).
+2. PART 2 (Eskalasi Kejadian / Dialog Lanjutan):
+   - Respons orang yang bersangkutan atau kejadian lanjutan yang bikin gregetan/kesal.
+   - Panjang: 150 - 250 karakter.
+3. PART 3 (Pertanyaan Dilema Warganet):
+   - Momen di mana kamu bingung harus bersikap apa, lalu lempar pertanyaan konkret ke warganet.
+   - Panjang: 100 - 180 karakter. Contoh: "Kalau kalian di posisi gue, mending langsung tegor depan mukanya atau diem-diem lapor pengelola?"
 
-PENTING (ATURAN TEKS BERSIH):
-- DILARANG MENGETIK ANGKA PENOMORAN seperti "1/5", "2/5", "[Part 1]", "1.", dll di dalam teks! Aplikasi Threads sudah otomatis memberi badge nomor thread secara native.
-- DILARANG menggunakan kata-kata AI klise seperti "tidak disangka-sangka", "pada akhirnya saya menyadari", "sangat disayangkan".
-- Gunakan bahasa manusia yang cerdas, dingin, observatif, dan relatable.
+ATURAN KETAT:
+- DILARANG MENULIS ANGKA PENOMORAN (seperti "1/3", "Part 1", dll).
+- DILARANG MENULIS HEADER SEPERTI "[Cerita Fiksi]". Header akan dipasang otomatis oleh sistem kode.
+- DILARANG menyisipkan link promosi atau barang. 100% nol iklan.
+- Gunakan bahasa manusia alami, relatable, dan emosi yang terasa nyata.
 
 Keluarkan HANYA JSON:
 {
-  "title": "Judul Utas Tajam (Maksimal 6-8 kata)",
+  "title": "Judul Utas (Maksimal 6-8 kata)",
   "topic": "${topic}",
   "story_parts": [
-    "Part 1 dengan dialog/kejadian nyata tanpa angka nomor...",
-    "Part 2 dengan aturan/fakta lapangan tanpa angka nomor...",
-    "Part 3 opini tajam & logika tanpa angka nomor...",
-    "Part 4 pertanyaan debat warganet tanpa angka nomor..."
+    "Part 1 hook menggantung ringkas (100-160 chars)...",
+    "Part 2 eskalasi kejadian (150-250 chars)...",
+    "Part 3 pertanyaan dilema (100-180 chars)..."
   ]
 }
 `;
@@ -346,7 +315,7 @@ Keluarkan HANYA JSON:
           contents: [{ parts: [{ text: prompt }] }],
           generationConfig: {
             responseMimeType: 'application/json',
-            temperature: 0.85
+            temperature: 0.8
           }
         })
       });
@@ -428,51 +397,38 @@ Keluarkan HANYA JSON:
   const cleanJson = rawText.replace(/```json/g, '').replace(/```/g, '').trim();
   const parsed = JSON.parse(cleanJson);
 
-  const cleanParts = parsed.story_parts.map(p => sanitizeText(p));
+  let cleanParts = (parsed.story_parts || []).map(p => sanitizeText(p));
 
-  // Rakit slides akhir
-  let finalSlides = [];
-  let trackedProductUrl = null;
-
-  if (isSingleMenfess || cleanParts.length === 1) {
-    // Mode Single Menfess: Tepat 1 slide, 0% iklan
-    finalSlides = [cleanParts[0]];
+  // Pastikan jumlah slide sesuai format
+  if (isFormatA) {
+    cleanParts = [cleanParts[0] || ''];
   } else {
-    // Mode Utas Berbobot: Sisipkan produk sebagai solusi penunjang di Part 4/5 jika produk ada
-    if (product && product.affiliate_url) {
-      const catSlug = (product.category || 'umum')
-        .toLowerCase()
-        .replace(/[^a-z0-9]+/g, '_')
-        .slice(0, 15);
-
-      trackedProductUrl = appendSubId(product.affiliate_url, {
-        sub_id1: 'threads_ceritakiki',
-        sub_id2: catSlug,
-        sub_id3: slotTag,
-        sub_id4: product.id ? `p${product.id}` : undefined
-      });
-
-      // Template solusi fungsional cerdas & kontekstual sesuai kategori produk riil
-      const contextualAd = generateContextualAd(product, trackedProductUrl);
-
-      // Susun 5 part: Part 1, Part 2, Part 3, Solusi Part 4, Debat Part 5
-      finalSlides = [
-        cleanParts[0],
-        cleanParts[1] || cleanParts[0],
-        cleanParts[2] || cleanParts[1],
-        contextualAd,
-        cleanParts[3] || cleanParts[2] || cleanParts[0]
-      ];
-    } else {
-      finalSlides = cleanParts;
+    // Format B: Tepat 3 part
+    if (cleanParts.length < 3) {
+      cleanParts.push('Gimana menurut kalian kalau di posisi kayak gini? Mending tegor langsung atau lapor pengelola?');
     }
+    cleanParts = cleanParts.slice(0, 3);
   }
 
-  // Pastikan setiap slide aman di bawah batas 485 karakter Meta Threads
-  finalSlides = finalSlides.map(slide => {
+  // SEMATKAN HEADER KETAT DARI KODE (Bukan dari prompt AI)
+  const header = (origin === 'submitted') ? '[Kiriman Warganet]\n\n' : '[Cerita Fiksi]\n\n';
+  cleanParts[0] = header + cleanParts[0].replace(/^\[(Cerita Fiksi|Kiriman Warganet)\]\s*/i, '').trim();
+
+  // Batasi karakter agar sesuai dengan aturan eksperimen:
+  // Format A: Maksimal 280 karakter total
+  if (isFormatA && cleanParts[0].length > 280) {
+    cleanParts[0] = cleanParts[0].substring(0, 275) + '...';
+  }
+  // Format B Part 1: Maksimal 200 karakter total
+  if (!isFormatA && cleanParts[0].length > 200) {
+    cleanParts[0] = cleanParts[0].substring(0, 195) + '...';
+  }
+
+  // Slide selanjutnya dibatasi di bawah batas Threads (480 karakter)
+  cleanParts = cleanParts.map((slide, idx) => {
     const s = (slide || '').trim();
-    if (s.length > 485) {
-      return s.substring(0, 480) + '...';
+    if (s.length > 480) {
+      return s.substring(0, 475) + '...';
     }
     return s;
   });
@@ -480,10 +436,13 @@ Keluarkan HANYA JSON:
   return {
     title: sanitizeText(parsed.title),
     topic: parsed.topic || topic,
-    product_name: product ? product.name : null,
-    product_url: trackedProductUrl,
-    slides: finalSlides,
-    is_single_menfess: isSingleMenfess
+    product_name: null,
+    product_url: null, // Bekukan 100% affiliate
+    slides: cleanParts,
+    variant: variant,
+    origin: origin,
+    topicTag: topicTag,
+    is_single_menfess: isFormatA
   };
 }
 

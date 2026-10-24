@@ -62,7 +62,7 @@ async function waitForContainerFinished(containerId, accessToken, maxAttempts = 
  * Mempublikasikan satu post ke Threads (Batas resmi Meta: Maksimal 500 karakter per post/reply)
  * Jika replyToId diisi, post akan menjadi REPLY di bawah post tersebut.
  */
-async function publishTextPost(userId, accessToken, text, replyToId = null) {
+async function publishTextPost(userId, accessToken, text, replyToId = null, topicTag = null) {
   // Selalu prioritaskan token aktif di DB (hasil auto-refresh)
   const tokenToUse = getActiveAccessToken() || accessToken;
   if (!tokenToUse) {
@@ -81,6 +81,12 @@ async function publishTextPost(userId, accessToken, text, replyToId = null) {
   };
   if (replyToId) {
     payload.reply_to_id = replyToId;
+  }
+  if (topicTag && !replyToId) {
+    const cleanTag = String(topicTag).replace(/[#.&]/g, '').trim().substring(0, 50);
+    if (cleanTag.length > 0) {
+      payload.topic_tag = cleanTag;
+    }
   }
 
   // Percobaan pembuatan container dengan retry bertingkat (3 kali)
@@ -101,8 +107,22 @@ async function publishTextPost(userId, accessToken, text, replyToId = null) {
         containerData = resJson;
         break;
       }
+
+      // Deteksi error fatal Meta (190: Auth/Token, 200: Permission, 368: Spam/Block)
+      if (resJson.error) {
+        const code = resJson.error.code;
+        const subcode = resJson.error.error_subcode;
+        const msg = resJson.error.message || 'Unknown Meta API error';
+        if (code === 190 || code === 200 || code === 368) {
+          const fatalErr = new Error(`Meta API Fatal Error [${code}${subcode ? '/' + subcode : ''}]: ${msg}`);
+          fatalErr.metaCode = code;
+          fatalErr.metaSubcode = subcode;
+          throw fatalErr;
+        }
+      }
       lastContainerErr = resJson;
     } catch (err) {
+      if (err.metaCode) throw err;
       lastContainerErr = err.message;
     }
     // Jeda sejenak sebelum retry container
@@ -140,8 +160,21 @@ async function publishTextPost(userId, accessToken, text, replyToId = null) {
         publishedId = publishData.id;
         break;
       }
+
+      if (publishData.error) {
+        const code = publishData.error.code;
+        const subcode = publishData.error.error_subcode;
+        const msg = publishData.error.message || 'Unknown Meta publish error';
+        if (code === 190 || code === 200 || code === 368) {
+          const fatalErr = new Error(`Meta API Publish Fatal Error [${code}${subcode ? '/' + subcode : ''}]: ${msg}`);
+          fatalErr.metaCode = code;
+          fatalErr.metaSubcode = subcode;
+          throw fatalErr;
+        }
+      }
       lastError = publishData;
     } catch (err) {
+      if (err.metaCode) throw err;
       lastError = err.message;
     }
 
@@ -227,8 +260,8 @@ async function publishStoryToThreads(userId, accessToken, story) {
   console.log(`[Threads] Memulai publikasi thread berantai (${totalParts} parts)...`);
 
   // PART 1: Post Utama (Root Post)
-  const rootPostId = await publishTextPost(userId, tokenToUse, parts[0]);
-  console.log(`[Threads] Post 1 (ROOT) terbit ID: ${rootPostId}`);
+  const rootPostId = await publishTextPost(userId, tokenToUse, parts[0], null, story.topic_tag || null);
+  console.log(`[Threads] Post 1 (ROOT) terbit ID: ${rootPostId}${story.topic_tag ? ` [tag: ${story.topic_tag}]` : ''}`);
 
   // PART 2 s/d SELESAI: Rantai sekuensial bersambung
   let parentPostId = rootPostId;

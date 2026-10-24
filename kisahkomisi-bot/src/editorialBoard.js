@@ -18,24 +18,51 @@ async function evaluateStoryWithQC(story) {
   const intermezzoSlide = slides.find(s => s.includes('http') || s.includes('shope.ee') || s.includes('shopee.co.id')) || '(Tanpa Iklan)';
   const endingSlide = slides[slides.length - 1] || '';
 
+  // Pre-check 1: Deteksi frasa esai / jargon formal yang memicu esai daripada dialog
+  const allText = slides.join(' ').toLowerCase();
+  const essayJargon = ['faktanya', 'logikanya', 'dalam literatur', 'secara psikologis', 'berdasarkan survei', 'esensi dari', 'menurut pasal'];
+  const foundJargon = essayJargon.find(j => allText.includes(j));
+  if (foundJargon) {
+    return {
+      provider: 'Pre-QC Filter',
+      approved: false,
+      total_score: 4.0,
+      scores: { realism: 4, human_tone: 3, format_pacing: 7, affiliate: 10, debate: 4 },
+      curator_note: `Ditolak: Mengandung gaya esai formal/jargon ("${foundJargon}"). Wajib adegan konkret percakapan warganet.`
+    };
+  }
+
+  // Pre-check 2: Pastikan slide 1 diawali header resmi kode
+  const expectedHeader = (story.origin === 'submitted') ? '[Kiriman Warganet]' : '[Cerita Fiksi]';
+  if (!hookSlide.startsWith(expectedHeader)) {
+    return {
+      provider: 'Pre-QC Filter',
+      approved: false,
+      total_score: 5.0,
+      scores: { realism: 7, human_tone: 7, format_pacing: 4, affiliate: 10, debate: 6 },
+      curator_note: `Ditolak: Header ${expectedHeader} tidak terdeteksi di awal slide 1.`
+    };
+  }
+
   const evaluationPrompt = `
 Kamu adalah Chief Editor & Kepala Kurator akun Threads viral @ceritakikiii.
 Tugasmu adalah menguji dan mengurasi draf cerita menfess sebelum dijadwalkan tayang ke publik.
 
 DATA DRAF CERITA:
 Topik: ${story.topic || '-'}
-Produk: ${story.product_name || 'Murni Cerita'}
+Format Variant: ${story.variant || 'A'}
+Produk: ${story.product_name || 'Murni Cerita (Nol Iklan)'}
 Link: ${story.product_url || '-'}
 
 SLIDES:
 ${slides.map((s, idx) => `[Part ${idx + 1}]: ${s}`).join('\n\n')}
 
 KRITERIA PENILAIAN (Skala 1 - 10):
-1. realism_score: Apakah ini masalah nyata yang dialami orang dewasa/pekerja Indonesia (seperti magang, lembur, PP 35/2021, uang dapur, ranjang pasutri, kosan)? TOLAK KERAS cerita fiktif sinetron/Wattpad (seperti peramal hantu, melodrama berlebihan, noda lipstik ala sinetron).
-2. human_tone_score: Apakah gaya bahasa 100% natural warganet Threads Indonesia (lu-gue/aku-kamu, istilah nyata seperti HB/bgt/ngadep)? TOLAK jika ada bau klise AI (seperti "tidak disangka-sangka", "pada akhirnya aku menyadari").
-3. format_pacing_score: Apakah alur ringkas dan padat (4-5 slide teks bersih tanpa nomor manual, atau 1 slide curhat murni)?
-4. affiliate_score: Jika ada link, apakah disisipkan wajar sebagai alat bantu/solusi praktis (bukan iklan template)? Jika tanpa link, beri nilai 10.
-5. debate_score: Apakah bagian akhir memancing netizen untuk berdebat atau curhat balik di kolom reply?
+1. realism_score: Apakah ini adegan konkret relatable yang dialami orang dewasa/pekerja Indonesia (kosan, teman, keluarga, transportasi, kantor)? TOLAK jika terasa seperti esai opini atau melodrama sinetron.
+2. human_tone_score: Apakah gaya bahasa 100% natural warganet Threads Indonesia (lu-gue/aku-kamu, santai, ceplas-ceplos)? TOLAK jika ada bau klise AI (seperti "tidak disangka-sangka", "pada akhirnya aku menyadari").
+3. format_pacing_score: Apakah alur ringkas dan padat (Format A tepat 1 slide ≤280 chars; Format B tepat 3 slide bersambung)?
+4. affiliate_score: Nol iklan bernilai 10.
+5. debate_score: Apakah memancing netizen untuk berdebat atau menceritakan pengalamannya di kolom reply?
 
 Berikan output HANYA berupa JSON valid persis seperti format ini:
 {
@@ -45,13 +72,13 @@ Berikan output HANYA berupa JSON valid persis seperti format ini:
     "realism": 9,
     "human_tone": 9,
     "format_pacing": 8,
-    "affiliate": 9,
+    "affiliate": 10,
     "debate": 8
   },
   "curator_note": "Ringkasan penilaian kurator dalam 1-2 kalimat"
 }
 
-Syarat Lolos (approved = true): total_score >= 7.5 dan realism >= 7.0. Jika terdeteksi fiksi lebay sinetron, set approved = false.
+Syarat Lolos (approved = true): total_score >= 7.5 dan realism >= 7.0. Jika terdeteksi gaya esai atau sinetron, set approved = false.
 `;
 
   // 1. Coba QC via Groq (Primary QC LPU ultra-fast)
@@ -183,14 +210,20 @@ Syarat Lolos (approved = true): total_score >= 7.5 dan realism >= 7.0. Jika terd
  * Menghasilkan 1 cerita terkurasi yang telah lolos QC Dewan Redaksi.
  * Mengulang maksimal 2 kali bila draf awal ditolak.
  */
-async function produceCuratedStory(forcedTopic = null) {
-  let targetTopic = forcedTopic;
-  if (!targetTopic) {
+async function produceCuratedStory(options = null) {
+  let storyOpts = {};
+  if (typeof options === 'string') {
+    storyOpts = { topic: options };
+  } else if (typeof options === 'object' && options !== null) {
+    storyOpts = { ...options };
+  }
+
+  if (!storyOpts.topic) {
     const recentTopics = db.getRecentStoryTopics ? db.getRecentStoryTopics(12) : [];
     // Prioritaskan topik yang belum pernah dipakai dalam 12 postingan terakhir
     const freshTopics = TOPICS.filter(t => !recentTopics.some(rt => rt.toLowerCase().includes(t.toLowerCase().slice(0, 20))));
     if (freshTopics.length > 0) {
-      targetTopic = freshTopics[Math.floor(Math.random() * freshTopics.length)];
+      storyOpts.topic = freshTopics[Math.floor(Math.random() * freshTopics.length)];
     }
   }
 
@@ -200,7 +233,7 @@ async function produceCuratedStory(forcedTopic = null) {
 
   for (let attempt = 1; attempt <= maxAttempts; attempt++) {
     console.log(`[EditorialBoard] Memproduksi draf cerita (Percobaan ${attempt}/${maxAttempts})...`);
-    const draft = await generateStory(targetTopic);
+    const draft = await generateStory(storyOpts);
     const qc = await evaluateStoryWithQC(draft);
 
     console.log(`[EditorialBoard] Hasil QC (${qc.provider}): Skor ${qc.total_score} | Approved: ${qc.approved}`);
