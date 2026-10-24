@@ -794,57 +794,87 @@ async function prepareAndNotifyVetoSlot(slotTime, label) {
   try {
     const nowWIB = new Date(new Date().toLocaleString('en-US', { timeZone: 'Asia/Jakarta' }));
     const dateStr = nowWIB.toISOString().slice(0, 10);
-    const experimentSlot = db.getExperimentSlot(dateStr, slotTime);
-
-    if (!experimentSlot || experimentSlot.status !== 'pending') {
-      console.log(`[VetoWindow] Tidak ada slot eksperimen pending untuk ${dateStr} ${slotTime}.`);
-      return;
-    }
-
+    const experimentSlot = db.getExperimentSlot ? db.getExperimentSlot(dateStr, slotTime) : null;
     let story = null;
-    let storyId = experimentSlot.story_id;
+    let storyId = null;
+    let topicTag = 'curhat';
+    let variantDesc = 'Format B (Micro-Thread)';
 
-    if (storyId) {
-      story = db.getStoryById(storyId);
+    if (experimentSlot && (experimentSlot.status === 'pending' || experimentSlot.status === 'running')) {
+      storyId = experimentSlot.story_id;
+      if (storyId) {
+        story = db.getStoryById(storyId);
+      }
+
+      if (!story) {
+        console.log(`[VetoWindow] Memproduksi draf cerita untuk slot ${label} (Day ${experimentSlot.day_number}, Format ${experimentSlot.variant})...`);
+        const curated = await produceCuratedStory({
+          topic: experimentSlot.theme,
+          variant: experimentSlot.variant,
+          origin: experimentSlot.origin || 'fiction',
+          topicTag: experimentSlot.topic_tag
+        });
+
+        storyId = db.addStoryToQueue({
+          title: curated.title,
+          topic: curated.topic,
+          slides: curated.slides,
+          productName: curated.product_name || null,
+          productUrl: curated.product_url || null,
+          scheduledFor: `${dateStr}T${slotTime}:00+07:00`,
+          qcScore: curated.qcScore,
+          qcNotes: curated.qcNotes,
+          origin: curated.origin,
+          topicTag: curated.topicTag,
+          variant: curated.variant
+        });
+
+        db.updateExperimentSlot(experimentSlot.id, 'pending', storyId);
+        story = db.getStoryById(storyId);
+      }
+      topicTag = experimentSlot.topic_tag || 'curhat';
+      variantDesc = experimentSlot.variant === 'A' ? 'Format A (Single Menfess)' : 'Format B (3-Part Micro-Thread)';
+    } else {
+      // MODE OPERASI NORMAL AUTOPILOT (Ambil dari antrean buffer)
+      story = db.getNextQueuedStory ? db.getNextQueuedStory() : null;
+      if (!story) {
+        console.log(`[VetoWindow] Antrean kosong, memproduksi 1 cerita terkurasi langsung untuk slot ${label}...`);
+        const curated = await produceCuratedStory({
+          variant: 'B',
+          origin: 'fiction'
+        });
+        storyId = db.addStoryToQueue({
+          title: curated.title,
+          topic: curated.topic,
+          slides: curated.slides,
+          productName: curated.product_name || null,
+          productUrl: curated.product_url || null,
+          scheduledFor: `${dateStr}T${slotTime}:00+07:00`,
+          qcScore: curated.qcScore,
+          qcNotes: curated.qcNotes,
+          origin: curated.origin || 'fiction',
+          topicTag: curated.topic_tag || curated.topicTag || 'curhat',
+          variant: curated.variant || 'B'
+        });
+        story = db.getStoryById(storyId);
+      }
+      topicTag = story.topic_tag || 'curhat';
+      variantDesc = story.variant === 'A' ? 'Format A (Single Menfess)' : 'Format B (Micro-Thread)';
     }
 
     if (!story) {
-      console.log(`[VetoWindow] Memproduksi draf cerita untuk slot ${label} (Day ${experimentSlot.day_number}, Format ${experimentSlot.variant})...`);
-      const curated = await produceCuratedStory({
-        topic: experimentSlot.theme,
-        variant: experimentSlot.variant,
-        origin: experimentSlot.origin || 'fiction',
-        topicTag: experimentSlot.topic_tag
-      });
-
-      storyId = db.addStoryToQueue({
-        title: curated.title,
-        topic: curated.topic,
-        slides: curated.slides,
-        productName: curated.product_name || null,
-        productUrl: curated.product_url || null,
-        scheduledFor: `${dateStr}T${slotTime}:00+07:00`,
-        qcScore: curated.qcScore,
-        qcNotes: curated.qcNotes,
-        origin: curated.origin,
-        topicTag: curated.topicTag,
-        variant: curated.variant
-      });
-
-      db.updateExperimentSlot(experimentSlot.id, 'pending', storyId);
-      story = db.getStoryById(storyId);
+      console.log(`[VetoWindow] Tidak ada cerita siap tayang untuk ${dateStr} ${slotTime}.`);
+      return;
     }
 
     const slides = JSON.parse(story.slides_json);
     const firstSlide = slides[0] || '';
-    const variantDesc = experimentSlot.variant === 'A' ? 'Format A (Single Menfess)' : 'Format B (3-Part Micro-Thread)';
 
     const sent = await sendAdminAlert(
       `⏳ *[30-MIN VETO WINDOW]* Draf Siap Tayang Jam ${slotTime} WIB!\n\n` +
       `⏰ *Slot*: ${label}\n` +
-      `📅 *Hari Eksperimen*: Hari ke-${experimentSlot.day_number}\n` +
       `🏷️ *Format*: *${variantDesc}*\n` +
-      `🔖 *Topic Tag*: \`#${experimentSlot.topic_tag}\`\n` +
+      `🔖 *Topic Tag*: \`#${topicTag}\`\n` +
       `📖 *Judul*: ${story.title}\n\n` +
       `*Pratinjau Hook / Post Utama:*\n` +
       `_"${firstSlide}"_\n\n` +
