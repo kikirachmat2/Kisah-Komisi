@@ -678,6 +678,13 @@ Keluarkan HANYA JSON:
 // 📸 JOB PERIODIC SNAPSHOTS VIEWS POSTINGAN
 // Interval evaluasi: 1h, 6h, 24h, 72h
 // ==========================================
+function parseUtcTimestamp(dateStr) {
+  if (!dateStr) return NaN;
+  if (typeof dateStr !== 'string') return new Date(dateStr).getTime();
+  if (dateStr.includes('Z') || dateStr.includes('+')) return new Date(dateStr).getTime();
+  return new Date(dateStr.replace(' ', 'T') + 'Z').getTime();
+}
+
 async function recordPeriodicSnapshots() {
   const userId = process.env.THREADS_USER_ID;
   const token = getActiveAccessToken();
@@ -688,11 +695,26 @@ async function recordPeriodicSnapshots() {
 
   for (const story of published) {
     if (!story.threads_media_id) continue;
-    const pubTime = new Date(story.published_at).getTime();
+    let pubTime = parseUtcTimestamp(story.published_at);
+    if (isNaN(pubTime)) {
+      // Fallback: ambil timestamp terbit langsung dari Graph API Threads
+      try {
+        const metaRes = await fetch(`https://graph.threads.net/v1.0/${story.threads_media_id}?fields=timestamp&access_token=${token}`);
+        if (metaRes.ok) {
+          const metaJson = await metaRes.json();
+          if (metaJson.timestamp) {
+            pubTime = new Date(metaJson.timestamp).getTime();
+            // Cache ke database agar tidak perlu fetch API berulang
+            db.db.prepare('UPDATE stories SET published_at = ? WHERE id = ?').run(metaJson.timestamp, story.id);
+          }
+        }
+      } catch (e) {}
+    }
     if (isNaN(pubTime)) continue;
+
     const ageHours = (now - pubTime) / (1000 * 60 * 60);
 
-    // KETAT SESUAI PROTOKOL CLAUDE: Jendela presisi interval ±15 menit (0.25 jam)
+    // KETAT SESUAI PROTOKOL: Jendela presisi interval ±15 menit (0.25 jam) dari WAKTU TERBIT AKTUAL
     // DILARANG MENULIS INTERVAL YANG SUDAH LEWAT! Jika terlewat, jangan tulis retroaktif.
     const intervalsToCheck = [];
     if (ageHours >= 0.75 && ageHours <= 1.25 && !db.hasPostSnapshot(story.threads_media_id, '1h')) {

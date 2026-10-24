@@ -396,13 +396,25 @@ async function getExternalReplyCount(mediaId, myUsername = 'ceritakikiii', acces
   const tokenToUse = getActiveAccessToken() || accessToken;
   if (!tokenToUse) return 0;
   try {
-    const url = `${THREADS_API_BASE}/${mediaId}/replies?fields=id,username&access_token=${tokenToUse}`;
-    const res = await fetch(url);
-    if (!res.ok) return 0;
-    const json = await res.json();
-    if (!json.data || !Array.isArray(json.data)) return 0;
-    const external = json.data.filter(r => r.username && r.username.toLowerCase() !== myUsername.toLowerCase());
-    return external.length;
+    let url = `${THREADS_API_BASE}/${mediaId}/conversation?fields=id,username&access_token=${tokenToUse}`;
+    let externalCount = 0;
+    let pageCount = 0;
+
+    while (url && pageCount < 5) {
+      pageCount++;
+      const res = await fetch(url);
+      if (!res.ok) break;
+      const json = await res.json();
+      if (!json.data || !Array.isArray(json.data)) break;
+
+      const external = json.data.filter(r => r.username && r.username.toLowerCase() !== myUsername.toLowerCase());
+      externalCount += external.length;
+
+      // Handle pagination if conversation has more items
+      url = json.paging?.next || null;
+    }
+
+    return externalCount;
   } catch (e) {
     return 0;
   }

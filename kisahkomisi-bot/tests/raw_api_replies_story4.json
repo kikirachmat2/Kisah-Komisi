@@ -1,0 +1,87 @@
+{
+  "command": "node scripts/fetch_raw_replies_story4.js",
+  "endpoint_post": "GET https://graph.threads.net/v1.0/18107440349261221?fields=id,text,timestamp,username,permalink",
+  "post_info": {
+    "id": "18107440349261221",
+    "permalink": "https://www.threads.com/@ceritakikiii/post/DevIfbOExes",
+    "text": "Muka gue mendadak dilempar botol minum di KRL Manggarai cuma gara-gara nolak ngalah pas kaki gue lagi diperban. Hari itu gerbong padat parah dan gue duduk di kursi biasa, bukan prioritas. Tiba-tiba ada cewek kantoran berdiri di depan gue, berkacak pinggang sambil teriak kencang kalau gue anak muda ga punya empati sama sekali.",
+    "timestamp": "2026-10-21T00:35:06+0000",
+    "username": "ceritakikiii"
+  },
+  "endpoint_replies": "GET https://graph.threads.net/v1.0/18107440349261221/replies?fields=id,text,timestamp,username",
+  "raw_replies": {
+    "data": [
+      {
+        "id": "18074054384742974",
+        "text": "Update dikit: Barusan dikabari, si pelaku udah dipanggil HRD dan sekarang lagi nangis-nangis di tangga darurat wkwk. Ada yang nyesel udah ngegas? Kasian juga sih emang.",
+        "timestamp": "2026-10-21T03:45:06+0000",
+        "username": "ceritakikiii"
+      },
+      {
+        "id": "18105001805344944",
+        "text": "Awalnya gue baru balik kontrol dari RS abis jatuh dari tangga kantor sampai ligamen engkel gue robek. Gue naik dari Stasiun Sudirman pas jam pulang kantor yang luar biasa brutal. Beruntung pas pintu kebuka ada bapak-bapak turun dan gue dapet kursi kosong. Celana kulot gue emang panjang, jadi perban tebal di pergelangan kaki ketutupan.",
+        "timestamp": "2026-10-21T00:35:21+0000",
+        "username": "ceritakikiii"
+      }
+    ],
+    "paging": {
+      "cursors": {
+        "before": "QVFIVGNEV2g2dzJOSXhBRVFnRE1nSXF1SU1taGlHUldhSnhCSi15OTI4NDJ0VERDSmlYM3Y3US05VW81NXJKcG1LWGg2LUI0V1FPSUJMUGJER0ExTWpSQ1BR",
+        "after": "QVFIVEREVHp5SE9jSFpaS1MtZAkpnWVFKRTI2bHhjN0RSeXVTUUhEM253WG9aemJhZA2Vwd1RGLTRPRWpCd0E3dENEMUZA2UTRaT0Q0ZAE9KcW90Tll1TGduaTdn"
+      }
+    }
+  },
+  "endpoint_conversation": "GET https://graph.threads.net/v1.0/18107440349261221/conversation?fields=id,text,timestamp,username",
+  "raw_conversation": {
+    "data": [
+      {
+        "id": "18074054384742974",
+        "text": "Update dikit: Barusan dikabari, si pelaku udah dipanggil HRD dan sekarang lagi nangis-nangis di tangga darurat wkwk. Ada yang nyesel udah ngegas? Kasian juga sih emang.",
+        "timestamp": "2026-10-21T03:45:06+0000",
+        "username": "ceritakikiii"
+      },
+      {
+        "id": "18062903210623165",
+        "text": "Dia sempat minta maaf pas digiring turun tapi sambil pasang muka sinis seolah gue yang sengaja jebak dia. Sampai rumah gue nangis sesenggukan ngerasa trauma naik KRL lagi. Menurut kalian, wajar ga sih orang yang ngerasa capek kerja nuntut kursi non-prioritas dengan cara agresif, atau mental penumpang KRL sekarang emang makin ga karuan?",
+        "timestamp": "2026-10-21T00:36:53+0000",
+        "username": "ceritakikiii"
+      },
+      {
+        "id": "17913031044506725",
+        "text": "Gue yang udah gemetar nahan malu langsung narik celana ke atas, nunjukin engkel gue yang bengkak biru dibebat perban kaku. Petugas PKD langsung lari nerobos masuk buat nahan mbak itu. Pas liat kaki gue, mukanya langsung pucat pasi dan orang-orang segerbong mulai balik nyorakin dia egois sampai akhirnya dia diturunkan paksa di Stasiun Cawang.",
+        "timestamp": "2026-10-21T00:36:37+0000",
+        "username": "ceritakikiii"
+      },
+      {
+        "id": "18102768170148374",
+        "text": "Puncaknya pas dia narik paksa tangan gue suruh berdiri sambil nyalain kamera HP buat ngevideoin komplotan netizennya. Gue kaget reflek nolak dan bilang kaki gue sakit. Di situ dia histeris nuduh gue bohong, terus langsung ngelempar botol plastik airnya ke pangkuan gue sampai tumpah. Satu gerbong seketika hening dan fokus ngeliatin drama kami.",
+        "timestamp": "2026-10-21T00:36:16+0000",
+        "username": "ceritakikiii"
+      },
+      {
+        "id": "18450215518123581",
+        "text": "Btw selingan bentar ya, kemarin banyak yang nanya rekomendasi Barbel Dumbbell Vinyl Olahraga Rumah belinya di mana, aku belinya di toko ini mumpung lagi diskon:\nhttps://s.shopee.co.id/7pu9yiUxhp?sub_id1=threads_ceritakiki\n\nLanjut ceritanya ke bawah...",
+        "timestamp": "2026-10-21T00:35:56+0000",
+        "username": "ceritakikiii"
+      },
+      {
+        "id": "18127071002313975",
+        "text": "Mbak-mbak ini masuk pas di Tebet sambil napas ngos-ngosan dan sengaja nyenggol lutut gue berkali-kali pake tas gedenya. Dia mulai ngedumel kencang banget nyindir anak zaman sekarang yang sibuk main HP pura-pura budek pas liat orang tua capek berdiri. Padahal umurnya palingan baru akhir dua puluhan dan di samping dia ada cowok kekar sehat.",
+        "timestamp": "2026-10-21T00:35:39+0000",
+        "username": "ceritakikiii"
+      },
+      {
+        "id": "18105001805344944",
+        "text": "Awalnya gue baru balik kontrol dari RS abis jatuh dari tangga kantor sampai ligamen engkel gue robek. Gue naik dari Stasiun Sudirman pas jam pulang kantor yang luar biasa brutal. Beruntung pas pintu kebuka ada bapak-bapak turun dan gue dapet kursi kosong. Celana kulot gue emang panjang, jadi perban tebal di pergelangan kaki ketutupan.",
+        "timestamp": "2026-10-21T00:35:21+0000",
+        "username": "ceritakikiii"
+      }
+    ],
+    "paging": {
+      "cursors": {
+        "before": "QVFIVGNEV2g2dzJOSXhBRVFnRE1nSXF1SU1taGlHUldhSnhCSi15OTI4NDJ0VERDSmlYM3Y3US05VW81NXJKcG1LWGg2LUI0V1FPSUJMUGJER0ExTWpSQ1BR",
+        "after": "QVFIVEREVHp5SE9jSFpaS1MtZAkpnWVFKRTI2bHhjN0RSeXVTUUhEM253WG9aemJhZA2Vwd1RGLTRPRWpCd0E3dENEMUZA2UTRaT0Q0ZAE9KcW90Tll1TGduaTdn"
+      }
+    }
+  }
+}
