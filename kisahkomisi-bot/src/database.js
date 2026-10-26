@@ -386,7 +386,7 @@ module.exports = {
 
   getUpcomingStories: (limit = 6) => {
     return db.prepare(`
-      SELECT id, title, topic, product_name, format_type, scheduled_for, status, qc_score, qc_notes 
+      SELECT id, title, topic, product_name, format_type, slides_json, scheduled_for, status, qc_score, qc_notes 
       FROM stories 
       WHERE status = 'queued' 
       ORDER BY id ASC 
