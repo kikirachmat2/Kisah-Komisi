@@ -32,15 +32,14 @@ async function evaluateStoryWithQC(story) {
     };
   }
 
-  // Pre-check 2: Pastikan slide 1 diawali header resmi kode
-  const expectedHeader = (story.origin === 'submitted') ? '[Kiriman Warganet]' : '[Cerita Fiksi]';
-  if (!hookSlide.startsWith(expectedHeader)) {
+  // Pre-check 2: Tolak jika masih ada label disclaimer fiksi apapun ([Cerita Fiksi], [Fiksi])
+  if (/\[(Cerita Fiksi|Fiksi|Kiriman Warganet)\]/i.test(hookSlide)) {
     return {
       provider: 'Pre-QC Filter',
       approved: false,
-      total_score: 5.0,
-      scores: { realism: 7, human_tone: 7, format_pacing: 4, affiliate: 10, debate: 6 },
-      curator_note: `Ditolak: Header ${expectedHeader} tidak terdeteksi di awal slide 1.`
+      total_score: 4.0,
+      scores: { realism: 4, human_tone: 4, format_pacing: 6, affiliate: 10, debate: 5 },
+      curator_note: `Ditolak: Masih mengandung label [Cerita Fiksi]. Postingan wajib 100% alami tanpa label fiksi.`
     };
   }
 

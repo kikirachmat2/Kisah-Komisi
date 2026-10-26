@@ -25,7 +25,11 @@ const MENFESS_SPILL_THEMES = [
   'Momen disuruh ngerjain tugas di luar jobdesk oleh atasan tapi gak ada apresiasi',
   'Kelakuan tetangga komplek paling bikin ngelus dada soal parkir atau sampah',
   'Momen dipinjemin uang sama temen tapi pas ditagih malah kita yang disemprot',
-  'Alasan paling gak masuk akal pas atasan nolak pengajuan cuti tahunan'
+  'Alasan paling gak masuk akal pas atasan nolak pengajuan cuti tahunan',
+  'Momen dititipin oleh-oleh pas liburan sama temen kantor tapi duitnya gak pernah diganti',
+  'Hal paling bikin ilfeel pas PDKT pas liat cara dia memperlakukan pelayan resto',
+  'Pengalaman diajak temen lama reuni taunya diprospek jualan MLM atau asuransi',
+  'Kelakuan rekan kerja satu tim yang paling jago cari muka di depan bos besar'
 ];
 
 // Bank tema Financial Breakdown (In this economy reality check)
@@ -35,7 +39,11 @@ const FINANCIAL_THEMES = [
   'Simulasi biaya hidup lajang vs ekspektasi nikah mewah di hotel bintang empat',
   'Potongan slip gaji BPJS dan pajak bertambah tapi fasilitas publik gak berubah',
   'Gaji 7 juta kirim ortu 2 juta sisa tabungan receh buat dana darurat',
-  'Fenomena FOMO nongkrong cafe tiap weekend padahal limit paylater udah mepet'
+  'Fenomena FOMO nongkrong cafe tiap weekend padahal limit paylater udah mepet',
+  'Gaji 5.5 juta di Jaksel vs realitas sewa kos sepetak dan makan siang kantor',
+  'Simulasi nabung nikah 2 tahun gaji 6 juta vs inflasi harga katering dan sewa gedung',
+  'Sandwich generation gaji 7 juta nanggung adik sekolah dan cicilan motor orang tua',
+  'Realitas split bill kencan pertama: pesen steak mewah tapi pas bayar minta bagi dua rata'
 ];
 
 // Bank tema Hot Takes Sarkasme
@@ -44,7 +52,9 @@ const HOT_TAKE_THEMES = [
   'Normalisasi gak ikut patungan kado nikahan teman kantor yang gak pernah nyapa di pantry',
   'Pekerja loyal 5 tahun gajinya kalah sama karyawan baru yang jago nego pas interview',
   'Istilah loyalitas perusahaan itu cuma mitos pas giliran efisiensi karyawan',
-  'Makin dewasa lingkaran pertemanan mengecil bukan karena sombong tapi sama-sama capek dan ga ada duit'
+  'Makin dewasa lingkaran pertemanan mengecil bukan karena sombong tapi sama-sama capek dan ga ada duit',
+  'Gelar sarjana sekarang cuma syarat administrasi, yang nentuin keterima tetep orang dalem atau hoki',
+  'Kerja lembur tiap hari bukan tanda produktif, tapi tanda manajemen kerjaannya berantakan'
 ];
 
 /**

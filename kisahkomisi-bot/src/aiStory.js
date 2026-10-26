@@ -304,68 +304,70 @@ async function generateStory(options = {}) {
   let prompt = '';
 
   if (isFormatA) {
-    // FORMAT A: Single Post Curhat Ringkas + Pertanyaan Pengalaman Terbuka (≤240 karakter teks asli agar pas ≤280 chars dengan header)
+    // FORMAT A: Single Post Curhat Ringkas + Pertanyaan Pengalaman Terbuka (≤260 karakter teks asli, 0% label fiksi)
     prompt = `
-Kamu adalah kurator di Threads @ceritakikiii. Bio: "In this economy mau nulis cerita orang-orang aja lah".
+Kamu adalah akun Threads @ceritakikiii. Bio: "In this economy mau nulis cerita orang-orang aja lah".
 Tuliskan SATU (1) POSTINGAN CURHAT TUNGGAL (Single Post Menfess, TIDAK BERSAMBUNG, HANYA 1 SLIDE).
-Panjang KETAT teks cerita: 140 - 190 karakter (DILARANG lebih dari 190 karakter agar pertanyaan penutup tidak terpotong saat dipasang header!).
+Panjang teks cerita: 160 - 240 karakter.
 
-ADEGAN/TOPIK NYATA:
+TOPIK/KERESAHAN NYATA:
 ${topic}
 
-STRUKTUR DAN ATURAN WAJIB:
-1. LANGSUNG KE ADEGAN SPESIFIK: Tampilkan kejadian nyata langsung dengan nama orang konkret (misal: Dimas, Rian, Rendy, Sarah, Bima). DILARANG pakai sebutan generik "si A" atau "si B".
-2. AKHIRI DENGAN PERTANYAAN DILEMA 2-KUBU (THREAD WAR BAIT): Wajib ada pertanyaan penutup yang membelah audiens menjadi 2 kubu (Tim A vs Tim B) agar terpicu membalas. Contoh: "Kalau di posisi Rian, kalian tim langsung konfrontasi atau tim pendam cari aman? Kenapa?"
-3. Bahasa warganet santai, ringkas, dan emosional (lu-gue/aku-kamu, "bgt", "anteng", "ngelunjak").
-4. DILARANG MENULIS HEADER SEPERTI "[Cerita Fiksi]". Header akan ditempel oleh sistem kode.
-5. DILARANG iklan/promosi apapun. 100% nol iklan.
+STRUKTUR DAN ATURAN WAJIB (BAHASA MANUSIA ASLI 100%):
+1. WAJIB SUDUT PANDANG ORANG PERTAMA ("Gue", "Di kantor gue", "Temen sekamar gue", "Atasan gue"). DILARANG gaya cerpen atau novel orang ketiga (DILARANG nama-nama sinetron seperti "Pak Baskara", "Direktur menatap Rendy", "Rian melongo").
+2. LANGSUNG TO THE POINT: Mulai langsung dari kejadian nyata yang bikin emosi/kaget/geleng-geleng kepala.
+3. AKHIRI DENGAN PERTANYAAN DILEMA 2-KUBU (THREAD WAR BAIT): Pertanyaan penutup yang membelah audiens menjadi 2 kubu (Tim A vs Tim B). Contoh: "Kalau kalian di posisi gue, kalian tim langsung labrak atau tim tahan dulu cari bukti lain? Kenapa?"
+4. Bahasa warganet santai, ringkas, emosional, dan alami (lu-gue, bgt, parah, nyesek, anteng).
+5. DILARANG MENULIS LABEL/DISCLAIMER SEPERTI "[Cerita Fiksi]", "[Fiksi]", "[Menfess]" ATAU SEJENISNYA! Tulis langsung teksnya.
+6. DILARANG iklan/promosi apapun. 100% nol iklan.
 
 Keluarkan HANYA JSON:
 {
   "title": "Judul Menfess Singkat (Maksimal 6 kata)",
   "topic": "${topic}",
   "story_parts": [
-    "Teks curhat adegan konkret + pertanyaan dilema 2-kubu warganet (160-240 karakter)..."
+    "Teks curhat adegan konkret sudut pandang orang pertama + pertanyaan dilema 2-kubu warganet (160-240 karakter)..."
   ]
 }
 `;
   } else {
     // FORMAT B: Micro-Thread Tepat 3 Part (Persis 3 slide)
-    // Part 1: Hook momen menggantung (100-160 chars)
-    // Part 2: Eskalasi kejadian dengan nama spesifik (150-250 chars)
+    // Part 1: Hook momen menggantung orang pertama (120-180 chars)
+    // Part 2: Eskalasi kejadian / percakapan nyata (160-260 chars)
     // Part 3: Pertanyaan dilema 2-kubu warganet (100-180 chars)
     prompt = `
-Kamu adalah kurator di Threads @ceritakikiii. Bio: "In this economy mau nulis cerita orang-orang aja lah".
+Kamu adalah akun Threads @ceritakikiii. Bio: "In this economy mau nulis cerita orang-orang aja lah".
 Tuliskan SATU UTAS MICRO-THREAD TEPAT 3 PART (PERSIS 3 SLIDE).
 
-ADEGAN/TOPIK NYATA:
+TOPIK/KERESAHAN NYATA:
 ${topic}
 
 STRUKTUR 3 PART:
-1. PART 1 (Hook Kejadian Menggantung):
-   - Langsung ke tengah adegan yang memicu rasa penasaran dengan nama tokoh spesifik (misal: Dimas, Rian, Rendy).
-   - Panjang KETAT: 100 - 160 karakter (wajib ringkas karena akan ditempel header).
-2. PART 2 (Eskalasi Kejadian / Dialog Lanjutan):
-   - Reaksi orang bersangkutan atau dialog lanjutan yang bikin gregetan. Gunakan nama spesifik, DILARANG "si A / si B".
-   - Panjang: 150 - 250 karakter.
+1. PART 1 (Hook Kejadian Menggantung - Sudut Pandang Orang Pertama):
+   - WAJIB sudut pandang orang pertama ("Gue", "Temen kosan gue", "Atasan gue"). Langsung ke adegan yang memicu rasa penasaran warganet.
+   - DILARANG gaya sinetron orang ketiga seperti "Pak Baskara mendadak diam".
+   - Panjang: 120 - 180 karakter.
+2. PART 2 (Eskalasi Kejadian / Percakapan Nyata):
+   - Kelanjutan kejadian atau dialog yang bikin emosi/geregetan warganet.
+   - Panjang: 160 - 260 karakter.
 3. PART 3 (Pertanyaan Dilema 2-Kubu / Thread War Bait):
-   - Momen perdebatan yang membelah audiens menjadi 2 kubu realistis (Tim A vs Tim B).
-   - Panjang: 100 - 180 karakter. Contoh: "Kalau kalian di posisi Rendy, kalian tim 'langsung tolak chat bos jam 10 malam' atau tim 'iyain aja demi cari aman'? Coba jelasin alasan logisnya."
+   - Pertanyaan yang membelah audiens menjadi 2 kubu realistis (Tim A vs Tim B).
+   - Panjang: 100 - 180 karakter. Contoh: "Kalau kalian di posisi gue, kalian tim 'langsung tolak mentah-mentah' atau tim 'iyain aja demi cari aman'? Coba jelasin alasannya."
 
 ATURAN KETAT:
 - DILARANG MENULIS ANGKA PENOMORAN (seperti "1/3", "Part 1", dll).
-- DILARANG MENULIS HEADER SEPERTI "[Cerita Fiksi]". Header akan dipasang otomatis oleh kode.
-- DILARANG menyisipkan link promosi atau barang. 100% nol iklan.
-- Gunakan bahasa manusia alami dan nama tokoh spesifik.
+- DILARANG MENULIS LABEL SEPERTI "[Cerita Fiksi]", "[Fiksi]", ATAU DISCLAIMER APAPUN! Buat 100% seperti curhat manusia asli.
+- DILARANG menyisipkan link promosi atau barang di prompt ini (link disisipkan otomatis secara terpisah di Slide 3).
+- Gunakan bahasa manusia alami warganet Threads Indonesia (lu-gue, bgt, nyesek, kocak).
 
 Keluarkan HANYA JSON:
 {
   "title": "Judul Utas (Maksimal 6-8 kata)",
   "topic": "${topic}",
   "story_parts": [
-    "Part 1 hook menggantung (100-160 chars)...",
-    "Part 2 eskalasi adegan dengan nama spesifik (150-250 chars)...",
-    "Part 3 pertanyaan pengalaman terbuka warganet (100-180 chars)..."
+    "Part 1 hook menggantung sudut pandang orang pertama (120-180 chars)...",
+    "Part 2 eskalasi adegan nyata (160-260 chars)...",
+    "Part 3 pertanyaan dilema 2-kubu warganet (100-180 chars)..."
   ]
 }
 `;
@@ -498,18 +500,17 @@ Keluarkan HANYA JSON:
     }
   }
 
-  // SEMATKAN HEADER KETAT DARI KODE (Bukan dari prompt AI)
-  const header = (origin === 'submitted') ? '[Kiriman Warganet]\n\n' : '[Cerita Fiksi]\n\n';
-  cleanParts[0] = header + cleanParts[0].replace(/^\[(Cerita Fiksi|Kiriman Warganet)\]\s*/i, '').trim();
+  // HAPUS TOTAL HEADER FIKSI: Bikin 100% Asli & Alami Seperti Curhat Manusia Warganet
+  cleanParts[0] = cleanParts[0].replace(/^\[(Cerita Fiksi|Kiriman Warganet|Fiksi)\]\s*/gi, '').trim();
 
-  // Batasi karakter agar sesuai dengan aturan:
+  // Batasi karakter agar pas di feed Threads:
   // Format A: Maksimal 280 karakter total
   if (isFormatA && cleanParts[0].length > 280) {
     cleanParts[0] = cleanParts[0].substring(0, 275) + '...';
   }
-  // Format B Part 1: Maksimal 200 karakter total
-  if (!isFormatA && cleanParts[0].length > 200) {
-    cleanParts[0] = cleanParts[0].substring(0, 195) + '...';
+  // Format B Part 1: Maksimal 280 karakter
+  if (!isFormatA && cleanParts[0].length > 280) {
+    cleanParts[0] = cleanParts[0].substring(0, 275) + '...';
   }
 
   // Slide selanjutnya dibatasi di bawah batas Threads (480 karakter)
