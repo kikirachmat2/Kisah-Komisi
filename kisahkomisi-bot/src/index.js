@@ -122,13 +122,14 @@ function sanitizeStoryBeforePublish(story) {
     parsedSlides = story.slides || [];
   }
 
-  // Bersihkan segala bentuk label [Cerita Fiksi], (Cerita Fiksi), disclaimer fiksi/AI di semua slide
+  // Bersihkan segala bentuk label [Cerita Fiksi], (Cerita Fiksi), disclaimer fiksi/AI, dan frasa DM di semua slide
   const cleanSlides = parsedSlides.map(slide => {
     return (slide || '')
       .replace(/\[\s*(Cerita Fiksi|Kiriman Warganet|Kisah Fiksi|Fiksi|Fiktif)\s*\]/gi, '')
       .replace(/\(\s*(Cerita Fiksi|Kiriman Warganet|Kisah Fiksi|Fiksi|Fiktif)\s*\)/gi, '')
       .replace(/^.*?(disclaimer|catatan|peringatan)\s*:\s*.*?(fiksi|fiktif|karangan|buatan ai).*$/gim, '')
       .replace(/cerita ini (hanya )?(fiksi|rekaan|karangan|buatan ai)/gi, '')
+      .replace(/\b(masuk\s*dm|kiriman\s*dm|spill\s*di\s*dm)\b/gi, 'denger dari obrolan sana-sini')
       .replace(/^[\s\n\r*_-]+/, '')
       .trim();
   }).filter(Boolean);
