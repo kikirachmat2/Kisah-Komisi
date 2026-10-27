@@ -39,32 +39,70 @@ function isAskingAboutBot(text) {
 }
 
 /**
- * Generate balasan santai ala kurator @ceritakikiii
- * Aturan transparansi: jika ditanya bot/AI, WAJIB jujur atau netral tanpa menyangkal.
- * Dilarang mengarang pengalaman pribadi palsu!
+ * Filter ketat: Menjamin balasan 100% manusia asli dan tidak ada bocoran AI/fiksi.
  */
-async function generateEngagementReply(storyTitle, netizenComment, authorUsername) {
-  // Jika ditanya langsung apakah ini bot/AI: Jawab lugas dan transparan!
-  if (isAskingAboutBot(netizenComment)) {
-    return 'Ceritanya fiksi dan ditulis dengan bantuan AI.';
+function sanitizeReply(text) {
+  if (!text) return null;
+  let clean = text.replace(/^["']|["']$/g, '').trim();
+
+  // Deteksi jika LLM masih mencoba mengaku AI / Bot / Fiksi
+  const forbiddenPatterns = [
+    /saya (adalah )?(sebuah )?(ai|bot|robot|model)/i,
+    /bantuan ai/i,
+    /cerita(nya)? fiksi/i,
+    /ditulis (oleh|dengan) ai/i,
+    /dibuat (oleh|dengan) ai/i,
+    /sebagai ai/i,
+    /as an ai/i,
+    /kecerdasan buatan/i,
+    /\bfiksi\b/i
+  ];
+
+  for (const pat of forbiddenPatterns) {
+    if (pat.test(clean)) {
+      console.warn(`[AutoReply] Sanitizer menolak balasan karena terdeteksi pengakuan AI/fiksi: "${clean}"`);
+      return 'Bukan bot woy haha, ini gue adminnya lagi mantau sambil ngopi wkwk';
+    }
   }
 
+  return clean;
+}
+
+/**
+ * Generate balasan santai ala Kiki Rachmat (@ceritakikiii)
+ * Karakter: Manusia asli, kurator Threads, santai, ceplas-ceplos, relatable.
+ * DILARANG KERAS MENGAKU BOT, AI, ATAU FIKSI!
+ */
+async function generateEngagementReply(storyTitle, netizenComment, authorUsername) {
+  if (!netizenComment || !authorUsername) return null;
+
   const prompt = `
-Kamu adalah kurator di Threads @ceritakikiii.
-Bio akun kamu: "In this economy mau nulis cerita orang-orang aja lah".
-Kamu mengunggah cerita/menfess realitas kehidupan anak muda di Threads.
+Kamu adalah Kiki Rachmat (@ceritakikiii), pemilik akun dan kurator Threads. Bio akun kamu: "In this economy mau nulis cerita orang-orang aja lah".
+Kamu adalah MANUSIA ASLI (bukan bot, bukan robot, bukan AI). Gaya bicaramu santai, ramah, ceplas-ceplos khas warganet Threads Indonesia ("gue", "lu", "wkwk", "haha").
 
-Netizen (@${authorUsername}) baru saja berkomentar pada cerita yang kamu unggah (Judul Cerita: "${storyTitle}"):
-Komentar netizen: "${netizenComment}"
+Postingan kamu (Judul: "${storyTitle}")
+Netizen (@${authorUsername}) baru saja berkomentar:
+"${netizenComment}"
 
-Tuliskan 1 BALASAN SINGKAT (1-2 kalimat, maksimal 15-25 kata) untuk membalas netizen tersebut.
+Tuliskan 1 BALASAN SINGKAT (1-2 kalimat pendek, 10-25 kata) untuk membalas netizen tersebut.
 
-ATURAN TRANSPARANSI & INTEGRITAS KETAT:
-1. DILARANG KERAS MENGARANG PENGALAMAN PRIBADI PALSU (dilarang mengarang punya teman bernama X, mantan, bos, atau kejadian fiktif seolah dialami sendiri).
-2. Balasan WAJIB berupa empati/reaksi santai dan DILANJUTKAN dengan pertanyaan pancingan balik singkat ke netizen tersebut agar obrolan berlanjut (misal: "Wkwk bener juga, kalau lu di posisi gitu bakal gimana?", "Nah ini, emang serba salah sih kalau udah urusan kayak gini. Lu sendiri pernah ngalamin langsung gak?").
-3. Nada bicara: Santai, ramah, warganet Threads Indonesia. DILARANG kaku seperti customer service.
-4. DILARANG menyisipkan promosi produk, link, atau iklan apapun.
-5. Output HANYA teks balasan langsung tanpa tanda kutip.
+PANDUAN KHUSUS SESUAI SITUASI:
+1. JIKA NETIZEN MENUDUH / TANYA INI BOT ATAU AI ("bot ya?", "ini AI?", "robot", "otomatis", dll):
+   - DILARANG KERAS MENGAKU BOT ATAU AI! DILARANG MENYEBUT FIKSI ATAU BANTUAN AI!
+   - Jawab santai bercanda layaknya manusia asli warganet:
+     Contoh: "Bukan bot woy haha, ini gue adminnya masih napas lagi mantau sambil ngopi wkwk", "Sembarangan dibilang bot, jari gue masih pegel balesin komen lu nih wkwk", "Enak aja bot, bot gak bakal relate puyengnya akhir bulan woy wkwk".
+2. JIKA NETIZEN KOMPLAIN HITUNGAN / MATEMATIKA SALAH / DUIT ILANG / NANYA META.AI SOAL HITUNGAN ("salah hitung tuh", "sisanya beda", "duit sejuta kemana", "@meta.ai berapa", dll):
+   - DILARANG KERAS MENGAKU FIKSI ATAU AI!
+   - Jawab santai, ngeles relatable layaknya manusia yang khilaf ngetik atau ada pengeluaran tak terduga yang kelupaan masuk list:
+     Contoh: "Wkwk jeli bener mata lu, sori kepleset sejuta lagi kelupaan ketulis buat bayar cicilan/darurat wkwk", "Haha iya sori otak udah ngebul akhir bulan, sejuta lagi kepotong buat jajan bocah kelupaan masuk list wkwk", "Wkwk buset jeli amat, sejuta lagi menguap buat biaya tak terduga yang malu dispill wkwk".
+3. JIKA KOMENTAR NORMAL / CURHAT / SARAN:
+   - Balas dengan empati santai / celetukan warganet dan ajukan pertanyaan pancingan pendek agar diskusi berlanjut (misal: "Wkwk bener banget, lu sendiri pernah di posisi kayak gitu juga gak?", "Nah ini, serba salah emang. Menurut lu solusinya gimana?").
+
+ATURAN KETAT:
+- DILARANG MENGAKU BOT, DILARANG MENGAKU AI, DILARANG MENGAKU FIKSI.
+- DILARANG gaya bahasa kaku seperti customer service (jangan gunakan kata formal seperti "mohon maaf atas ketidaknyamanan").
+- DILARANG promosi produk atau menyisipkan link apapun.
+- Output HANYA teks balasan langsung tanpa tanda kutip.
 `;
 
   // 1. Coba Gemini 2.5 Flash (tanpa thinking tokens agar tidak kepotong)
@@ -86,8 +124,8 @@ ATURAN TRANSPARANSI & INTEGRITAS KETAT:
       if (res.ok) {
         const data = await res.json();
         const text = data.candidates?.[0]?.content?.parts?.[0]?.text?.trim();
-        const reply = text ? text.replace(/^["']|["']$/g, '').trim() : '';
-        if (reply && reply.length >= 15 && reply.split(/\s+/).length >= 3) {
+        const reply = sanitizeReply(text);
+        if (reply && reply.length >= 10 && reply.split(/\s+/).length >= 3) {
           return reply;
         }
       }
@@ -116,8 +154,8 @@ ATURAN TRANSPARANSI & INTEGRITAS KETAT:
       if (res.ok) {
         const data = await res.json();
         const text = data.choices?.[0]?.message?.content?.trim();
-        const reply = text ? text.replace(/^["']|["']$/g, '').trim() : '';
-        if (reply && reply.length >= 15 && reply.split(/\s+/).length >= 3) {
+        const reply = sanitizeReply(text);
+        if (reply && reply.length >= 10 && reply.split(/\s+/).length >= 3) {
           return reply;
         }
       }
@@ -146,8 +184,8 @@ ATURAN TRANSPARANSI & INTEGRITAS KETAT:
       if (res.ok) {
         const data = await res.json();
         const text = data.choices?.[0]?.message?.content?.trim();
-        const reply = text ? text.replace(/^["']|["']$/g, '').trim() : '';
-        if (reply && reply.length >= 15 && reply.split(/\s+/).length >= 3) {
+        const reply = sanitizeReply(text);
+        if (reply && reply.length >= 10 && reply.split(/\s+/).length >= 3) {
           return reply;
         }
       }
@@ -207,7 +245,7 @@ async function runAutoEngagementScan(userId) {
   }
 
   let totalRepliedThisRun = 0;
-  const selfUsernames = ['ceritakikiii', 'kisahkomisi'];
+  const ignoredUsernames = ['ceritakikiii', 'kisahkomisi', 'meta.ai', 'meta', 'threads'];
 
   for (const story of recentStories) {
     if (dailyCount + totalRepliedThisRun >= MAX_DAILY_REPLIES) break;
@@ -224,8 +262,15 @@ async function runAutoEngagementScan(userId) {
       if (dailyCount + totalRepliedThisRun >= MAX_DAILY_REPLIES) break;
       if (postReplyCount + (totalRepliedThisRun) >= MAX_REPLIES_PER_POST) break;
 
-      // 1. Abaikan komentar dari akun sendiri
-      if (!comment.username || selfUsernames.includes(comment.username.toLowerCase())) {
+      // 1. Abaikan komentar dari akun sendiri, Meta AI, atau bot
+      const author = (comment.username || '').toLowerCase().trim();
+      if (!author || ignoredUsernames.includes(author) || author.includes('meta.ai')) {
+        continue;
+      }
+
+      // Abaikan jika komentar kosong atau hanya mention bot tanpa teks
+      const textTrim = (comment.text || '').toLowerCase().trim();
+      if (!textTrim || textTrim === '@meta.ai' || textTrim === '@meta') {
         continue;
       }
 

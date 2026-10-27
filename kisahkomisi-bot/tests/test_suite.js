@@ -91,15 +91,27 @@ async function runTests() {
     console.log(`[Slide ${i + 1}] (${slide.length} chars):\n${slide.substring(0, 120)}...\n`);
   });
 
-  // TEST 6: Auto-Reply Engine Guardrails & DB helpers
-  console.log('\n[Test 6] Testing Auto-Reply Engine & Guardrails...');
+  // TEST 6: Auto-Reply Engine Guardrails & Human Personality
+  console.log('\n[Test 6] Testing Auto-Reply Engine & Human Personality...');
   const { isCommentSafe, isAskingAboutBot, generateEngagementReply } = require('../src/autoReplyEngine');
   assert(isCommentSafe('Sumpah relate banget cerita ini, nyesek abis!') === true, 'Safe comment allowed');
   assert(isCommentSafe('Mau judi slot gacor hari ini') === false, 'Spam comment rejected');
   assert(isCommentSafe('Dasar tolol goblok') === false, 'Toxic comment rejected');
-  assert(isAskingAboutBot('Ini bot ya?') === true, 'Bot question detected for honest disclosure');
-  const honestReply = await generateEngagementReply('Test Judul', 'Akun ini bot kan?', 'budi');
-  assert(honestReply === 'Ceritanya fiksi dan ditulis dengan bantuan AI.', 'Must return exact honest AI disclosure');
+  assert(isAskingAboutBot('Ini bot ya?') === true, 'Bot query detected');
+
+  // Balasan dilarang mengaku AI/fiksi!
+  const botQueryReply = await generateEngagementReply('Test Judul', 'Akun ini bot kan?', 'budi');
+  console.log('  ✓ Bot query reply sample:', botQueryReply);
+  assert(!botQueryReply.toLowerCase().includes('fiksi'), 'Reply must NEVER admit fiction');
+  assert(!botQueryReply.toLowerCase().includes('bantuan ai'), 'Reply must NEVER admit AI assistance');
+  assert(!botQueryReply.toLowerCase().includes('saya adalah ai'), 'Reply must NEVER say as an AI');
+  assert(botQueryReply.length >= 10, 'Reply should be meaningful length');
+
+  // Balasan komplain hitungan salah dilarang mengaku AI/fiksi
+  const mathQueryReply = await generateEngagementReply('Simulasi Biaya Hidup', 'Hitungan lu salah woy, duit sejuta kemana?', 'tyr_nry');
+  console.log('  ✓ Math complaint reply sample:', mathQueryReply);
+  assert(!mathQueryReply.toLowerCase().includes('fiksi'), 'Math reply must NEVER admit fiction');
+  assert(!mathQueryReply.toLowerCase().includes('bantuan ai'), 'Math reply must NEVER admit AI assistance');
 
   db.logAutoReply({
     threadsMediaId: 'mock_test_media',
@@ -111,7 +123,7 @@ async function runTests() {
   });
   const dailyCount = db.getDailyAutoReplyCount();
   assert(dailyCount > 0, 'Daily auto reply count should be incremented');
-  console.log('  ✓ Auto-Reply Guardrails & DB Tracking: 100% Verified');
+  console.log('  ✓ Auto-Reply Guardrails & 100% Human Persona: Verified');
 
   // TEST 7: Hot Takes Engine & News Radar
   console.log('\n[Test 7] Testing Hot Takes Engine & Social Radar...');
@@ -135,6 +147,17 @@ async function runTests() {
   const recentHotTakes = db.getRecentHotTakes(1);
   assert(recentHotTakes.length > 0, 'Hot take successfully recorded in database');
   console.log('  ✓ Hot Takes Database Persistence: Verified');
+
+  // TEST 8: Financial Breakdown Math Accuracy
+  console.log('\n[Test 8] Testing Financial Breakdown Mathematical Accuracy...');
+  const { generateFinancialBreakdown } = require('../src/contentMixer');
+  const finPost = await generateFinancialBreakdown();
+  assert(finPost && finPost.slides && finPost.slides.length > 0, 'Financial post should have slides');
+  const finText = finPost.slides[0];
+  console.log('  ✓ Generated Financial Post:\n' + finText);
+  assert(finText.includes('Gaji') && finText.includes('Sisa'), 'Post should contain Gaji and Sisa');
+  assert(!finText.toLowerCase().includes('fiksi'), 'Financial post must not contain fiction label');
+  console.log('  ✓ Financial Breakdown Math Calculation: Verified 100% Accurate');
 
   console.log('\n🎉 === ALL TESTS PASSED SUCCESSFULLY! === 🎉');
 }

@@ -70,7 +70,11 @@ async function callAiWithFallback(prompt, temperature = 0.7) {
         signal: AbortSignal.timeout(12000),
         body: JSON.stringify({
           contents: [{ parts: [{ text: prompt }] }],
-          generationConfig: { maxOutputTokens: 500, temperature }
+          generationConfig: {
+            maxOutputTokens: 800,
+            temperature,
+            thinkingConfig: { thinkingBudget: 0 }
+          }
         })
       });
       if (res.ok) {
@@ -223,7 +227,134 @@ Output HANYA teks postingan langsung tanpa tanda kutip.
 }
 
 /**
+ * Format nominal rupiah ke string singkat (cth: 1.8 -> '1,8 jt', 0.5 -> '500 rb')
+ */
+function formatRupiahJt(jt) {
+  if (jt <= 0) return '0 rupiah';
+  if (jt < 1) {
+    const rb = Math.round(jt * 1000);
+    return `${rb} rb`;
+  }
+  const formatted = jt % 1 === 0 ? jt.toFixed(0) : jt.toString().replace('.', ',');
+  return `${formatted} jt`;
+}
+
+/**
+ * Merakit teks postingan financial breakdown dengan kalkulasi matematika 100% presisi.
+ * Menghitung Total Pengeluaran dan Sisa Tabungan dalam kode JavaScript (Zero Hallucination).
+ */
+function buildFinancialBreakdownText({ incomeJt, location, items, punchline }) {
+  const totalExpense = Number(items.reduce((sum, it) => sum + it.amountJt, 0).toFixed(2));
+  const sisaJt = Number((incomeJt - totalExpense).toFixed(2));
+
+  let sisaLine;
+  if (sisaJt > 0) {
+    sisaLine = `Sisa ${formatRupiahJt(sisaJt)} buat tabungan darurat.`;
+  } else if (sisaJt === 0) {
+    sisaLine = `Sisa 0 rupiah alias pas-pasan banget.`;
+  } else {
+    sisaLine = `Defisit ${formatRupiahJt(Math.abs(sisaJt))} alias minus ditambal paylater.`;
+  }
+
+  const lines = [
+    `Gaji ${formatRupiahJt(incomeJt)} di ${location}:`,
+    ...items.map(it => `• ${it.label}: ${formatRupiahJt(it.amountJt)}`),
+    sisaLine,
+    punchline
+  ];
+
+  return lines.join('\n');
+}
+
+/**
+ * Bank template anggaran riil tervalidasi 100% akurat secara matematis
+ */
+const VERIFIED_BUDGETS = [
+  {
+    incomeJt: 6.0,
+    location: 'Jakarta',
+    items: [
+      { label: 'Kos (listrik + air)', amountJt: 1.8 },
+      { label: 'Makan sehari-hari', amountJt: 1.5 },
+      { label: 'KRL & ojol', amountJt: 0.5 },
+      { label: 'Kirim ortu', amountJt: 1.0 },
+      { label: 'Kuota & langganan', amountJt: 0.2 }
+    ],
+    punchline: 'Terus ada yang ngajak nongkrong di Senopati? Mending gue pura-pura pingsan.'
+  },
+  {
+    incomeJt: 5.5,
+    location: 'Jaksel',
+    items: [
+      { label: 'Kos sepetak', amountJt: 1.6 },
+      { label: 'Makan warteg siang-malam', amountJt: 1.4 },
+      { label: 'MRT & transport', amountJt: 0.5 },
+      { label: 'Kirim adik sekolah', amountJt: 0.8 },
+      { label: 'Tagihan paylater belanja', amountJt: 0.7 },
+      { label: 'Kuota & pulsa', amountJt: 0.2 }
+    ],
+    punchline: 'Beli kopi susu 40rb berani, pas kena ongkir 9rb mikirnya 3 hari.'
+  },
+  {
+    incomeJt: 7.0,
+    location: 'Jakarta',
+    items: [
+      { label: 'Kos AC + parkir', amountJt: 2.0 },
+      { label: 'Makan & ngopi kantor', amountJt: 1.8 },
+      { label: 'Kirim ortu kampung', amountJt: 1.5 },
+      { label: 'Cicilan motor', amountJt: 0.8 },
+      { label: 'Transport & bensin', amountJt: 0.4 },
+      { label: 'Kuota & laundry', amountJt: 0.3 }
+    ],
+    punchline: 'Sandwich generation: gaji cuma numpang lewat 5 menit di M-Banking.'
+  },
+  {
+    incomeJt: 5.2,
+    location: 'Jakarta Barat',
+    items: [
+      { label: 'Sewa kamar kos', amountJt: 1.4 },
+      { label: 'Makan hemat + masak', amountJt: 1.3 },
+      { label: 'Ongkos KRL & angkot', amountJt: 0.4 },
+      { label: 'Kirim keluarga', amountJt: 1.0 },
+      { label: 'Keperluan mandi & kos', amountJt: 0.3 },
+      { label: 'Paket data', amountJt: 0.15 }
+    ],
+    punchline: 'Mau healing ke Bali tapi saldo tabungan cuma cukup buat beli cilok di depan gang.'
+  },
+  {
+    incomeJt: 6.5,
+    location: 'Tangerang / BSD',
+    items: [
+      { label: 'Sewa studio kos', amountJt: 1.9 },
+      { label: 'Makan & jajan pantry', amountJt: 1.6 },
+      { label: 'Bensin & tol', amountJt: 0.8 },
+      { label: 'Kirim ortu', amountJt: 1.0 },
+      { label: 'Cicilan HP', amountJt: 0.6 },
+      { label: 'Kuota & Netflix', amountJt: 0.2 }
+    ],
+    punchline: 'Tiap tanggal muda ngerasa sultan, tanggal 20 udah makan mie instan dibagi dua.'
+  },
+  {
+    incomeJt: 7.5,
+    location: 'Jakarta Pusat',
+    items: [
+      { label: 'Kos jalan kaki ke kantor', amountJt: 2.2 },
+      { label: 'Makan siang & malam', amountJt: 1.7 },
+      { label: 'Kirim orang tua', amountJt: 1.5 },
+      { label: 'Nabung rencana nikah', amountJt: 1.2 },
+      { label: 'Gym & kuota', amountJt: 0.3 }
+    ],
+    punchline: 'Simulasi nikah mewah di hotel, pas liat tabungan langsung kepikiran nikah di KUA aja deh.'
+  }
+];
+
+function getRandomVerifiedFinancialBudget() {
+  return VERIFIED_BUDGETS[Math.floor(Math.random() * VERIFIED_BUDGETS.length)];
+}
+
+/**
  * Generate 1 Financial Breakdown ("In this economy" Reality Check)
+ * Menjamin 100% akurasi matematis tanpa halusinasi angka.
  */
 async function generateFinancialBreakdown(options = {}) {
   const theme = options.theme || FINANCIAL_THEMES[Math.floor(Math.random() * FINANCIAL_THEMES.length)];
@@ -231,29 +362,70 @@ async function generateFinancialBreakdown(options = {}) {
 
   const prompt = `
 Kamu adalah Kiki Rachmat (@ceritakikiii), kurator Threads. Bio: "In this economy mau nulis cerita orang-orang aja lah".
-Tuliskan SATU (1) POSTINGAN FINANCIAL BREAKDOWN realitas gaji vs pengeluaran sehari-hari di kota besar (panjang 160-260 karakter).
+Buat rincian data pengeluaran bulanan yang realistis dan relatable untuk pekerja di kota besar Indonesia.
 
-TEMA:
-"${theme}"
+TEMA: "${theme}"
 
-STRUKTUR WAJIB:
-- Baris 1: Pemasukan bulanan (misal: "Gaji 6 juta di Jakarta:")
-- Baris 2-5: Rincian poin pengeluaran konkret (Kos, makan, KRL, jatah ortu, kuota/internet)
-- Baris terakhir: Sisa tabungan receh + celetukan sarkas yang nendang (misal: "Terus ada yang ngajak nongkrong di Senopati? Mending gue pura-pura pingsan.")
+Berikan output HANYA berupa JSON valid persis seperti ini:
+{
+  "incomeJt": 6.0,
+  "location": "Jakarta",
+  "items": [
+    { "label": "Kos (listrik + air)", "amountJt": 1.8 },
+    { "label": "Makan sehari-hari", "amountJt": 1.5 },
+    { "label": "KRL & ojol", "amountJt": 0.5 },
+    { "label": "Kirim ortu", "amountJt": 1.0 },
+    { "label": "Kuota & langganan", "amountJt": 0.2 }
+  ],
+  "punchline": "Terus ada yang ngajak nongkrong di Senopati? Mending gue pura-pura pingsan."
+}
 
 ATURAN KETAT:
-1. DILARANG sapaan basi dan DILARANG HASHTAG (#).
-2. Bahasa santai warganet, relatable, bikin orang menghela napas setuju dan me-repost.
-3. DILARANG iklan/promosi apapun.
-Output HANYA teks postingan langsung tanpa tanda kutip.
+1. Total pengeluaran items HARUS lebih kecil dari incomeJt (sisakan 400rb - 1.2jt untuk sisa tabungan).
+2. DILARANG menghitung sisa sendiri dalam JSON, sistem kode yang akan menghitung sisa secara eksak.
+3. Punchline harus bernada sarkasme santai warganet, relatable, tanpa hashtag (#).
+4. Output HANYA JSON murni tanpa markdown, tanpa teks pengantar.
 `;
 
-  let text = await callAiWithFallback(prompt, 0.7);
-  if (!text || text.length < 50) {
-    text = `Gaji 6 juta di Jakarta:\n• Kos: 1.6jt\n• Makan: 1.8jt\n• KRL & ojol: 400rb\n• Kirim ortu: 1jt\n• Kuota & langganan: 200rb\nSisa 1 juta buat tabungan darurat.\nTerus ada yang ngajak nongkrong abis 500rb semalam? Mending gue pura-pura tipes.`;
+  let budgetData = null;
+  const rawResponse = await callAiWithFallback(prompt, 0.7);
+
+  if (rawResponse) {
+    try {
+      const cleanJson = rawResponse.replace(/```json/gi, '').replace(/```/gi, '').trim();
+      const parsed = JSON.parse(cleanJson);
+      if (parsed && typeof parsed.incomeJt === 'number' && Array.isArray(parsed.items) && parsed.items.length >= 3) {
+        let validIncome = Number(Number(parsed.incomeJt).toFixed(1));
+        let validItems = parsed.items.map(it => ({
+          label: String(it.label || 'Kebutuhan lain').replace(/^[•\-\*]\s*/, '').trim(),
+          amountJt: Number(Number(it.amountJt).toFixed(2))
+        })).filter(it => it.amountJt > 0);
+
+        const totalExpense = validItems.reduce((acc, it) => acc + it.amountJt, 0);
+
+        if (totalExpense >= validIncome) {
+          validIncome = Number((totalExpense + 0.6).toFixed(1));
+        }
+
+        budgetData = {
+          incomeJt: validIncome,
+          location: parsed.location || 'Jakarta',
+          items: validItems,
+          punchline: parsed.punchline || 'Terus ada yang ngajak nongkrong di Senopati? Mending gue pura-pura pingsan.'
+        };
+      }
+    } catch (e) {
+      console.warn('[ContentMixer] Gagal parse JSON AI financial breakdown, menggunakan budget terverifikasi:', e.message);
+    }
   }
 
-  text = text.replace(/^["']|["']$/g, '').trim();
+  // Jika AI gagal / parsing error, gunakan template terverifikasi 100% akurat
+  if (!budgetData) {
+    budgetData = getRandomVerifiedFinancialBudget();
+  }
+
+  // Bangun teks dengan kalkulasi matematika eksak via JavaScript
+  const text = buildFinancialBreakdownText(budgetData);
 
   return {
     title: `Finansial: ${theme.slice(0, 30)}...`,
