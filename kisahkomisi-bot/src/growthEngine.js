@@ -4,7 +4,7 @@ const { TOPICS } = require('./aiStory');
 
 const GROQ_API_KEY = process.env.GROQ_API_KEY;
 const OPENROUTER_API_KEY = process.env.OPENROUTER_API_KEY;
-const SELF_USERNAME = (process.env.THREADS_USERNAME || 'ceritakikiii').toLowerCase();
+const SELF_USERNAME = (process.env.THREADS_USERNAME || 'kikipunyacerita').toLowerCase();
 
 /**
  * Metrik `replies` dari Meta ikut menghitung part thread berantai & bump milik kita sendiri.
@@ -125,7 +125,7 @@ async function analyzePerformanceAndStrategize() {
   const latestAccount = db.getLatestAccountInsight() || { views: 0, likes: 0, replies: 0 };
 
   const prompt = `
-Kamu adalah Chief Growth Strategist & Head of Audience Retention untuk akun Threads viral @ceritakikiii.
+Kamu adalah Chief Growth Strategist & Head of Audience Retention untuk akun Threads viral @kikipunyacerita.
 
 DATA PERFORMA NYATA DARI META THREADS API:
 - Total Views Hari Ini: ${latestAccount.views || 0} views
@@ -394,7 +394,8 @@ async function generateInsightReportMarkdown() {
   const latestStrategy = db.getLatestStrategyLog();
   const allNiches = db.getAllNiches();
 
-  let msg = `📊 *LAPORAN INSIGHT & PERFORMA THREADS (@ceritakikiii)*\n`;
+  const currentUsername = process.env.THREADS_USERNAME || 'kikipunyacerita';
+  let msg = `📊 *LAPORAN INSIGHT & PERFORMA THREADS (@${currentUsername})*\n`;
   msg += `📅 _Data Sinkronisasi Meta Threads API_\n\n`;
 
   msg += `📈 *Metrik Akun Terkini:*\n`;

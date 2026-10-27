@@ -52,13 +52,14 @@ async function main() {
     }
   }
 
-  console.log(`🚀 [Threads] Mulai mempublikasikan cerita #${storyId} ke akun @ceritakikiii...`);
+  const targetUsername = process.env.THREADS_USERNAME || 'kikipunyacerita';
+  console.log(`🚀 [Threads] Mulai mempublikasikan cerita #${storyId} ke akun @${targetUsername}...`);
   const rootPostId = await publishStoryToThreads(userId, token, story);
 
   db.markStoryPublished(storyId, rootPostId);
 
   console.log(`\n🎉 [SUKSES TAYANG] Root Post ID: ${rootPostId}`);
-  console.log(`🔗 Cek live di Threads: https://www.threads.net/@ceritakikiii/post/${rootPostId}`);
+  console.log(`🔗 Cek live di Threads: https://www.threads.net/@${targetUsername}/post/${rootPostId}`);
 }
 
 main().catch(err => {

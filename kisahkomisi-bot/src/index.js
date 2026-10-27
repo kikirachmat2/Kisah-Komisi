@@ -27,6 +27,7 @@ const { executeThreadBump } = require('./threadBumper');
 const { executeHotTake } = require('./hotTakesEngine');
 
 const token = process.env.BOT_TOKEN;
+const THREADS_USERNAME = process.env.THREADS_USERNAME || 'kikipunyacerita';
 
 if (!token) {
   console.error('FATAL ERROR: BOT_TOKEN belum diset di file .env');
@@ -699,7 +700,7 @@ bot.command('post_sekarang', async (ctx) => {
   }
 
   isPostingInProgress = true;
-  await ctx.reply(`🚀 Sedang mem-publish cerita: "${story.title}" ke akun Threads @ceritakikiii...`);
+  await ctx.reply(`🚀 Sedang mem-publish cerita: "${story.title}" ke akun Threads @${THREADS_USERNAME}...`);
 
   try {
     const cleanStory = sanitizeStoryBeforePublish(story);
@@ -713,7 +714,7 @@ bot.command('post_sekarang', async (ctx) => {
     });
     const postId = typeof publishResult === 'object' ? publishResult.rootPostId : publishResult;
     const lastId = typeof publishResult === 'object' ? publishResult.lastPostId : postId;
-    const permalink = typeof publishResult === 'object' ? publishResult.permalink : `https://www.threads.net/@ceritakikiii`;
+    const permalink = typeof publishResult === 'object' ? publishResult.permalink : `https://www.threads.net/@${THREADS_USERNAME}`;
 
     db.markStoryPublished(story.id, postId, lastId, permalink);
 
@@ -724,7 +725,7 @@ bot.command('post_sekarang', async (ctx) => {
       `🆔 *Threads Post ID*: \`${postId}\`\n` +
       `🛒 *Struktur*: 1 Post Utama + ${parsedSlides.length - 1} Replies Berantai\n\n` +
       `🔗 [Buka Postingan Threads](${permalink})\n` +
-      `Akun: *@ceritakikiii*`
+      `Akun: *@${THREADS_USERNAME}*`
     );
 
     // Isi ulang stok di background
@@ -854,7 +855,7 @@ bot.command('bantu_komen', async (ctx) => {
   await ctx.reply('✍️ Menyusun 2 draf komentar bernilai tambah (dengan guardrails pengalaman asli)...');
 
   const commentPrompt = `
-Kamu adalah asisten komentar Threads untuk akun @ceritakikiii (milik Kiki Rachmat).
+Kamu adalah asisten komentar Threads untuk akun @${THREADS_USERNAME} (milik Kiki Rachmat).
 Tugasmu adalah menyusun DUA (2) opsi draf balasan komentar yang bernilai tambah, santai, dan memancing percakapan balik warganet.
 
 POSTINGAN SASARAN:
@@ -1010,7 +1011,7 @@ async function recordPeriodicSnapshots() {
 
         let externalReplies = 0;
         try {
-          externalReplies = await getExternalReplyCount(story.threads_media_id, 'ceritakikiii', token);
+          externalReplies = await getExternalReplyCount(story.threads_media_id, THREADS_USERNAME, token);
         } catch (ere) {
           console.warn(`[Snapshot] Gagal fetch external replies untuk ${story.threads_media_id}:`, ere.message);
         }
@@ -1280,7 +1281,7 @@ async function executeScheduledPosting(slotTime, label, slotNumber = null) {
 
       const postId = typeof publishResult === 'object' ? publishResult.rootPostId : publishResult;
       const lastId = typeof publishResult === 'object' ? publishResult.lastPostId : postId;
-      const permalink = typeof publishResult === 'object' ? publishResult.permalink : `https://www.threads.net/@ceritakikiii`;
+      const permalink = typeof publishResult === 'object' ? publishResult.permalink : `https://www.threads.net/@${THREADS_USERNAME}`;
 
       db.markStoryPublished(story.id, postId, lastId, permalink);
       console.log(`[Scheduler] Sukses terbit postingan #${story.id} (${label}, Format ${story.format_type || 'story'}): ${postId}`);
@@ -1303,7 +1304,7 @@ async function executeScheduledPosting(slotTime, label, slotNumber = null) {
         `🔖 *Topic Tag*: \`#${story.topic_tag || 'threads'}\`\n` +
         `🆔 *Post ID*: \`${postId}\`\n\n` +
         `🔗 [Buka Postingan Threads](${permalink})\n` +
-        `Akun: *@ceritakikiii*`
+        `Akun: *@${THREADS_USERNAME}*`
       );
     } catch (err) {
       console.error(`[Scheduler] Gagal posting konten #${story.id} (${story.title}) slot ${label}:`, err.message);

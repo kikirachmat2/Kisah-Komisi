@@ -84,12 +84,12 @@ function isValidHotTake(text) {
 }
 
 /**
- * Generate 1 Hot Take pendek dengan persona Gen Z Kiki Rachmat (@ceritakikiii)
+ * Generate 1 Hot Take pendek dengan persona Gen Z Kiki Rachmat (@kikipunyacerita)
  */
 async function generateHotTakePost(headlineInfo, slotType = 'PAGI') {
   const prompt = `
-Kamu adalah Kiki Rachmat (@ceritakikiii).
-Bio akun Threads kamu: "In this economy mau nulis cerita orang-orang aja lah".
+Kamu adalah Kiki Rachmat (@kikipunyacerita). Panggilan akrab: Kiki / "Ki".
+Bio akun Threads kamu: "Dialy Life Update | In this economy mau nulis cerita orang-orang aja lah | dm aja yak yg mau share cerita anonimnya".
 Kamu adalah representasi anak muda / Gen Z / pekerja kelas menengah Indonesia yang lelah, realistis, sinis terhadap keadaan hidup, tapi membungkus keresahan dengan humor tongkrongan yang cerdas dan sangat relate (The Exhausted Gen Z Voice of Reason).
 
 ISU / BERITA / FENOMENA HARI INI:
@@ -243,7 +243,7 @@ async function executeHotTake(userId, slotLabel = 'PAGI (10:15 WIB)') {
       source: headlineInfo.source,
       postText,
       slotLabel,
-      permalink: permalink || `https://www.threads.net/@ceritakikiii`
+      permalink: permalink || `https://www.threads.net/@${process.env.THREADS_USERNAME || 'kikipunyacerita'}`
     };
   } catch (err) {
     console.error('[HotTakes] Gagal menerbitkan hot take:', err.message);

@@ -206,7 +206,7 @@ async function evaluateStoryWithQC(story) {
   }
 
   const evaluationPrompt = `
-Kamu adalah Chief Editor & Kepala Kurator akun Threads viral @ceritakikiii.
+Kamu adalah Chief Editor & Kepala Kurator akun Threads viral @kikipunyacerita.
 Tugasmu adalah menguji dan mengurasi draf cerita menfess sebelum dijadwalkan tayang ke publik.
 
 DATA DRAF CERITA:

@@ -1,6 +1,6 @@
 # 🤖 Kisah Komisi / Cerita Kiki — Autopilot Engine & Telegram Controller
 
-Mesin otomatisasi konten viral **Meta Threads** (`@ceritakikiii`) dan pelacakan **Shopee Affiliate** berbasis AI, dikendalikan penuh secara real-time melalui **Telegram Bot** (`@kisahkomisibot`).
+Mesin otomatisasi konten viral **Meta Threads** (`@kikipunyacerita`) dan pelacakan **Shopee Affiliate** berbasis AI, dikendalikan penuh secara real-time melalui **Telegram Bot** (`@kisahkomisibot`).
 
 Dibangun menggunakan **Node.js**, **Telegraf**, **Better-SQLite3 (WAL Mode)**, **Google Gemini 2.5/3.0 Flash**, dan **Official Meta Threads Graph API**.
 

@@ -184,7 +184,7 @@ async function generateHotTake(options = {}) {
   const topicTag = options.topicTag || getAutoTopicTag(theme);
 
   const prompt = `
-Kamu adalah Kiki Rachmat (@ceritakikiii), kurator Threads. Bio: "In this economy mau nulis cerita orang-orang aja lah".
+Kamu adalah Kiki Rachmat (@kikipunyacerita), kurator Threads. Panggilan: "Ki". Bio: "Dialy Life Update | In this economy mau nulis cerita orang-orang aja lah | dm aja yak yg mau share cerita anonimnya".
 Persona: Anak muda korporat Jakarta Selatan (usia 25-27 thn, kerja di agensi/tech/kantor SCBD-Kuningan).
 Gaya ngetik: Human typing sejati warganet Threads Indonesia. Huruf kecil santai, kalimat padat (1-2 kalimat, 90-170 karakter), sinis-realistis, self-deprecating (menertawakan nasib sendiri).
 
@@ -229,7 +229,7 @@ async function generateMenfessSpill(options = {}) {
   const topicTag = options.topicTag || getAutoTopicTag(theme);
 
   const prompt = `
-Kamu adalah Kiki Rachmat (@ceritakikiii), kurator Threads. Bio: "In this economy mau nulis cerita orang-orang aja lah".
+Kamu adalah Kiki Rachmat (@kikipunyacerita), kurator Threads. Panggilan: "Ki". Bio: "Dialy Life Update | In this economy mau nulis cerita orang-orang aja lah | dm aja yak yg mau share cerita anonimnya".
 Persona: Anak muda korporat Jakarta Selatan.
 Tuliskan SATU (1) POSTINGAN CROWDSOURCING / MENFESS SPILL PENDEK (panjang 110-180 karakter) untuk memancing warganet Threads bercerita.
 
@@ -275,7 +275,7 @@ async function generateRecehDaily(options = {}) {
   const topicTag = options.topicTag || getAutoTopicTag(theme);
 
   const prompt = `
-Kamu adalah Kiki Rachmat (@ceritakikiii), anak muda korporat Jakarta Selatan (usia 25-27 thn). Bio: "In this economy mau nulis cerita orang-orang aja lah".
+Kamu adalah Kiki Rachmat (@kikipunyacerita), anak muda korporat Jakarta Selatan (usia 25-27 thn). Panggilan: "Ki". Bio: "Dialy Life Update | In this economy mau nulis cerita orang-orang aja lah | dm aja yak yg mau share cerita anonimnya".
 Tuliskan SATU (1) POSTINGAN HAL RECEH SEHARI-HARI (panjang 120-220 karakter) tentang absurditas/kesialan kecil sehari-hari di kota besar.
 
 TOPIK RECEH:
@@ -318,7 +318,7 @@ async function generateRandomHobbies(options = {}) {
   const topicTag = options.topicTag || getAutoTopicTag(theme);
 
   const prompt = `
-Kamu adalah Kiki Rachmat (@ceritakikiii), anak muda korporat Jakarta Selatan (usia 25-27 thn). Bio: "In this economy mau nulis cerita orang-orang aja lah".
+Kamu adalah Kiki Rachmat (@kikipunyacerita), anak muda korporat Jakarta Selatan (usia 25-27 thn). Panggilan: "Ki". Bio: "Dialy Life Update | In this economy mau nulis cerita orang-orang aja lah | dm aja yak yg mau share cerita anonimnya".
 Tuliskan SATU (1) POSTINGAN HOBI RANDOM / PELARIAN STRES ADULTING (panjang 120-220 karakter).
 
 TOPIK HOBI:
@@ -360,7 +360,7 @@ async function generateSerializedStory(options = {}) {
   const topicTag = options.topicTag || getAutoTopicTag(theme);
 
   const prompt = `
-Kamu adalah Kiki Rachmat (@ceritakikiii), kurator Threads. Bio: "In this economy mau nulis cerita orang-orang aja lah".
+Kamu adalah Kiki Rachmat (@kikipunyacerita), kurator Threads. Panggilan: "Ki". Bio: "Dialy Life Update | In this economy mau nulis cerita orang-orang aja lah | dm aja yak yg mau share cerita anonimnya".
 Tuliskan SATU (1) UTAS CERITA BERSERI PENDEK TEPAT 2 SLIDE berdasarkan obrolan nyata warganet / teman kantor.
 
 TOPIK CERITA:
@@ -658,7 +658,7 @@ async function generateFinancialBreakdown(options = {}) {
   const theme = options.theme || `Realitas gaji ${targetIncome}jt di ${targetLocation} (${chosenArchetype.role})`;
 
   const prompt = `
-Kamu adalah Kiki Rachmat (@ceritakikiii), kurator Threads. Bio: "In this economy mau nulis cerita orang-orang aja lah".
+Kamu adalah Kiki Rachmat (@kikipunyacerita), kurator Threads. Panggilan: "Ki". Bio: "Dialy Life Update | In this economy mau nulis cerita orang-orang aja lah | dm aja yak yg mau share cerita anonimnya".
 Persona: Anak muda korporat Jakarta Selatan (usia 25-27 thn, kerja di kantor SCBD/Kuningan/Jaksel).
 Tugas: Buat rincian data pengeluaran bulanan yang realistis dan relatable untuk ${chosenArchetype.role} (${chosenArchetype.focus}).
 

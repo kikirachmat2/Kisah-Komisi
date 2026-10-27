@@ -296,7 +296,7 @@ async function publishStoryToThreads(userId, accessToken, story) {
     rootPostId,
     lastPostId: parentPostId,
     replyIds,
-    permalink: officialPermalink || `https://www.threads.net/@ceritakikiii`
+    permalink: officialPermalink || `https://www.threads.net/@${process.env.THREADS_USERNAME || 'kikipunyacerita'}`
   };
 }
 
@@ -390,7 +390,7 @@ function mediaIdToShortcode(mediaId) {
   }
 }
 
-function getPostUrl(mediaId, username = 'ceritakikiii') {
+function getPostUrl(mediaId, username = (process.env.THREADS_USERNAME || 'kikipunyacerita')) {
   return `https://www.threads.net/@${username}`;
 }
 
@@ -398,7 +398,7 @@ function getPostUrl(mediaId, username = 'ceritakikiii') {
  * Mengambil jumlah reply organik HANYA dari akun netizen lain (mengecualikan self-replies akun sendiri)
  * Menghilangkan bias inherent pada Format B (yang secara default memiliki 2 reply bersambung buatan sendiri)
  */
-async function getExternalReplyCount(mediaId, myUsername = 'ceritakikiii', accessToken = null) {
+async function getExternalReplyCount(mediaId, myUsername = (process.env.THREADS_USERNAME || 'kikipunyacerita'), accessToken = null) {
   if (!mediaId) return 0;
   const tokenToUse = getActiveAccessToken() || accessToken;
   if (!tokenToUse) return 0;

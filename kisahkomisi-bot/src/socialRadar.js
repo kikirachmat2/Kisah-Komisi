@@ -37,7 +37,7 @@ async function scanThreadsViralTrends(forceFresh = false) {
   }
 
   const prompt = `
-Kamu adalah Social Radar Specialist untuk audiens Threads Indonesia (@ceritakikiii).
+Kamu adalah Social Radar Specialist untuk audiens Threads Indonesia (@kikipunyacerita).
 Lakukan pencarian Google real-time untuk topik hangat, isu politik/kebijakan publik, demo, keluhan, curhatan, atau drama viral yang SEDANG RAMAI dibahas warganet Indonesia hari ini / minggu ini.
 
 Kategori yang sangat potensial memicu keterlibatan (engagement wave):

@@ -363,8 +363,8 @@ async function generateStory(options = {}) {
   if (isFormatA) {
     // FORMAT A: Single Post Curhat Ringkas + Pertanyaan Pengalaman Terbuka (≤260 karakter teks asli, 0% label fiksi)
     prompt = `
-Kamu adalah Kiki Rachmat (@ceritakikiii), pemilik akun Threads. Bio: "In this economy mau nulis cerita orang-orang aja lah".
-Persona: Anak muda korporat Jakarta Selatan (usia 25-27 thn, kerja di agensi/tech/kantoran Jaksel, commute KRL/MRT, ngekos).
+Kamu adalah Kiki Rachmat (@kikipunyacerita), pemilik akun Threads. Panggilan: "Ki". Bio: "Dialy Life Update | In this economy mau nulis cerita orang-orang aja lah | dm aja yak yg mau share cerita anonimnya".
+Persona: Anak muda korporat Jakarta Selatan (usia 25-27 thn, kerja di agensi/tech/kantoran Jaksel, commute KRL/MRT, ngekos). Karakter: EXTROVERT MENTOK, gaul, santai.
 Tuliskan SATU (1) POSTINGAN CURHAT TUNGGAL (Single Post, TIDAK BERSAMBUNG, HANYA 1 SLIDE).
 Panjang teks cerita: 150 - 240 karakter.
 
@@ -398,8 +398,8 @@ Keluarkan HANYA JSON:
     // Part 2: Eskalasi kejadian / percakapan nyata (160-260 chars)
     // Part 3: Pertanyaan dilema 2-kubu warganet (100-180 chars)
     prompt = `
-Kamu adalah Kiki Rachmat (@ceritakikiii), pemilik akun Threads. Bio: "In this economy mau nulis cerita orang-orang aja lah".
-Persona: Anak muda korporat Jakarta Selatan (usia 25-27 thn, kerja di agensi/tech/kantoran Jaksel, commute KRL/MRT, ngekos).
+Kamu adalah Kiki Rachmat (@kikipunyacerita), pemilik akun Threads. Panggilan: "Ki". Bio: "Dialy Life Update | In this economy mau nulis cerita orang-orang aja lah | dm aja yak yg mau share cerita anonimnya".
+Persona: Anak muda korporat Jakarta Selatan (usia 25-27 thn, kerja di agensi/tech/kantoran Jaksel, commute KRL/MRT, ngekos). Karakter: EXTROVERT MENTOK, gaul, santai.
 Tuliskan SATU UTAS MICRO-THREAD TEPAT 3 PART (PERSIS 3 SLIDE).
 
 TOPIK/KERESAHAN NYATA:
@@ -610,7 +610,7 @@ Keluarkan HANYA JSON:
 
 /**
  * Mengolah cerita mentah kiriman warganet / DM menjadi thread berantai ("Add to thread": 3-5 part)
- * Karakter: Kiki Rachmat (@ceritakikiii), anak muda korporat Jaksel, bertindak sebagai kurator/pencerita.
+ * Karakter: Kiki Rachmat (@kikipunyacerita), anak muda korporat Jaksel, bertindak sebagai kurator/pencerita.
  * 
  * Aturan:
  * 1. Memecah cerita menjadi 3 sampai 4 slide terhubung sekuensial.
@@ -628,8 +628,8 @@ async function processAnonymousStory(rawSubmission, options = {}) {
   }
 
   const prompt = `
-Kamu adalah Kiki Rachmat (@ceritakikiii), pemilik akun Threads. Bio: "In this economy mau nulis cerita orang-orang aja lah".
-Persona: Anak muda korporat Jakarta Selatan (usia 25-27 thn, kerja di agensi/tech/kantoran Jaksel).
+Kamu adalah Kiki Rachmat (@kikipunyacerita), pemilik akun Threads. Panggilan: "Ki". Bio: "Dialy Life Update | In this economy mau nulis cerita orang-orang aja lah | dm aja yak yg mau share cerita anonimnya".
+Persona: Anak muda korporat Jakarta Selatan (usia 25-27 thn, kerja di agensi/tech/kantoran Jaksel). Karakter: EXTROVERT MENTOK. JANGAN sebut nama asli orang (gunakan "si fulan").
 
 Ada kiriman curhatan/cerita nyata warganet berikut ini:
 """

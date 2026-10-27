@@ -146,7 +146,7 @@ function sanitizeReply(text) {
 
 /**
  * Klasifikasi Arketipe Perilaku Komentar Warganet Threads
- * Berdasarkan riset data empiris postingan viral @ceritakikiii:
+ * Berdasarkan riset data empiris postingan viral @kikipunyacerita:
  * 1. AUDITOR_EXPENSE: Menyoroti pos pengeluaran hilang (skincare, jajan, nongki, duit sejuta, salah hitung, panggil meta.ai)
  * 2. CURHAT_SHARING: Membagikan nominal gaji/pengeluaran hidup mereka sendiri
  * 3. ASK_LOCATION: Menanyakan info tempat/spill daerah kosan
@@ -185,7 +185,7 @@ function detectCommentArchetype(text) {
 }
 
 /**
- * Generate balasan santai ala Kiki Rachmat (@ceritakikiii)
+ * Generate balasan santai ala Kiki Rachmat (@kikipunyacerita)
  * Karakter: Manusia asli, warganet Threads Indonesia, ceplas-ceplos, santai, relate.
  * 
  * PRINSIP PRAGMATIK KOMUNIKASI WARGANET (Anti-Freak & Anti-Survey Bot):
@@ -223,8 +223,8 @@ async function generateEngagementReply(storyTitle, netizenComment, authorUsernam
   }
 
   const prompt = `
-Kamu adalah Kiki Rachmat (@ceritakikiii), pemilik akun Threads. Bio: "In this economy mau nulis cerita orang-orang aja lah".
-Persona: Anak muda korporat Jakarta Selatan (usia 25-27 thn, kerja di agensi/tech/kantoran Jaksel).
+Kamu adalah Kiki Rachmat (@kikipunyacerita), pemilik akun Threads. Bio: "Dialy Life Update | In this economy mau nulis cerita orang-orang aja lah | dm aja yak yg mau share cerita anonimnya".
+Persona: Anak muda korporat Jakarta Selatan (usia 25-27 thn, kerja di agensi/tech/kantoran Jaksel). Panggilan akrab: Kiki / "Ki". Karakter: EXTROVERT MENTOK, pendengar yang asik, ceplas-ceplos, solutif, realistis, dan hemat tapi santai. Temen-temen sering manggil dia "Ki".
 Kamu MANUSIA ASLI (bukan bot, bukan AI). Gaya ngetik: santai, ceplas-ceplos, bahasa tongkrongan warganet Threads Indonesia ("gue", "lu", "wkwk", "haha", "anjir", "valid", "relate", "boncos", "burnout"). Huruf kecil semua layaknya ngetik cepat di HP pas jam istirahat kantor.
 
 Postingan kamu (Judul: "${storyTitle}")
@@ -404,8 +404,8 @@ async function runAutoEngagementScan(userId) {
     return { repliedCount: 0, scannedPosts: 0 };
   }
 
-  let totalRepliedThisRun = 0;
-  const ignoredUsernames = ['ceritakikiii', 'kisahkomisi', 'meta.ai', 'meta', 'threads'];
+  const selfUsername = (process.env.THREADS_USERNAME || 'kikipunyacerita').toLowerCase();
+  const ignoredUsernames = [selfUsername, 'kikipunyacerita', 'ceritakikiii', 'kisahkomisi', 'meta.ai', 'meta', 'threads'];
 
   for (const story of recentStories) {
     if (dailyCount + totalRepliedThisRun >= MAX_DAILY_REPLIES) break;
