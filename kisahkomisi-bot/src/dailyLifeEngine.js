@@ -196,7 +196,7 @@ TUGAS KAMU: Tuliskan SATU curhatan / celetukan singkat (1 slide) tentang kejadia
 
   const prompt = `
 Kamu adalah Kiki Rachmat (@ceritakikiii), pemilik akun Threads. Bio: "In this economy mau nulis cerita orang-orang aja lah".
-Persona: Anak muda korporat Jakarta Selatan (usia 25-27 thn, kerja di agensi/tech/kantoran Jaksel, commute KRL/MRT, ngekos).
+Persona: Kiki, anak muda Jakarta (usia 25-27 thn, kerja di agensi/tech/kantoran Jaksel). Karakter: EXTROVERT MENTOK, social butterfly, ceplas-ceplos, punya aktivitas banyak & random (commute KRL/MRT, ngekos, warkop, futsal/gym, kulineran). Temennya bejibun dari zaman sekolah SD-SMA, kuliah dulu, sampe rekan kerja dan tongkrongan.
 Hari ini adalah: ${context.dateFormatted}.
 
 ${guidance}
@@ -318,23 +318,35 @@ async function generateAnonymousCurhatStory(options = {}) {
   const context = getCurrentLifeContext();
 
   const curatedScenarios = [
-    // Dunia Kerja & Kantor
-    'Anak magang agensi disuruh lembur sampai jam 10 malam tapi pas evaluasi bulanan uang saku malah dipotong alasan telat absen',
+    // 1. Temen Kantor / Dunia Kerja
     'Senior kantor lempar kesalahan revisi ke junior baru di depan klien pas meeting pitching direksi',
     'Teman satu tim yang hobi lempar revisian pas jam 5 sore alasan buru-buru ada urusan keluarga',
     'Manajer yang nolak pengajuan cuti tahunan dengan alasan tim lagi sibuk padahal dia sendiri liburan 2 minggu',
     'Teman kantor pinjam laptop kerja buat download film taunya kena virus ransomware dan nolak ganti rugi',
     'Rekan kerja yang suka cari muka ke bos pas meeting tapi pas kerja lapangan numpang nama doang',
     'Atasan yang suka chat urusan kerjaan jam 10 malam tapi pas lembur gak pernah mau bayar uang lembur',
-    // Kehidupan Kosan & Rantau
+
+    // 2. Temen Zaman Kuliah Dulu / Skripsi / Kosan Lama
+    'Temen satu bimbingan skripsi jaman kuliah yang numpang nyontek bab 4 tapi malah lulus duluan dan gak ngucapin makasih',
+    'Temen satu kosan jaman kuliah yang barangnya numpuk berantakan tapi pas pindahan ninggalin sampah sekamar',
+    'Temen sekelompok KKN / magang kuliah yang kerjanya cuma tidur tapi pas laporan akhir namanya minta paling atas',
+    'Mantan gebetan jaman kuliah yang dulu ngilang tanpa kabar tiba-tiba nge-chat nawarin asuransi unit link',
+
+    // 3. Temen Sekolah (SD, SMP, SMA, Reuni)
+    'Temen sekelas jaman SMA yang dulu gak pernah nyapa tiba-tiba nge-chat manis cuma buat nagih kado nikahan',
+    'Temen nongkrong jaman SMP yang pas diajak reuni sok asik flexing mobil rental padahal bensin minta patungan',
+    'Temen sebangku jaman sekolah yang dulu pinjam jaket favorit sampe bertahun-tahun gak dibalikin dan pura-pura lupa',
+
+    // 4. Temen Main / Nongkrong Warkop / Futsal / Hobi Random
+    'Temen tongkrongan warkop yang hobi pesen rokok eceran sama mie dobel tapi pas giliran bayar pura-pura ke toilet',
+    'Temen main futsal / badminton yang gayanya paling heboh beli raket 3 juta tapi pas bayar sewa lapangan ngilang',
+    'Temen sehobi lari / CFD yang FOMO beli jersey mahal cuma buat foto IG story 15 menit terus ngeluh haus',
+
+    // 5. Kehidupan Kosan & Realita Urban
     'Pasutri muda di kosan diribetin mertua yang tiba-tiba dateng tanpa kabar dan ngobrak-abrik isi lemari pakaian',
     'Teman sekamar kosan hobi bawa pacar nginep pas hari kerja dan makai barang printilan orang tanpa izin',
-    'Ibu kos yang diam-diam masuk kamar pas penghuni lagi kerja dengan alasan ngecek meteran listrik',
     'Tetangga kosan yang nyetel musik jedag-jedug kencang jam 12 malam pas besoknya ada ujian atau presentasi',
-    // Relasi & Pertemanan Urban
     'Diajak makan di restoran mewah sama temen lama taunya pas giliran bayar dia pura-pura dompet ketinggalan',
-    'Teman tongkrongan minjam uang 2 juta janji ganti pas gajian tapi malah asik flexing nonton konser festival',
-    'Teman kantor yang hobi titip makan siang tapi giliran ditagih pura-pura lupa dan gak pernah transfer',
     'Dilema split bill pacaran di Jakarta: cowok selalu nanggung tapi cewek gak pernah inisiatif bayar parkir atau minum'
   ];
 
@@ -343,25 +355,25 @@ async function generateAnonymousCurhatStory(options = {}) {
   const STORY_ANGLES = [
     {
       type: 'personal',
-      name: 'CERITA PENGALAMAN PRIBADI KIKI',
-      guidance: 'Kiki menceritakan kejadian nyata/nyesek/lucu yang dialaminya sendiri di kantor, kosan, pergaulan, atau jalanan Jakarta.',
-      hookInstruction: 'Mulai dengan kalimat spontan pengalaman diri sendiri (contoh: "masih gak habis pikir sama kejadian di kantor tadi...", "tadi pagi gue baru aja ngalamin hal paling zonk...", "pelajaran hidup hari ini: jangan pernah...", "asli gue baru aja kena apes pas...", "gue kira drama kantor kayak gini cuma mitos..."). DILARANG sebut kata DM atau anonim.',
+      name: 'CERITA PENGALAMAN PRIBADI KIKI (SUDUT PANDANG ORANG PERTAMA)',
+      guidance: 'Kiki menceritakan kejadian nyata/nyesek/lucu/zonk yang dialami dirinya sendiri ("gue ngalamin sendiri", "asli gue baru aja...") sebagai anak muda extrovert mentok yang aktif di Jakarta.',
+      hookInstruction: 'Gunakan sudut pandang orang pertama ("gue"). Mulai dengan kalimat spontan pengalaman diri sendiri (contoh: "masih gak habis pikir sama kejadian tadi siang di kantor...", "tadi pagi gue baru aja ngalamin hal paling zonk...", "pelajaran hidup hari ini: jangan pernah...", "asli gue baru aja kena apes pas...", "gue kira drama kayak gini cuma mitos..."). DILARANG sebut kata DM atau anonim.',
       credit: null,
       origin: 'kiki_personal'
     },
     {
       type: 'friend',
-      name: 'CERITA REKAN KERJA / TEMAN TONGKRONGAN',
-      guidance: 'Kiki menceritakan kejadian nyata yang dialami temen sekantor, temen sekosan, atau temen tongkrongannya.',
-      hookInstruction: 'Mulai dengan kalimat observasi temen (contoh: "tadi pas makan siang di kantin, temen seruangan gue cerita...", "kemarin denger curhatan temen sekantor yang baru aja...", "temen tongkrongan gue semalem ngomel-ngomel gara-gara...", "kasian bgt liat temen kosan gue hari ini..."). DILARANG sebut kata DM.',
+      name: 'CERITA TEMAN KIKI (KIKI NYERITAIN TEMANNYA DARI BERBAGAI SIRKEL)',
+      guidance: 'Kiki adalah anak yang EXTROVERT MENTOK dan circle pertemanannya bejibun luas: ada temen kantor sekarang, temen zaman kuliah dulu (skripsi/kosan), temen sekolah dari SD sampe SMA, temen nongkrong warkop, temen main futsal/gym, atau temen hobi random. Kiki memposisikan diri sebagai pencerita yang ikut kaget/gregetan/ngakak sama kelakuan temannya.',
+      hookInstruction: 'Kiki menceritakan temannya dari berbagai sirkel hidupnya. Variasikan sirkel temennya (contoh: "kemarin pas reunian temen SMA gue cerita...", "tadi pas makan siang di kantin, temen kantor gue curhat...", "temen kuliah gue dulu semalem ngabarin...", "temen nongkrong warkop gue kemarin ngomel-ngomel...", "ada temen sekelas gue jaman sekolah dulu yang nasibnya...", "temen main futsal gue kemarin cerita apes bgt..."). DILARANG sebut kata DM atau anonim.',
       credit: '(cerita temen tongkrongan)',
       origin: 'friend_circle'
     },
     {
       type: 'anonymous',
-      name: 'CURHATAN ANONIM / OBROLAN WARGANET',
-      guidance: 'Kiki membagikan curhatan anonim yang masuk dari followers atau obrolan warganet yang relate.',
-      hookInstruction: 'Mulai dengan variasi pembuka kurasi warganet (contoh: "ada yang curhat di dm, ceritanya bikin geleng-geleng...", "kemarin sempet baca curhatan seseorang yang relate bgt...", "denger dari obrolan sana-sini, ternyata ada yang ngalamin...", "kemarin ada yang spill kejadian di divisinya..."). DILARANG kaku selalu pakai kata yang sama.',
+      name: 'CURHATAN ANONIM WARGANET / OBROLAN WARGANET',
+      guidance: 'Kiki membagikan curhatan anonim yang masuk dari followers / warganet yang relate. WAJIB: JANGAN sebut nama asli orang jika menceritakan karakter di dalamnya! Selalu gunakan sebutan samaran seperti "si fulan", "sebut aja si fulan", atau "si A".',
+      hookInstruction: 'Mulai dengan variasi pembuka kurasi warganet (contoh: "ada yang curhat di dm, sebut aja si fulan...", "kemarin sempet baca curhatan seseorang yang relate bgt...", "denger dari obrolan sana-sini, ada yang cerita...", "kemarin ada yang spill kejadian di divisinya..."). DILARANG kaku selalu pakai kata yang sama.',
       credit: '(cerita anonim dari obrolan warganet)',
       origin: 'community_dm'
     }
@@ -384,7 +396,7 @@ async function generateAnonymousCurhatStory(options = {}) {
 
   const prompt = `
 Kamu adalah Kiki Rachmat (@ceritakikiii), pemilik akun Threads. Bio: "In this economy mau nulis cerita orang-orang aja lah".
-Persona: Anak muda korporat Jakarta Selatan (usia 25-27 thn, kerja di agensi/tech/kantoran Jaksel).
+Persona: Kiki, anak muda Jakarta (usia 25-27 thn, kerja di agensi/tech/kantoran Jaksel). Karakter: EXTROVERT MENTOK, social butterfly, ceplas-ceplos, punya aktivitas banyak & random. Temennya bejibun dari zaman sekolah SD-SMA, kuliah dulu, sampe rekan kantor dan tongkrongan.
 
 TUGAS KAMU: Tuliskan SATU UTAS THREAD BERSAMBUNG ("Add to thread") SEBANYAK 3 PART/SLIDE.
 
@@ -406,8 +418,9 @@ STRUKTUR WAJIB:
   Contoh: "kalian di posisi kayak gini tim langsung speak up atau cari aman dulu? spill coba."
   Panjang: 90 - 160 karakter.
 
-ATURAN KETAT ANTI-REPETISI:
+ATURAN KETAT ANTI-REPETISI & PRIVASI:
 - DILARANG SELALU MENGGUNAKAN POLA KALIMAT PEMBUKA YANG SAMA! Variasikan kalimat pembuka secara alami dan segar.
+- JIKA SUDUT PANDANG ANONIM: DILARANG menyebut nama orang asli! Gunakan sebutan "si fulan" atau "sebut aja si fulan".
 - DILARANG nomor urut part ("1/3", "Part 1").
 - DILARANG label fiksi "[Cerita Fiksi]" dsb.
 - Gaya bahasa manusiawi anak muda korporat Jaksel (lu-gue, bgt, nyesek, boncos, wkwk). Huruf kecil santai.
@@ -489,7 +502,7 @@ Keluarkan HANYA JSON:
       ];
     } else {
       parts = [
-        `ada yang curhat di dm, ceritanya bikin geleng-geleng kepala. temen sekosan dia hobi bawa pacar nginep pas hari kerja dan suka makai barang printilan tanpa izin.`,
+        `ada yang curhat di dm, sebut aja si fulan. dia cerita temen sekosannya hobi bawa pacar nginep pas hari kerja dan suka makai barang printilan tanpa izin.`,
         `pas ditegur baik-baik, balesannya malah nyolot bilang 'namanya juga anak kosan bagi-bagi berkah'. nyesek bgt dengernya.`,
         `kalian di posisi kayak gini tim langsung lapor ibu kos atau tim konfrontasi depan muka? spill coba.`
       ];
