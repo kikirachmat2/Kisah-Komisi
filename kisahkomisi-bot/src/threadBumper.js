@@ -167,6 +167,10 @@ async function executeThreadBump(userId) {
 
   // Generate narasi update utuh
   const bumpText = await generateBumpUpdate(targetStory);
+  if (!bumpText) {
+    console.log('[ThreadBumper] Bump update dinonaktifkan atau kosong, lewati proses bump.');
+    return null;
+  }
 
   try {
     console.log(`[ThreadBumper] Mempublikasikan sambungan bump ke Threads di bawah parent ID: ${parentPostId}...`);

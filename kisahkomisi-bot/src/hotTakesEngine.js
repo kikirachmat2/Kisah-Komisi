@@ -78,6 +78,8 @@ function isValidHotTake(text) {
   if (words.length < 8) return false;
   // Dilarang keras postingan satu kata atau label kategori
   if (/^(kesehatan|politik|ekonomi|hiburan|olahraga|hukum|nasional|internasional|berita|ragam)\.?$/i.test(clean)) return false;
+  // Dilarang kata fiksi atau AI
+  if (/fiksi|fiktif|buatan ai|as an ai/i.test(clean)) return false;
   return true;
 }
 

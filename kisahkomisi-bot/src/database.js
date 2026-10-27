@@ -12,10 +12,11 @@ if (!fs.existsSync(dbDir)) {
 // Inisialisasi better-sqlite3
 const db = new Database(dbPath);
 
-// Konfigurasi performa & kehandalan (WAL mode)
+// Konfigurasi performa & kehandalan (WAL mode + 5s busy timeout)
 db.pragma('journal_mode = WAL');
 db.pragma('synchronous = NORMAL');
 db.pragma('foreign_keys = ON');
+db.pragma('busy_timeout = 5000');
 
 // Inisialisasi tabel dasar
 function initSchema() {

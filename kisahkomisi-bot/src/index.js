@@ -1002,27 +1002,35 @@ async function executeScheduledPosting(slotTime, label, slotNumber = null) {
     return;
   }
 
+  // RANDOM JITTER MANUSIAWI (1 s/d 6 menit: 60.000 - 360.000 ms)
+  // Menghindari footprint posting kaku/robotik pada detik :00 agar aman dari deteksi algoritma Meta
+  const jitterMs = Math.floor(Math.random() * (360000 - 60000 + 1)) + 60000;
+  const jitterSec = Math.round(jitterMs / 1000);
+  const jitterMin = (jitterMs / 60000).toFixed(1);
+  console.log(`[Scheduler] Random jitter manusiawi aktif untuk ${label}: menunggu ${jitterMin} menit (${jitterSec} detik)...`);
+  await new Promise(r => setTimeout(r, jitterMs));
+
+  // Cek kembali veto pasca-jitter (siapa tahu owner veto saat jitter berjalan)
+  if (db.getSetting(vetoKey) === 'vetoed') {
+    console.log(`[Scheduler] Slot ${label} (${slotTime}) diveto saat masa jitter.`);
+    await sendAdminAlert(`🛑 *[VETO DIPROSES]* Slot tayang *${label}* dibatalkan sesuai veto owner.`);
+    return;
+  }
+
+  // Tunggu jika ada proses posting lain sedang berjalan (maksimal 5 kali x 15 detik)
+  let waitAttempts = 0;
+  while (isPostingInProgress && waitAttempts < 5) {
+    console.warn(`[Scheduler] Sedang ada proses posting lain, menunggu 15 detik (percobaan ${waitAttempts + 1}/5)...`);
+    await new Promise(r => setTimeout(r, 15000));
+    waitAttempts++;
+  }
   if (isPostingInProgress) {
-    console.warn(`[Scheduler] Sedang ada proses posting lain, menunda slot ${label} selama 30 detik...`);
-    await new Promise(r => setTimeout(r, 30000));
+    console.error(`[Scheduler] Slot ${label} dilewati karena proses posting sebelumnya belum selesai.`);
+    return;
   }
 
   isPostingInProgress = true;
   try {
-    // RANDOM JITTER MANUSIAWI (1 s/d 6 menit: 60.000 - 360.000 ms)
-    // Menghindari footprint posting kaku/robotik pada detik :00 agar aman dari deteksi algoritma Meta
-    const jitterMs = Math.floor(Math.random() * (360000 - 60000 + 1)) + 60000;
-    const jitterSec = Math.round(jitterMs / 1000);
-    const jitterMin = (jitterMs / 60000).toFixed(1);
-    console.log(`[Scheduler] Random jitter manusiawi aktif untuk ${label}: menunggu ${jitterMin} menit (${jitterSec} detik)...`);
-    await new Promise(r => setTimeout(r, jitterMs));
-
-    // Cek kembali veto pasca-jitter (siapa tahu owner veto saat jitter berjalan)
-    if (db.getSetting(vetoKey) === 'vetoed') {
-      console.log(`[Scheduler] Slot ${label} (${slotTime}) diveto saat masa jitter.`);
-      await sendAdminAlert(`🛑 *[VETO DIPROSES]* Slot tayang *${label}* dibatalkan sesuai veto owner.`);
-      return;
-    }
 
     const userId = process.env.THREADS_USER_ID;
     const token = getActiveAccessToken();

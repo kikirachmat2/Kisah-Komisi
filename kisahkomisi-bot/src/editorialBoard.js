@@ -194,7 +194,7 @@ Syarat Lolos (approved = true): total_score >= 7.5 dan realism >= 7.0. Jika terd
   console.log('[EditorialBoard] Menjalankan Fallback Heuristik Lokal...');
   const hasBasiOpener = /^(halo|hai|kenalin|selamat pagi|siang|malam)/i.test(hookSlide.trim());
   const hasDebateQuestion = endingSlide.includes('?') || endingSlide.includes('gimana') || endingSlide.includes('kalian');
-  const allSlidesLengthOk = slides.every(s => s.length >= 80 && s.length <= 480);
+  const allSlidesLengthOk = slides.every(s => s.length >= 50 && s.length <= 485);
 
   const localScore = (!hasBasiOpener ? 3.0 : 1.0) + (hasDebateQuestion ? 3.0 : 1.5) + (allSlidesLengthOk ? 2.5 : 1.5);
   return {

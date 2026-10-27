@@ -167,8 +167,9 @@ Output HANYA teks postingan langsung tanpa tanda kutip.
     text = `Orang yang hobi bales chat kerjaan pas weekend itu bukan loyal, tapi gak punya kehidupan pribadi di luar kantor. In this economy kewarasan emang ada harganya.`;
   }
 
-  // Bersihkan kutip jika ada
-  text = text.replace(/^["']|["']$/g, '').trim();
+  // Bersihkan kutip, markdown asterisks, hashtag, dan batasi panjang
+  text = text.replace(/^["']|["']$/g, '').replace(/[*_~`]/g, '').replace(/#\w+/g, '').trim();
+  if (text.length > 480) text = text.substring(0, 475) + '...';
 
   return {
     title: `Sarkasme: ${theme.slice(0, 30)}...`,
@@ -211,7 +212,9 @@ Output HANYA teks postingan langsung tanpa tanda kutip.
     text = `Spill kelakuan paling gak masuk akal dari mantan temen sekamar kos lu yang bikin lu langsung mikir 'gue harus pindah minggu ini juga'. Pengen tau se-absurd apa.`;
   }
 
-  text = text.replace(/^["']|["']$/g, '').trim();
+  // Bersihkan kutip, markdown asterisks, hashtag, dan batasi panjang
+  text = text.replace(/^["']|["']$/g, '').replace(/[*_~`]/g, '').replace(/#\w+/g, '').trim();
+  if (text.length > 480) text = text.substring(0, 475) + '...';
 
   return {
     title: `Spill Warganet: ${theme.slice(0, 30)}...`,

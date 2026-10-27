@@ -253,15 +253,24 @@ async function fetchPostComments(mediaId, accessToken) {
   }
 }
 
+let isScanningReplies = false;
+
 /**
  * Scan seluruh postingan aktif dan jalankan auto-reply secara aman dan terukur
  */
 async function runAutoEngagementScan(userId) {
-  const token = getActiveAccessToken();
-  if (!token || !userId) {
-    console.log('[AutoReply] Token atau userId belum tersedia, skip.');
-    return { repliedCount: 0, scannedPosts: 0 };
+  if (isScanningReplies) {
+    console.log('[AutoReply] Scan komentar sedang berjalan di latar belakang, skip duplikasi.');
+    return { repliedCount: 0, scannedPosts: 0, skipped: true };
   }
+  isScanningReplies = true;
+
+  try {
+    const token = getActiveAccessToken();
+    if (!token || !userId) {
+      console.log('[AutoReply] Token atau userId belum tersedia, skip.');
+      return { repliedCount: 0, scannedPosts: 0 };
+    }
 
   const dailyCount = db.getDailyAutoReplyCount();
   if (dailyCount >= MAX_DAILY_REPLIES) {
@@ -369,10 +378,13 @@ async function runAutoEngagementScan(userId) {
     }
   }
 
-  return {
-    repliedCount: totalRepliedThisRun,
-    scannedPosts: recentStories.length
-  };
+    return {
+      repliedCount: totalRepliedThisRun,
+      scannedPosts: recentStories.length
+    };
+  } finally {
+    isScanningReplies = false;
+  }
 }
 
 module.exports = {

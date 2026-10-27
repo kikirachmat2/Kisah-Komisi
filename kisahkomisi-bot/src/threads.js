@@ -46,8 +46,8 @@ async function waitForContainerFinished(containerId, accessToken, maxAttempts = 
       if (data.status === 'FINISHED') {
         return true;
       }
-      if (data.status === 'ERROR') {
-        throw new Error(`Container processing error: ${data.error_message || JSON.stringify(data)}`);
+      if (data.status === 'ERROR' || data.status === 'EXPIRED') {
+        throw new Error(`Container processing error (${data.status}): ${data.error_message || JSON.stringify(data)}`);
       }
     } catch (e) {
       if (e.message.includes('Container processing error')) throw e;
@@ -250,9 +250,14 @@ function splitBySentence(text, maxLen = 420) {
  */
 async function publishStoryToThreads(userId, accessToken, story) {
   const tokenToUse = getActiveAccessToken() || accessToken;
-  const rawParts = story.slides;
-  const parts = [];
+  const rawParts = Array.isArray(story.slides) 
+    ? story.slides.filter(s => typeof s === 'string' && s.trim().length > 0) 
+    : [];
+  if (rawParts.length === 0) {
+    throw new Error('Daftar slide cerita kosong atau tidak valid.');
+  }
 
+  const parts = [];
   for (const p of rawParts) {
     const splitted = splitBySentence(p, 420);
     parts.push(...splitted);
