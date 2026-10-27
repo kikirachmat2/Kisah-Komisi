@@ -4,7 +4,7 @@ const fs = require('fs');
 const { Telegraf } = require('telegraf');
 const cron = require('node-cron');
 const db = require('./database');
-const { generateStory } = require('./aiStory');
+const { generateStory, processAnonymousStory } = require('./aiStory');
 const { replenishStockBuffer, produceCuratedStory, auditAffiliateLinks } = require('./editorialBoard');
 const { 
   trackAllInsights, 
@@ -336,6 +336,62 @@ bot.command('bikin_cerita', async (ctx) => {
   } catch (err) {
     console.error('Error bikin_cerita:', err);
     ctx.reply(`❌ Gagal membuat cerita: ${err.message}`);
+  }
+});
+
+// Command: /curhat atau /submit_cerita (Olah DM warganet jadi thread berantai otomatis)
+bot.command(['curhat', 'submit_cerita', 'dm'], async (ctx) => {
+  const rawText = ctx.message.text.replace(/^\/(curhat|submit_cerita|dm)\s*/i, '').trim();
+
+  if (!rawText || rawText.length < 15) {
+    return ctx.reply(
+      '💡 *Format Olah Curhat / Cerita DM Anonim:*\n\n' +
+      'Ketik:\n`/curhat <isi cerita warganet dari DM>`\n\n' +
+      'Contoh:\n' +
+      '`/curhat Temen kantor gue mendadak dapet perpanjangan magang 3 bulan lagi padahal janjinya officer...`\n\n' +
+      '🤖 *Sistem akan otomatis:*\n' +
+      '1. Membaca & menyusun jadi thread bersambung (3-4 slide berantai).\n' +
+      '2. Menuliskan hook menggantung & pertanyaan debat warganet.\n' +
+      '3. Menaruh credit anonim di paling ujung slide terakhir:\n' +
+      '   _"(cerita anonim dari obrolan warganet)"_\n' +
+      '4. Masuk ke antrean stok siap tayang!',
+      { parse_mode: 'Markdown' }
+    );
+  }
+
+  await ctx.reply('⏳ Sedang membaca & mengolah cerita warganet jadi thread berantai (Add to thread)...');
+
+  try {
+    const story = await processAnonymousStory(rawText, { withProduct: false });
+
+    const id = db.addStoryToQueue({
+      title: story.title,
+      topic: story.topic,
+      slides: story.slides,
+      productName: story.product_name,
+      productUrl: story.product_url,
+      scheduledFor: new Date().toISOString(),
+      qcScore: 9.5,
+      qcNotes: 'Cerita anonim kiriman warganet/DM diolah otomatis dengan credit di akhir',
+      origin: 'community',
+      topicTag: story.topicTag,
+      variant: 'B',
+      formatType: 'community_story'
+    });
+
+    let preview = `✅ *Cerita DM Warganet Berhasil Diolah & Masuk Antrean!*\n\n`;
+    preview += `🆔 *ID Antrean*: #${id}\n`;
+    preview += `📖 *Judul*: ${story.title}\n`;
+    preview += `🏷️ *Topik*: ${story.topic}\n`;
+    preview += `🧵 *Total Slide*: ${story.slides.length} Part (Add to thread berurutan)\n\n`;
+    preview += `*Slide 1 (Hook Utama):*\n"${story.slides[0]}"\n\n`;
+    preview += `*Slide Terakhir (Paling Ujung Belakang):*\n"${story.slides[story.slides.length - 1]}"\n\n`;
+    preview += `Gunakan \`/post_sekarang\` jika ingin langsung menerbitkan ke Threads sekarang!`;
+
+    safeReplyMarkdown(ctx, preview);
+  } catch (err) {
+    console.error('Error /curhat:', err);
+    ctx.reply(`❌ Gagal mengolah cerita warganet: ${err.message}`);
   }
 });
 

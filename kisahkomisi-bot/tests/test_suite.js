@@ -1,7 +1,7 @@
 const path = require('path');
 require('dotenv').config({ path: path.join(__dirname, '../.env') });
 const assert = require('assert');
-const { appendSubId, getThematicVibe, generateStory } = require('../src/aiStory');
+const { appendSubId, getThematicVibe, generateStory, processAnonymousStory } = require('../src/aiStory');
 const { splitBySentence, getActiveAccessToken } = require('../src/threads');
 const db = require('../src/database');
 
@@ -409,7 +409,23 @@ async function runTests() {
   assert(!seri.slides[0].toLowerCase().includes('masuk dm'), 'Serialized story uses natural obrolan framing');
   console.log('  ✓ New generators produced valid human typing posts without fiction or DM tags');
 
-  console.log('\n🎉 === ALL 14 TESTS PASSED SUCCESSFULLY! === 🎉');
+  // TEST 15: Anonymous Story Submission & Credit at the End
+  console.log('\n[Test 15] Testing processAnonymousStory (DM / Community Curhat)...');
+  const rawCurhat = 'Gue magang 3 bulan di agensi Jaksel dijanjikan jadi officer. Pas 3 bulan abis malah disodorin perpanjang magang 3 bulan lagi dengan uang saku 1,5 juta padahal lembur tiap hari sampe jam 10 malem.';
+  const processedCurhat = await processAnonymousStory(rawCurhat, { withProduct: false });
+
+  assert(processedCurhat.slides.length >= 3, 'Anonymous story must be at least 3 slides');
+  const lastSlide = processedCurhat.slides[processedCurhat.slides.length - 1];
+  assert(lastSlide.includes('(cerita anonim dari obrolan warganet)'), 'Last slide must contain anonymous credit');
+  assert(!processedCurhat.slides[0].toLowerCase().includes('masuk dm'), 'Slide 1 must not contain "masuk dm"');
+  assert(!processedCurhat.slides[0].includes('[Cerita Fiksi]'), 'Slide 1 must not contain fiction tag');
+  assert.strictEqual(processedCurhat.origin, 'community', 'Origin must be community');
+  console.log('  ✓ Total Slides:', processedCurhat.slides.length);
+  console.log('  ✓ Slide 1 Hook:', processedCurhat.slides[0]);
+  console.log('  ✓ Slide Terakhir (Credit Anonim di Ujung):', lastSlide);
+  console.log('  ✓ processAnonymousStory passed all requirements!');
+
+  console.log('\n🎉 === ALL 15 TESTS PASSED SUCCESSFULLY! === 🎉');
 }
 
 runTests().catch(err => {

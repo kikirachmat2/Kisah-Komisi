@@ -157,6 +157,10 @@ function sanitizeReply(text) {
 function detectCommentArchetype(text) {
   const lower = (text || '').toLowerCase();
   
+  if (/ujung.*(jualan|promo|shopee|iklan)|jualan mulu|promo mulu|spill link|affiliate|sales|dagang|nyari komisi|dapat komisi/i.test(lower)) {
+    return 'AFFILIATE_CRITIC';
+  }
+
   if (/skincare|jajan|parfum|sabun|nongki|nongkrong|salah hitung|duit.*mana|1jt|sejuta|kurang|boros|meta\.ai|audit|kepleset/i.test(lower)) {
     return 'AUDITOR_EXPENSE';
   }
@@ -195,6 +199,9 @@ async function generateEngagementReply(storyTitle, netizenComment, authorUsernam
   const archetype = detectCommentArchetype(netizenComment);
   let archetypeGuideline = '';
   switch (archetype) {
+    case 'AFFILIATE_CRITIC':
+      archetypeGuideline = 'Netizen sinis/nyindir "ujung-ujungnya jualan/promo Shopee/affiliate". Bales cuek santai tapi gak songong, jujur butuh duit khas Kiki budak korporat (contoh: "ya maap butuh duit wkwk", "namanya juga budak korporat bang butuh nambah bayar kosan wkwk", "ya maap namanya juga usaha cari sesuap nasi wkwk"). DILARANG marah, songong, atau defensif!';
+      break;
     case 'AUDITOR_EXPENSE':
       archetypeGuideline = 'Netizen bertindak sebagai AUDITOR jeli yang menyoroti pos pengeluaran hilang (jajan, skincare, nongki, duit sejuta, salah hitung). Ngeles santai & jenaka: sebut itu pos biaya ghoib yang sengaja gak ditulis biar gak makin nangis, atau sori otak udah ngebul akhir bulan jeli bener matanya.';
       break;
@@ -325,6 +332,17 @@ PANDUAN MUTLAK SUPAYA 100% SEPERTI MANUSIA KORPORAT JAKSEL & TIDAK FREAK:
     } catch (e) {
       console.warn('[AutoReply] OpenRouter fallback error:', e.message);
     }
+  }
+
+  // Fallback tanggapan spontan jika AI offline
+  if (archetype === 'AFFILIATE_CRITIC') {
+    const affReplies = [
+      'ya maap butuh duit wkwk',
+      'namanya juga budak korporat bang butuh nambah bayar kosan wkwk',
+      'ya maap namanya juga usaha cari sesuap nasi wkwk',
+      'maklumin aja bang in this economy apa aja digas wkwk'
+    ];
+    return affReplies[Math.floor(Math.random() * affReplies.length)];
   }
 
   return null;

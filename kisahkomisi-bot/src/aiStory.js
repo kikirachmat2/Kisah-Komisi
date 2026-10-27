@@ -156,63 +156,75 @@ function generateContextualAd(product, trackedUrl) {
   if (!product || !trackedUrl) return '';
   const cat = (product.category || '').toLowerCase();
   const name = cleanProductName(product.name);
+  const fullName = `${cat} ${name}`.toLowerCase();
 
-  // Kategori: Botol Minum / Tumbler / Gaya Hidup
+  // 1. Deteksi Barang Cewek/Wanita (Kiki cowok: pacar gue pake / kado cewek lu / jujur butuh duit)
+  const isFemaleProduct = /eyelash|bulumata|daster|bra|hijab|wanita|cewe|cewek|lipstick|lip balm|softlens|dress|rok|tunik|kutek|scrunchie/i.test(fullName);
+  if (isFemaleProduct) {
+    const femaleTemplates = [
+      `Btw pacar gue pake ini katanya bagus bgt, checkout lewat sini ya itung-itung bantu nambah bayar kosan budak korporat wkwk: ${trackedUrl}.`,
+      `Btw ini bagus bgt buat cewek lu atau kado pacar. beli lewat sini ya gue lagi jujur butuh duit wkwk: ${trackedUrl}.`,
+      `Btw racun printilan cewek yang kata pacar gue awet bgt dipake seharian: ${trackedUrl}. checkout lewat sini yak butuh recehan buat survive akhir bulan wkwk.`
+    ];
+    return femaleTemplates[Math.floor(Math.random() * femaleTemplates.length)];
+  }
+
+  // 2. Kategori: Botol Minum / Tumbler / Gaya Hidup
   if (cat.includes('botol') || cat.includes('tumbler') || name.toLowerCase().includes('tumbler') || name.toLowerCase().includes('termos')) {
     const templates = [
-      `Btw di tengah pusingnya lembur kerja dan drama kantor, investasi receh under 50rb yang bikin gue tetep waras itu tumbler air es di meja: ${trackedUrl}. Nahan dingin seharian.`,
-      `Btw buat yang seharian di ruangan AC dan gampang lemes, tumbler fungsional harga ramah kantong ini lifesaver banget nemenin ngantor: ${trackedUrl}.`
+      `Btw di tengah pusingnya lembur kerja dan drama kantor, investasi receh under 50rb yang bikin gue tetep waras itu tumbler air es di meja: ${trackedUrl}. checkout sini yak nambah bayar kosan wkwk.`,
+      `Btw buat yang seharian di ruangan AC dan gampang lemes, tumbler fungsional harga ramah kantong ini lifesaver banget nemenin ngantor: ${trackedUrl}. beli lewat sini ya gue lagi butuh duit wkwk.`
     ];
     return templates[Math.floor(Math.random() * templates.length)];
   }
 
-  // Kategori: Elektronik & Gadget (Charger, Kabel, Kipas)
+  // 3. Kategori: Elektronik & Gadget (Charger, Kabel, Kipas)
   if (cat.includes('elektronik') || cat.includes('gadget') || name.toLowerCase().includes('charger') || name.toLowerCase().includes('kabel') || name.toLowerCase().includes('kipas')) {
     const templates = [
-      `Btw buat yang seharian mobile atau sering lembur, kepala charger fast charging under 50rb kayak gini lifesaver banget di tas kerja: ${trackedUrl}. Daripada minjem sana-sini pas sekarat.`,
-      `Btw daripada pusing kabel kusut pas dikejar deadline kantor, barang printilan receh tapi fungsional ini kepake banget di meja: ${trackedUrl}. Ngecas cepet dan ga ribet.`
+      `Btw buat yang seharian mobile atau sering lembur, kepala charger fast charging under 50rb kayak gini lifesaver banget di tas kerja: ${trackedUrl}. checkout sini ya itung-itung amal buat budak korporat wkwk.`,
+      `Btw daripada pusing kabel kusut pas dikejar deadline kantor, barang printilan receh tapi fungsional ini kepake banget di meja: ${trackedUrl}. beli lewat sini yak gue lagi butuh duit wkwk.`
     ];
     return templates[Math.floor(Math.random() * templates.length)];
   }
 
-  // Kategori: Skincare & Grooming / Perawatan Diri
+  // 4. Kategori: Skincare & Grooming / Perawatan Diri
   if (cat.includes('skincare') || cat.includes('grooming') || cat.includes('perawatan') || name.toLowerCase().includes('wash') || name.toLowerCase().includes('deodorant') || name.toLowerCase().includes('serum')) {
     const templates = [
-      `Btw seharian dihajar stres kerjaan sama polusi jalanan komuter, self-care receh gak sampe seharga kopi kekinian tapi muka langsung seger lagi: ${trackedUrl}.`,
-      `Btw di tengah capeknya tuntutan kerja, ngerawat diri sendiri itu bentuk self-respect paling realistis. Buat daily wash under 40rb yang ga ribet pas ngantor: ${trackedUrl}.`
+      `Btw seharian dihajar stres kerjaan sama polusi jalanan komuter, self-care receh gak sampe seharga kopi kekinian tapi muka langsung seger lagi: ${trackedUrl}. checkout sini yak bantu nambah bayar kosan wkwk.`,
+      `Btw di tengah capeknya tuntutan kerja, ngerawat diri sendiri itu bentuk self-respect paling realistis. Buat daily wash under 40rb yang ga ribet pas ngantor: ${trackedUrl}. beli lewat sini ya gue lagi jujur butuh duit wkwk.`
     ];
     return templates[Math.floor(Math.random() * templates.length)];
   }
 
-  // Kategori: Parfum & Wewangian
+  // 5. Kategori: Parfum & Wewangian
   if (cat.includes('parfum') || cat.includes('wewangian')) {
     const templates = [
-      `Btw salah satu booster mood kerja paling ampuh pas lagi pusing itu aroma calming. Parfum daily wangi seger under 50rb yang awet buat ngantor: ${trackedUrl}.`,
-      `Btw di tengah hecticnya meeting, wangi yang seger tuh ngaruh banget ke rasa percaya diri. Yang ini harganya ramah kantong tapi wanginya mewah: ${trackedUrl}.`
+      `Btw salah satu booster mood kerja paling ampuh pas lagi pusing itu aroma calming. Parfum daily wangi seger under 50rb yang awet buat ngantor: ${trackedUrl}. checkout lewat sini ya itung-itung sedekah buat budak korporat wkwk.`,
+      `Btw di tengah hecticnya meeting, wangi yang seger tuh ngaruh banget ke rasa percaya diri. Yang ini harganya ramah kantong tapi wanginya mewah: ${trackedUrl}. beli lewat sini yak gue lagi butuh duit wkwk.`
     ];
     return templates[Math.floor(Math.random() * templates.length)];
   }
 
-  // Kategori: Camilan & Minuman
+  // 6. Kategori: Camilan & Minuman
   if (cat.includes('camilan') || cat.includes('makanan') || cat.includes('teh') || cat.includes('lemon')) {
     const templates = [
-      `Btw buat nemenin fokus di depan laptop atau ngusir ngantuk pas jam rawan siang di kantor, cemilan renyah under 25rb ini lumayan bikin melek: ${trackedUrl}.`,
-      `Btw pas lagi mumet ngerjain revisian malam hari, asupan seger-seger harga receh kayak gini lifesaver banget di meja: ${trackedUrl}.`
+      `Btw buat nemenin fokus di depan laptop atau ngusir ngantuk pas jam rawan siang di kantor, cemilan renyah under 25rb ini lumayan bikin melek: ${trackedUrl}. beli lewat sini ya lagi butuh duit wkwk.`,
+      `Btw pas lagi mumet ngerjain revisian malam hari, asupan seger-seger harga receh kayak gini lifesaver banget di meja: ${trackedUrl}. checkout sini ya bantu nambah bayar kosan wkwk.`
     ];
     return templates[Math.floor(Math.random() * templates.length)];
   }
 
-  // Kategori: Rumah Tangga & Kosan (Tissue, Gantungan, Keset, dll.)
+  // 7. Kategori: Rumah Tangga & Kosan (Tissue, Gantungan, Keset, dll.)
   if (cat.includes('kosan') || cat.includes('rumah')) {
     const templates = [
-      `Btw buat anak kos atau kontrakan, barang printilan fungsional under 30rb kayak gini simple tapi kepake banget biar kamar gak berantakan: ${trackedUrl}.`,
-      `Btw salah satu investasi kecil under 50rb buat kenyamanan tempat istirahat setelah seharian cape kerja di luar: ${trackedUrl}.`
+      `Btw buat anak kos atau kontrakan, barang printilan fungsional under 30rb kayak gini simple tapi kepake banget biar kamar gak berantakan: ${trackedUrl}. checkout sini ya itung-itung amal wkwk.`,
+      `Btw salah satu investasi kecil under 50rb buat kenyamanan tempat istirahat setelah seharian cape kerja di luar: ${trackedUrl}. beli lewat sini yak butuh duit wkwk.`
     ];
     return templates[Math.floor(Math.random() * templates.length)];
   }
 
   // Fallback netral & manusiawi
-  return `Btw buat yang lagi cari rekomendasi barang fungsional harga ramah dompet buat nemenin rutinitas harian biar lebih praktis: ${trackedUrl}. Lumayan kepake banget.`;
+  return `Btw buat yang lagi cari rekomendasi barang fungsional harga ramah dompet buat nemenin rutinitas harian biar lebih praktis: ${trackedUrl}. checkout lewat sini ya gue lagi jujur butuh duit wkwk.`;
 }
 
 /**
@@ -596,13 +608,226 @@ Keluarkan HANYA JSON:
   };
 }
 
+/**
+ * Mengolah cerita mentah kiriman warganet / DM menjadi thread berantai ("Add to thread": 3-5 part)
+ * Karakter: Kiki Rachmat (@ceritakikiii), anak muda korporat Jaksel, bertindak sebagai kurator/pencerita.
+ * 
+ * Aturan:
+ * 1. Memecah cerita menjadi 3 sampai 4 slide terhubung sekuensial.
+ * 2. Part 1: Hook menggantung dengan framing alami obrolan warganet (bukan "masuk DM").
+ * 3. Part 2 - (N-1): Eskalasi kronologi atau dialog nyata tanpa bertele-tele.
+ * 4. Part Terakhir (Paling Ujung): Pertanyaan diskusi warganet membelah kubu (thread war bait)
+ *    + WAJIB menambahkan credit anonim di baris paling akhir:
+ *    "(cerita anonim dari obrolan warganet)"
+ * 5. 0% Label fiksi, 0% nomor urut ("Part 1", "1/3").
+ */
+async function processAnonymousStory(rawSubmission, options = {}) {
+  const cleanRaw = (rawSubmission || '').trim();
+  if (!cleanRaw || cleanRaw.length < 15) {
+    throw new Error('Teks cerita curhat terlalu pendek. Masukkan minimal 15 karakter.');
+  }
+
+  const prompt = `
+Kamu adalah Kiki Rachmat (@ceritakikiii), pemilik akun Threads. Bio: "In this economy mau nulis cerita orang-orang aja lah".
+Persona: Anak muda korporat Jakarta Selatan (usia 25-27 thn, kerja di agensi/tech/kantoran Jaksel).
+
+Ada kiriman curhatan/cerita nyata warganet berikut ini:
+"""
+${cleanRaw}
+"""
+
+TUGAS:
+Olah dan susun ulang cerita mentah di atas menjadi SATU UTAS POSTINGAN BERSAMBUNG ("Add to thread") SEBANYAK 3 PART/SLIDE yang rapi, runtut, dan emosional bagi sesama pejuang hidup.
+
+STRUKTUR SLIDE:
+1. SLIDE 1 (Hook Utama):
+   - Gunakan framing alami obrolan warganet ("denger dari obrolan sana-sini...", "dapet cerita dari temen...", "kemarin denger cerita...") atau langsung masuk ke kejadian mengagetkan.
+   - DILARANG menggunakan kata "masuk DM", "kiriman DM", atau "spill di DM"!
+   - Panjang: 120 - 200 karakter. Huruf kecil santai.
+2. SLIDE 2 (Eskalasi Kejadian / Percakapan Nyata):
+   - Ceritakan inti kronologi, konflik, atau ucapan yang bikin nyesek/geregetan tanpa bertele-tele.
+   - Panjang: 160 - 260 karakter.
+3. SLIDE 3 (Pertanyaan Debat Warganet):
+   - Pertanyaan terbuka yang membelah audiens menjadi 2 kubu (Tim A vs Tim B) untuk memancing komentar warganet.
+   - Contoh: "kalian di posisi kayak gini tim langsung speak up atau tahan dulu cari aman? spill coba."
+   - Panjang: 90 - 160 karakter.
+
+ATURAN MUTLAK:
+- DILARANG MENULIS ANGKA PENOMORAN (seperti "1/3", "Part 1", dll).
+- DILARANG MENULIS LABEL SEPERTI "[Cerita Fiksi]", "[Fiksi]", "[Menfess]" ATAU DISCLAIMER APAPUN!
+- Gaya bahasa manusiawi anak muda korporat Jaksel (lu-gue, bgt, nyesek, boncos, wkwk, haha). Huruf kecil santai.
+
+Keluarkan HANYA JSON:
+{
+  "title": "Judul Utas Singkat (Maksimal 6 kata)",
+  "topic": "Ringkasan Topik (Maksimal 10 kata)",
+  "story_parts": [
+    "Slide 1 hook menggantung (120-200 chars)...",
+    "Slide 2 eskalasi adegan nyata (160-260 chars)...",
+    "Slide 3 pertanyaan debat warganet (90-160 chars)..."
+  ]
+}
+`;
+
+  let rawText = null;
+
+  // 1. Coba Gemini
+  const apiKey = process.env.GEMINI_API_KEY || GEMINI_API_KEY;
+  if (apiKey) {
+    const models = ['gemini-2.5-flash', 'gemini-3-flash-preview'];
+    for (const m of models) {
+      try {
+        const url = `https://generativelanguage.googleapis.com/v1beta/models/${m}:generateContent?key=${apiKey}`;
+        const res = await fetch(url, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          signal: AbortSignal.timeout(20000),
+          body: JSON.stringify({
+            contents: [{ parts: [{ text: prompt }] }],
+            generationConfig: { responseMimeType: 'application/json', temperature: 0.75 }
+          })
+        });
+        if (res.ok) {
+          const jsonRes = await res.json();
+          rawText = jsonRes.candidates?.[0]?.content?.parts?.[0]?.text;
+          if (rawText) break;
+        }
+      } catch (e) {
+        console.warn(`[AI-Curhat] Gemini ${m} error:`, e.message);
+      }
+    }
+  }
+
+  // 2. Coba Groq
+  if (!rawText && process.env.GROQ_API_KEY) {
+    try {
+      const groqRes = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${process.env.GROQ_API_KEY}`,
+          'Content-Type': 'application/json'
+        },
+        signal: AbortSignal.timeout(20000),
+        body: JSON.stringify({
+          model: 'qwen/qwen3.8-27b',
+          messages: [{ role: 'user', content: prompt + '\n\nKeluarkan HANYA JSON persis sesuai format.' }],
+          response_format: { type: 'json_object' },
+          temperature: 0.75
+        })
+      });
+      if (groqRes.ok) {
+        const gJson = await groqRes.json();
+        rawText = gJson.choices?.[0]?.message?.content;
+      }
+    } catch (e) {
+      console.warn('[AI-Curhat] Groq fallback error:', e.message);
+    }
+  }
+
+  let parsed = null;
+  if (rawText) {
+    try {
+      const cleanJson = rawText.replace(/```json/g, '').replace(/```/g, '').trim();
+      parsed = JSON.parse(cleanJson);
+    } catch (e) {
+      console.warn('[AI-Curhat] Gagal parse JSON AI:', e.message);
+    }
+  }
+
+  // Fallback jika semua AI gagal
+  if (!parsed || !Array.isArray(parsed.story_parts) || parsed.story_parts.length === 0) {
+    const sentences = cleanRaw.split(/(?<=[.!?])\s+/).filter(Boolean);
+    const hook = `denger dari obrolan sana-sini, ${sentences.slice(0, 2).join(' ')}`.substring(0, 240);
+    const body = sentences.slice(2, 6).join(' ').substring(0, 300) || 'pas kejadian ini terungkap, rasanya bener-bener ga habis pikir sama situasinya.';
+    const question = 'kalian di posisi kayak gini tim langsung speak up atau cari aman dulu? spill dong.';
+    parsed = {
+      title: 'Cerita Warganet',
+      topic: cleanRaw.substring(0, 60),
+      story_parts: [hook, body, question]
+    };
+  }
+
+  let cleanParts = (parsed.story_parts || []).map(p => sanitizeText(p)).filter(Boolean);
+
+  // Pastikan minimal 3 bagian
+  if (cleanParts.length < 3) {
+    cleanParts.push('kalian di posisi kayak gini tim langsung speak up atau cari aman dulu? spill dong alasannya.');
+  }
+
+  // Bersihkan label fiksi dan frasa DM di seluruh slide
+  cleanParts = cleanParts.map(slide => {
+    return (slide || '')
+      .replace(/\[\s*(Cerita Fiksi|Kiriman Warganet|Kisah Fiksi|Fiksi|Fiktif)\s*\]/gi, '')
+      .replace(/\(\s*(Cerita Fiksi|Kiriman Warganet|Kisah Fiksi|Fiksi|Fiktif)\s*\)/gi, '')
+      .replace(/^.*?(disclaimer|catatan|peringatan)\s*:\s*.*?(fiksi|fiktif|karangan|buatan ai).*$/gim, '')
+      .replace(/cerita ini (hanya )?(fiksi|rekaan|karangan|buatan ai)/gi, '')
+      .replace(/\b(masuk\s*dm|kiriman\s*dm|spill\s*di\s*dm)\b/gi, 'denger dari obrolan sana-sini')
+      .replace(/^[\s\n\r*_-]+/, '')
+      .trim();
+  }).filter(Boolean);
+
+  // Sisipkan produk Shopee jika opsi withProduct aktif
+  let product = null;
+  let trackedProductUrl = null;
+  if (options.withProduct === true) {
+    product = db.getRandomProduct();
+    if (product && product.affiliate_url) {
+      trackedProductUrl = appendSubId(product.affiliate_url, {
+        sub_id1: 'threads_ceritakiki',
+        sub_id2: 'curhat_anonim',
+        sub_id3: 'story'
+      });
+      const contextualAd = generateContextualAd(product, trackedProductUrl);
+      // Sisipkan tepat sebelum slide terakhir
+      const lastIndex = cleanParts.length - 1;
+      cleanParts.splice(lastIndex, 0, contextualAd);
+    }
+  }
+
+  // CREDIT ANONIM DI AKHIR BAIT CERITA (Slide paling belakang / paling ujung)
+  const lastIdx = cleanParts.length - 1;
+  const anonCredit = '(cerita anonim dari obrolan warganet)';
+  if (!cleanParts[lastIdx].includes(anonCredit)) {
+    cleanParts[lastIdx] = cleanParts[lastIdx].trim() + `\n\n${anonCredit}`;
+  }
+
+  // Batasi panjang karakter slide agar pas di feed Threads
+  if (cleanParts[0].length > 280) {
+    cleanParts[0] = cleanParts[0].substring(0, 275) + '...';
+  }
+  cleanParts = cleanParts.map(s => (s.length > 480 ? s.substring(0, 475) + '...' : s));
+
+  const topicTag = getAutoTopicTag(parsed.topic || cleanRaw);
+
+  return {
+    title: sanitizeText(parsed.title || 'Cerita Warganet'),
+    topic: parsed.topic || cleanRaw.substring(0, 60),
+    slides: cleanParts,
+    variant: 'B',
+    origin: 'community',
+    topicTag: topicTag,
+    topic_tag: topicTag,
+    is_single_menfess: false,
+    product_name: product ? product.name : null,
+    product_url: trackedProductUrl
+  };
+}
+
 module.exports = {
   generateStory,
+  processAnonymousStory,
   appendSubId,
   getThematicVibe,
   getAutoTopicTag,
+  generateContextualAd,
   TOPICS,
   TOPICS_CORPORATE,
   TOPICS_INTIMATE_MENFESS,
-  TOPICS_SOCIAL_DILEMMA
+  TOPICS_SOCIAL_DILEMMA,
+  TOPICS_HAL_RECEH,
+  TOPICS_KELUARGA_RELASI,
+  TOPICS_HOBI_RANDOM,
+  TOPICS_HOT_TAKE_RINGAN,
+  TOPICS_CERITA_BERSERI
 };
+
