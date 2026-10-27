@@ -71,11 +71,12 @@ function checkContentDeduplication(draft, recentStories = []) {
     };
   }
 
-  // 2. Filter frasa "masuk DM" terlarang (Wajib framing "denger dari obrolan sana-sini")
-  if (/(masuk\s*dm|kiriman\s*dm|spill\s*di\s*dm)/i.test(newFullText)) {
+  // 2. Filter frasa DM terlarang (Kecuali format resmi Cerita DM Anonim Warganet)
+  const isAnonymousDm = draft.origin === 'community_dm' || draft.format_type === 'anonymous_curhat_story' || draft.format_type === 'community_menfess';
+  if (!isAnonymousDm && /(masuk\s*dm|kiriman\s*dm|spill\s*di\s*dm)/i.test(newFullText)) {
     return {
       passed: false,
-      reason: 'Mengandung frasa DM terlarang. Wajib gunakan framing kurator: "denger dari obrolan sana-sini".'
+      reason: 'Mengandung frasa DM terlarang untuk format reguler. Wajib gunakan framing kurator: "denger dari obrolan sana-sini".'
     };
   }
 
