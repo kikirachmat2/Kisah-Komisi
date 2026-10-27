@@ -32,14 +32,15 @@ async function evaluateStoryWithQC(story) {
     };
   }
 
-  // Pre-check 2: Tolak jika masih ada label disclaimer fiksi apapun ([Cerita Fiksi], [Fiksi])
-  if (/\[(Cerita Fiksi|Fiksi|Kiriman Warganet)\]/i.test(hookSlide)) {
+  // Pre-check 2: Tolak jika ada label disclaimer fiksi/AI apapun di seluruh slide
+  const allSlidesText = slides.join(' ');
+  if (/(\[|\()?\s*(cerita fiksi|fiksi|fiktif|karangan|buatan ai)\s*(\]|\))?/i.test(allSlidesText) || /disclaimer\s*:/i.test(allSlidesText)) {
     return {
       provider: 'Pre-QC Filter',
       approved: false,
-      total_score: 4.0,
-      scores: { realism: 4, human_tone: 4, format_pacing: 6, affiliate: 10, debate: 5 },
-      curator_note: `Ditolak: Masih mengandung label [Cerita Fiksi]. Postingan wajib 100% alami tanpa label fiksi.`
+      total_score: 3.0,
+      scores: { realism: 3, human_tone: 3, format_pacing: 5, affiliate: 10, debate: 3 },
+      curator_note: `Ditolak: Terdeteksi label disclaimer fiksi/AI. Postingan wajib 100% alami manusia tanpa label fiksi/AI.`
     };
   }
 

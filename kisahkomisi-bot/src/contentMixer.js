@@ -256,14 +256,24 @@ function buildFinancialBreakdownText({ incomeJt, location, items, punchline }) {
     sisaLine = `Defisit ${formatRupiahJt(Math.abs(sisaJt))} alias minus ditambal paylater.`;
   }
 
+  // Sanitasi punchline agar tidak ada hashtag, markdown, dan panjangnya terkontrol
+  let safePunchline = (punchline || '').replace(/#\w+/g, '').replace(/[*_~`]/g, '').trim();
+  if (safePunchline.length > 150) {
+    safePunchline = safePunchline.substring(0, 145) + '...';
+  }
+
   const lines = [
     `Gaji ${formatRupiahJt(incomeJt)} di ${location}:`,
     ...items.map(it => `• ${it.label}: ${formatRupiahJt(it.amountJt)}`),
     sisaLine,
-    punchline
+    safePunchline
   ];
 
-  return lines.join('\n');
+  let fullText = lines.join('\n');
+  if (fullText.length > 480) {
+    fullText = fullText.substring(0, 475) + '...';
+  }
+  return fullText;
 }
 
 /**

@@ -621,6 +621,16 @@ module.exports = {
     return row ? row.cnt : 0;
   },
 
+  hasRepliedToUserInMedia: (mediaId, username) => {
+    if (!mediaId || !username) return false;
+    const row = db.prepare(`
+      SELECT id FROM auto_replies 
+      WHERE threads_media_id = ? AND LOWER(author_username) = LOWER(?)
+      LIMIT 1
+    `).get(mediaId, username.trim());
+    return !!row;
+  },
+
   // Thread Bumper Helpers
   getLatestPublishedStoryUnbumped: (minHoursAgo = 2.5, maxHoursAgo = 6) => {
     return db.prepare(`

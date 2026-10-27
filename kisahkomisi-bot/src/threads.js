@@ -83,7 +83,9 @@ async function publishTextPost(userId, accessToken, text, replyToId = null, topi
     payload.reply_to_id = replyToId;
   }
   if (topicTag && !replyToId) {
-    const cleanTag = String(topicTag).replace(/[#.&]/g, '').trim().substring(0, 50);
+    // Ambil tag pertama jika ada delimiter pipe/koma, bersihkan karakter non-alphanumeric
+    const firstTag = String(topicTag).split(/[|,/]/)[0].trim();
+    const cleanTag = firstTag.replace(/[^a-zA-Z0-9_]/g, '').substring(0, 50);
     if (cleanTag.length > 0) {
       payload.topic_tag = cleanTag;
     }

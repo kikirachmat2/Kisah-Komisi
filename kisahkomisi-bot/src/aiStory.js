@@ -500,8 +500,16 @@ Keluarkan HANYA JSON:
     }
   }
 
-  // HAPUS TOTAL HEADER FIKSI: Bikin 100% Asli & Alami Seperti Curhat Manusia Warganet
-  cleanParts[0] = cleanParts[0].replace(/^\[(Cerita Fiksi|Kiriman Warganet|Fiksi)\]\s*/gi, '').trim();
+  // HAPUS TOTAL SEGALA BENTUK LABEL FIKSI / DISCLAIMER DI SELURUH SLIDE
+  cleanParts = cleanParts.map(slide => {
+    return (slide || '')
+      .replace(/\[\s*(Cerita Fiksi|Kiriman Warganet|Kisah Fiksi|Fiksi|Fiktif)\s*\]/gi, '')
+      .replace(/\(\s*(Cerita Fiksi|Kiriman Warganet|Kisah Fiksi|Fiksi|Fiktif)\s*\)/gi, '')
+      .replace(/^.*?(disclaimer|catatan|peringatan)\s*:\s*.*?(fiksi|fiktif|karangan|buatan ai).*$/gim, '')
+      .replace(/cerita ini (hanya )?(fiksi|rekaan|karangan|buatan ai)/gi, '')
+      .replace(/^[\s\n\r*_-]+/, '')
+      .trim();
+  }).filter(Boolean);
 
   // Batasi karakter agar pas di feed Threads:
   // Format A: Maksimal 280 karakter total

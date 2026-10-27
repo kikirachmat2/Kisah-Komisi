@@ -105,6 +105,42 @@ async function safeReplyMarkdown(ctx, text, extra = {}) {
   }
 }
 
+/**
+ * Filter pra-publikasi: Membersihkan 100% label fiksi/AI dan delimiter tag sebelum dikirim ke Meta API
+ */
+function sanitizeStoryBeforePublish(story) {
+  let parsedSlides = [];
+  try {
+    parsedSlides = typeof story.slides_json === 'string' ? JSON.parse(story.slides_json) : (story.slides || []);
+  } catch (e) {
+    parsedSlides = story.slides || [];
+  }
+
+  // Bersihkan segala bentuk label [Cerita Fiksi], (Cerita Fiksi), disclaimer fiksi/AI di semua slide
+  const cleanSlides = parsedSlides.map(slide => {
+    return (slide || '')
+      .replace(/\[\s*(Cerita Fiksi|Kiriman Warganet|Kisah Fiksi|Fiksi|Fiktif)\s*\]/gi, '')
+      .replace(/\(\s*(Cerita Fiksi|Kiriman Warganet|Kisah Fiksi|Fiksi|Fiktif)\s*\)/gi, '')
+      .replace(/^.*?(disclaimer|catatan|peringatan)\s*:\s*.*?(fiksi|fiktif|karangan|buatan ai).*$/gim, '')
+      .replace(/cerita ini (hanya )?(fiksi|rekaan|karangan|buatan ai)/gi, '')
+      .replace(/^[\s\n\r*_-]+/, '')
+      .trim();
+  }).filter(Boolean);
+
+  // Bersihkan topic_tag dari delimiter pipe, koma, spasi
+  let cleanTopicTag = null;
+  if (story.topic_tag) {
+    const firstTag = String(story.topic_tag).split(/[|,/]/)[0].trim();
+    cleanTopicTag = firstTag.replace(/[^a-zA-Z0-9_]/g, '').substring(0, 50) || null;
+  }
+
+  return {
+    ...story,
+    slides: cleanSlides,
+    topic_tag: cleanTopicTag
+  };
+}
+
 // Kirim backup file database SQLite ke Telegram admin
 async function sendDatabaseBackup(targetChatId = null) {
   const chatId = targetChatId || process.env.ADMIN_CHAT_ID || db.getSetting('LAST_ADMIN_CHAT_ID');
@@ -492,12 +528,14 @@ bot.command('post_sekarang', async (ctx) => {
   await ctx.reply(`🚀 Sedang mem-publish cerita: "${story.title}" ke akun Threads @ceritakikiii...`);
 
   try {
-    const parsedSlides = JSON.parse(story.slides_json);
+    const cleanStory = sanitizeStoryBeforePublish(story);
+    const parsedSlides = cleanStory.slides;
     const publishResult = await publishStoryToThreads(userId, token, {
-      title: story.title,
+      title: cleanStory.title,
       slides: parsedSlides,
-      product_name: story.product_name,
-      product_url: story.product_url
+      product_name: cleanStory.product_name,
+      product_url: cleanStory.product_url,
+      topic_tag: cleanStory.topic_tag || null
     });
     const postId = typeof publishResult === 'object' ? publishResult.rootPostId : publishResult;
     const lastId = typeof publishResult === 'object' ? publishResult.lastPostId : postId;
@@ -1044,13 +1082,14 @@ async function executeScheduledPosting(slotTime, label, slotNumber = null) {
     }
 
     try {
-      const slides = JSON.parse(story.slides_json);
+      const cleanStory = sanitizeStoryBeforePublish(story);
+      const slides = cleanStory.slides;
       const publishResult = await publishStoryToThreads(userId, token, {
-        title: story.title,
+        title: cleanStory.title,
         slides: slides,
-        product_name: story.product_name,
-        product_url: story.product_url,
-        topic_tag: story.topic_tag || null
+        product_name: cleanStory.product_name,
+        product_url: cleanStory.product_url,
+        topic_tag: cleanStory.topic_tag || null
       });
 
       const postId = typeof publishResult === 'object' ? publishResult.rootPostId : publishResult;

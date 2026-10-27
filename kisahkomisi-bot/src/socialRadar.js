@@ -106,10 +106,12 @@ Balas HANYA string JSON murni tanpa pembuka atau markdown lainnya.
       const fullText = `${item.title || ''} ${item.topic || ''}`.toLowerCase();
       const isUnsafe = UNSAFE_KEYWORDS.some(kw => fullText.includes(kw));
       if (!isUnsafe && item.topic) {
+        const rawTag = item.topic_tag || getAutoTopicTag(item.topic);
+        const cleanTag = String(rawTag).split(/[|,/]/)[0].trim().replace(/[^a-zA-Z0-9_]/g, '');
         sanitizedTrends.push({
           title: item.title || 'Isu Hangat Warganet',
           topic: item.topic,
-          topic_tag: item.topic_tag || getAutoTopicTag(item.topic),
+          topic_tag: cleanTag || 'threads',
           vibe: item.vibe || 'kantor',
           source: 'Threads Real-time Radar (Gemini Live Search)'
         });
