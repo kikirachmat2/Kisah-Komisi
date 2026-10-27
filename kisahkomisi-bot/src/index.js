@@ -6,7 +6,13 @@ const cron = require('node-cron');
 const db = require('./database');
 const { generateStory } = require('./aiStory');
 const { replenishStockBuffer, produceCuratedStory, auditAffiliateLinks } = require('./editorialBoard');
-const { trackAllInsights, analyzePerformanceAndStrategize, generateInsightReportMarkdown } = require('./growthEngine');
+const { 
+  trackAllInsights, 
+  analyzePerformanceAndStrategize, 
+  generateInsightReportMarkdown,
+  syncNicheAnalytics,
+  evaluateAndLockWinningNiches
+} = require('./growthEngine');
 const { 
   publishStoryToThreads, 
   getPublishingLimit, 
@@ -503,6 +509,117 @@ bot.command('tambah_produk', (ctx) => {
   }
 });
 
+// Command: /niche (Dashboard Pilar Viral Terkunci & Eksplorasi)
+bot.command('niche', (ctx) => {
+  try {
+    const allNiches = db.getAllNiches();
+    const locked = allNiches.filter(n => n.is_locked);
+    const exploring = allNiches.filter(n => !n.is_locked);
+
+    let msg = `🎯 *STATUS ALGORITMA MULTI-NICHE & WAVE-RIDING*\n\n`;
+
+    msg += `🔒 *Pilar Viral Terkunci (Slot Prioritas 50%):*\n`;
+    if (locked.length > 0) {
+      locked.forEach((n, idx) => {
+        msg += `${idx + 1}. *#${n.niche_tag}* (${n.category_label})\n`;
+        msg += `   👀 Avg: *${n.avg_views} views* | 📝 Total: ${n.total_posts} post | 💬 Avg: ${n.avg_replies} reply\n`;
+        if (n.lock_reason) msg += `   📌 _Alasan: ${n.lock_reason}_\n`;
+        msg += `\n`;
+      });
+    } else {
+      msg += `_Belum ada niche terkunci._\n\n`;
+    }
+
+    msg += `🌊 *Pilar Eksplorasi Gelombang Baru (Slot Riset 50%):*\n`;
+    if (exploring.length > 0) {
+      exploring.forEach((n, idx) => {
+        msg += `${idx + 1}. *#${n.niche_tag}* (${n.category_label})\n`;
+        msg += `   👀 Avg: *${n.avg_views} views* | 📝 Diuji: ${n.total_posts} kali\n`;
+      });
+    } else {
+      msg += `_Semua niche sedang terkunci._\n`;
+    }
+
+    msg += `\n💡 *Perintah Kontrol Owner:*\n`;
+    msg += `• \`/lock <tag>\` : Kunci niche secara manual (misal: \`/lock krl\`)\n`;
+    msg += `• \`/unlock <tag>\` : Buka kunci niche ke eksplorasi\n`;
+    msg += `• \`/sync_niche\` : Jalankan sinkronisasi data analitik & evaluasi auto-lock sekarang`;
+
+    safeReplyMarkdown(ctx, msg);
+  } catch (err) {
+    console.error('Error command /niche:', err);
+    ctx.reply('❌ Gagal mengambil status niche.');
+  }
+});
+
+// Command: /lock <tag>
+bot.command('lock', (ctx) => {
+  const tag = ctx.message.text.replace('/lock', '').trim().toLowerCase().replace(/^#/, '');
+  if (!tag) {
+    return ctx.reply('⚠️ Format salah! Gunakan: /lock <niche_tag> (contoh: /lock krl)');
+  }
+
+  try {
+    const res = db.setNicheLock(tag, true, 'Manual Lock by Owner');
+    if (res.changes > 0) {
+      safeReplyMarkdown(ctx, `🔒 *Sukses!* Niche \`#${tag}\` berhasil DIKUNCI sebagai pilar viral tetap.`);
+    } else {
+      ctx.reply(`⚠️ Niche #${tag} tidak ditemukan di database analitik.`);
+    }
+  } catch (err) {
+    ctx.reply(`❌ Gagal mengunci niche: ${err.message}`);
+  }
+});
+
+// Command: /unlock <tag>
+bot.command('unlock', (ctx) => {
+  const tag = ctx.message.text.replace('/unlock', '').trim().toLowerCase().replace(/^#/, '');
+  if (!tag) {
+    return ctx.reply('⚠️ Format salah! Gunakan: /unlock <niche_tag> (contoh: /unlock rumahtangga)');
+  }
+
+  try {
+    const res = db.setNicheLock(tag, false, 'Manual Unlock by Owner');
+    if (res.changes > 0) {
+      safeReplyMarkdown(ctx, `🌊 *Sukses!* Niche \`#${tag}\` dibuka kuncinya dan kembali ke rotasi eksplorasi gelombang baru.`);
+    } else {
+      ctx.reply(`⚠️ Niche #${tag} tidak ditemukan di database analitik.`);
+    }
+  } catch (err) {
+    ctx.reply(`❌ Gagal membuka kunci niche: ${err.message}`);
+  }
+});
+
+// Command: /sync_niche
+bot.command('sync_niche', async (ctx) => {
+  await ctx.reply('⏳ Menyinkronkan performa seluruh niche dari postingan nyata...');
+  try {
+    await syncNicheAnalytics();
+    const evalResult = await evaluateAndLockWinningNiches();
+
+    let reply = `✅ *Sinkronisasi Niche Selesai!*\n\n`;
+    if (evalResult.newlyLocked && evalResult.newlyLocked.length > 0) {
+      reply += `🚀 *Niche yang Baru Saja Terkunci Otomatis (Viral):*\n`;
+      evalResult.newlyLocked.forEach(t => reply += `• \`#${t}\`\n`);
+      reply += `\n`;
+    }
+    if (evalResult.newlyUnlocked && evalResult.newlyUnlocked.length > 0) {
+      reply += `🌊 *Niche yang Mereda (Kembali ke Eksplorasi):*\n`;
+      evalResult.newlyUnlocked.forEach(t => reply += `• \`#${t}\`\n`);
+      reply += `\n`;
+    }
+
+    reply += `🔒 *Total Niche Terkunci Saat Ini*: ${evalResult.currentLocked.length}\n`;
+    reply += `🌊 *Total Niche Eksplorasi*: ${evalResult.currentExploring.length}\n\n`;
+    reply += `Ketik \`/niche\` untuk melihat tabel lengkap.`;
+
+    safeReplyMarkdown(ctx, reply);
+  } catch (err) {
+    console.error('Error sync_niche:', err);
+    ctx.reply(`❌ Gagal sinkronisasi niche: ${err.message}`);
+  }
+});
+
 // Flag mutex untuk mencegah balapan (race condition) antar postingan
 let isPostingInProgress = false;
 
@@ -880,12 +997,12 @@ async function checkTokenExpiryReminder() {
 // 3. Fully Otomatis + Jitter Manusiawi (1-6 Menit)
 // ==========================================
 const DAILY_SLOTS = [
-  { slotNumber: 1, time: '07:15', vetoTime: '07:00', label: 'SLOT 1 - PAGI KOMUTER (07:15 WIB)', defaultFormat: 'hot_take', hasAffiliate: false },
-  { slotNumber: 2, time: '10:00', vetoTime: '09:45', label: 'SLOT 2 - COFFEE BREAK (10:00 WIB)', defaultFormat: 'menfess_spill', hasAffiliate: false },
-  { slotNumber: 3, time: '12:30', vetoTime: '12:15', label: 'SLOT 3 - MAKAN SIANG (12:30 WIB)', defaultFormat: 'story_affiliate', hasAffiliate: true },
-  { slotNumber: 4, time: '16:30', vetoTime: '16:15', label: 'SLOT 4 - SORE PULANG KANTOR (16:30 WIB)', defaultFormat: 'financial_breakdown', hasAffiliate: false },
-  { slotNumber: 5, time: '19:30', vetoTime: '19:15', label: 'SLOT 5 - MALAM SANTAI (19:30 WIB)', defaultFormat: 'story_affiliate', hasAffiliate: true },
-  { slotNumber: 6, time: '21:45', vetoTime: '21:30', label: 'SLOT 6 - PEAK REBAHAN (21:45 WIB)', defaultFormat: 'story_affiliate', hasAffiliate: true }
+  { slotNumber: 1, time: '07:15', vetoTime: '07:00', label: 'SLOT 1 - PAGI KOMUTER (07:15 WIB)', defaultFormat: 'hot_take', targetNicheType: 'locked', hasAffiliate: false },
+  { slotNumber: 2, time: '10:00', vetoTime: '09:45', label: 'SLOT 2 - COFFEE BREAK (10:00 WIB)', defaultFormat: 'menfess_spill', targetNicheType: 'explore', hasAffiliate: false },
+  { slotNumber: 3, time: '12:30', vetoTime: '12:15', label: 'SLOT 3 - MAKAN SIANG (12:30 WIB)', defaultFormat: 'story_affiliate', targetNicheType: 'locked', hasAffiliate: true },
+  { slotNumber: 4, time: '16:30', vetoTime: '16:15', label: 'SLOT 4 - SORE PULANG KANTOR (16:30 WIB)', defaultFormat: 'financial_breakdown', targetNicheType: 'locked', hasAffiliate: false },
+  { slotNumber: 5, time: '19:30', vetoTime: '19:15', label: 'SLOT 5 - MALAM SANTAI (19:30 WIB)', defaultFormat: 'story_affiliate', targetNicheType: 'explore', hasAffiliate: true },
+  { slotNumber: 6, time: '21:45', vetoTime: '21:30', label: 'SLOT 6 - PEAK REBAHAN (21:45 WIB)', defaultFormat: 'story_affiliate', targetNicheType: 'explore', hasAffiliate: true }
 ];
 
 // ==========================================
@@ -899,7 +1016,8 @@ async function prepareAndNotifyVetoSlot(slotTime, label, slotNumber = null) {
     const slotConf = DAILY_SLOTS.find(s => s.time === slotTime) || {
       slotNumber: slotNumber || 1,
       hasAffiliate: false,
-      defaultFormat: 'hot_take'
+      defaultFormat: 'hot_take',
+      targetNicheType: 'locked'
     };
 
     let story = null;
@@ -920,6 +1038,7 @@ async function prepareAndNotifyVetoSlot(slotTime, label, slotNumber = null) {
         console.log(`[VetoWindow] Antrean kosong untuk format ${targetFormat}, memproduksi langsung untuk slot ${label}...`);
         const curated = await produceCuratedStory({
           formatType: targetFormat,
+          targetNicheType: slotConf.targetNicheType || 'locked',
           variant: 'B',
           origin: 'fiction'
         });
@@ -1064,6 +1183,7 @@ async function executeScheduledPosting(slotTime, label, slotNumber = null) {
       const targetFormat = slotConf.hasAffiliate ? 'story_affiliate' : slotConf.defaultFormat;
       const curated = await produceCuratedStory({
         formatType: targetFormat,
+        targetNicheType: slotConf.targetNicheType || 'locked',
         variant: 'B',
         origin: 'fiction'
       });

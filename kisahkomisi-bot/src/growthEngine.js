@@ -103,6 +103,16 @@ async function trackAllInsights() {
   }
 
   console.log(`[GrowthEngine] Sukses tracking performa untuk ${results.postsTracked} postingan.`);
+
+  // 3. Sinkronisasi performa per niche & jalankan evaluasi adaptive locking
+  try {
+    await syncNicheAnalytics();
+    const lockEval = await evaluateAndLockWinningNiches();
+    results.nicheEvolution = lockEval;
+  } catch (neErr) {
+    console.warn('[GrowthEngine] Gagal evaluasi niche locking:', neErr.message);
+  }
+
   return results;
 }
 
@@ -247,12 +257,142 @@ Keluarkan HANYA JSON persis sesuai struktur ini:
 }
 
 /**
+ * Normalisasi tag niche ke pilar standar
+ */
+function normalizeNicheTag(rawTag) {
+  if (!rawTag) return 'curhat';
+  const clean = String(rawTag).toLowerCase().split(/[|,/]/)[0].trim().replace(/[^a-z0-9_]/g, '');
+  if (clean.includes('finansial') || clean.includes('gaji') || clean.includes('ekonomi')) return 'finansial';
+  if (clean.includes('krl') || clean.includes('komuter') || clean.includes('transportasi') || clean.includes('ojol')) return 'krl';
+  if (clean.includes('kerja') || clean.includes('kantor') || clean.includes('lembur')) return 'duniakerja';
+  if (clean.includes('kos') || clean.includes('kontrakan') || clean.includes('kamar')) return 'anakkos';
+  if (clean.includes('relasi') || clean.includes('kencan') || clean.includes('pacar') || clean.includes('jodoh')) return 'relasi';
+  if (clean.includes('tangga') || clean.includes('tetangga') || clean.includes('komplek')) return 'rumahtangga';
+  if (clean.includes('belanja') || clean.includes('shopee') || clean.includes('lifestyle')) return 'lifestyle_belanja';
+  if (clean.includes('radar') || clean.includes('viral') || clean.includes('tren')) return 'radar_viral';
+  return clean || 'curhat';
+}
+
+/**
+ * Sinkronisasi data analitik per niche dari data insight postingan nyata
+ */
+async function syncNicheAnalytics() {
+  try {
+    const rawData = db.db.prepare(`
+      SELECT 
+        s.topic_tag,
+        COUNT(s.id) as post_count,
+        COALESCE(SUM(si.views), 0) as sum_views,
+        COALESCE(SUM(si.likes), 0) as sum_likes,
+        COALESCE(SUM(si.replies), 0) as sum_replies
+      FROM stories s
+      LEFT JOIN story_insights si ON s.id = si.story_id
+      WHERE s.status = 'published' AND s.threads_media_id IS NOT NULL
+      GROUP BY s.topic_tag
+    `).all();
+
+    const nicheMap = {};
+    for (const row of rawData) {
+      const tag = normalizeNicheTag(row.topic_tag);
+      if (!nicheMap[tag]) {
+        nicheMap[tag] = { posts: 0, views: 0, likes: 0, replies: 0 };
+      }
+      nicheMap[tag].posts += row.post_count;
+      nicheMap[tag].views += row.sum_views;
+      nicheMap[tag].likes += row.sum_likes;
+      nicheMap[tag].replies += row.sum_replies;
+    }
+
+    const upsertNiche = db.db.prepare(`
+      INSERT INTO niche_analytics (niche_tag, category_label, total_posts, total_views, total_likes, total_replies, avg_views, avg_replies, updated_at)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)
+      ON CONFLICT(niche_tag) DO UPDATE SET
+        total_posts = excluded.total_posts,
+        total_views = excluded.total_views,
+        total_likes = excluded.total_likes,
+        total_replies = excluded.total_replies,
+        avg_views = excluded.avg_views,
+        avg_replies = excluded.avg_replies,
+        updated_at = CURRENT_TIMESTAMP
+    `);
+
+    for (const [tag, m] of Object.entries(nicheMap)) {
+      const posts = Math.max(m.posts, 1);
+      const avgViews = Number((m.views / posts).toFixed(1));
+      const avgReplies = Number((m.replies / posts).toFixed(1));
+      const label = tag.charAt(0).toUpperCase() + tag.slice(1);
+      upsertNiche.run(tag, label, m.posts, m.views, m.likes, m.replies, avgViews, avgReplies);
+    }
+
+    console.log(`[GrowthEngine] Niche analytics tersinkronisasi untuk ${Object.keys(nicheMap).length} pilar niche.`);
+    return nicheMap;
+  } catch (err) {
+    console.warn('[GrowthEngine] Gagal sync niche analytics:', err.message);
+    return {};
+  }
+}
+
+/**
+ * Algoritma Adaptif: Mengevaluasi performa niche dan mengunci (auto-lock) gelombang viral baru
+ * Prinsip:
+ * 1. Exploitation Lock: Kunci niche pemenang (avg_views >= 50) agar slot performa tinggi terjaga.
+ * 2. Continuous Exploration: Jangan terpaku di 1 niche; terus uji niche baru (50% slot harian).
+ * 3. Wave Cooldown: Jika niche yang dikunci mendingin drastis, buka kunci untuk digantikan pilar baru.
+ */
+async function evaluateAndLockWinningNiches() {
+  const allNiches = db.getAllNiches();
+  if (allNiches.length === 0) return { locked: [], exploring: [] };
+
+  const totalViews = allNiches.reduce((acc, n) => acc + (n.total_views || 0), 0);
+  const totalPosts = allNiches.reduce((acc, n) => acc + (n.total_posts || 0), 0);
+  const overallAvgViews = totalPosts > 0 ? (totalViews / totalPosts) : 0;
+
+  const newlyLocked = [];
+  const newlyUnlocked = [];
+
+  for (const n of allNiches) {
+    // 1. Cek promosi niche eksplorasi ke LOCKED jika performa viral terbukti
+    // Syarat: minimal 2 post diuji, dan avg_views >= 50 atau >= 1.25x rata-rata akun
+    if (!n.is_locked && n.total_posts >= 2) {
+      if (n.avg_views >= 50 || (overallAvgViews > 0 && n.avg_views >= 1.25 * overallAvgViews)) {
+        db.setNicheLock(n.niche_tag, true, `Auto-Locked: Rata-rata ${n.avg_views} views (Gelombang Viral Terbukti)`);
+        newlyLocked.push(n.niche_tag);
+        console.log(`[GrowthEngine] 🚀 Auto-Locking Niche "${n.niche_tag}"! Performa rata-rata: ${n.avg_views} views.`);
+      }
+    }
+
+    // 2. Cek apakah ada pilar terkunci yang gelombangnya mendingin drastis (Wave Cooldown)
+    // Syarat: minimal 6 post, dan avg_views turun di bawah 15 views
+    // Pengecualian: pertahankan minimal 2 niche terkunci (core anchor finansial / krl)
+    if (n.is_locked && n.total_posts >= 6 && n.avg_views < 15) {
+      const lockedCount = allNiches.filter(x => x.is_locked).length;
+      if (lockedCount > 2) {
+        db.setNicheLock(n.niche_tag, false, `Auto-Unlocked: Gelombang mereda (${n.avg_views} views), kembali ke rotasi eksplorasi`);
+        newlyUnlocked.push(n.niche_tag);
+        console.log(`[GrowthEngine] 🌊 Auto-Unlocking Niche "${n.niche_tag}" untuk eksplorasi ulang.`);
+      }
+    }
+  }
+
+  const currentLocked = db.getLockedNiches();
+  const currentExploring = db.getExploringNiches();
+
+  return {
+    newlyLocked,
+    newlyUnlocked,
+    currentLocked,
+    currentExploring
+  };
+}
+
+/**
  * Format laporan ringkas untuk dikirim ke Telegram admin
  */
 async function generateInsightReportMarkdown() {
   const latestAccount = db.getLatestAccountInsight() || { views: 0, likes: 0, replies: 0 };
   const topStories = db.getTopPerformingStories(3);
   const latestStrategy = db.getLatestStrategyLog();
+  const allNiches = db.getAllNiches();
 
   let msg = `📊 *LAPORAN INSIGHT & PERFORMA THREADS (@ceritakikiii)*\n`;
   msg += `📅 _Data Sinkronisasi Meta Threads API_\n\n`;
@@ -271,13 +411,39 @@ async function generateInsightReportMarkdown() {
     msg += `\n`;
   }
 
+  // Dashboard Algoritma Multi-Niche & Wave-Riding
+  if (allNiches.length > 0) {
+    const locked = allNiches.filter(n => n.is_locked);
+    const exploring = allNiches.filter(n => !n.is_locked);
+
+    msg += `🎯 *Algoritma Multi-Niche & Wave-Riding:*\n`;
+    msg += `🔒 *Pilar Viral Terkunci (50% Slot):*\n`;
+    if (locked.length > 0) {
+      locked.forEach(n => {
+        msg += `• \`#${n.niche_tag}\` (${n.avg_views} avg views, ${n.total_posts} posts) ${n.lock_reason ? `- _${n.lock_reason}_` : ''}\n`;
+      });
+    } else {
+      msg += `_Belum ada niche terkunci._\n`;
+    }
+
+    msg += `\n🌊 *Eksplorasi Gelombang Baru (50% Slot):*\n`;
+    if (exploring.length > 0) {
+      exploring.slice(0, 5).forEach(n => {
+        msg += `• \`#${n.niche_tag}\` (${n.avg_views} avg views, ${n.total_posts} uji tayang)\n`;
+      });
+    } else {
+      msg += `_Semua niche sedang terkunci._\n`;
+    }
+    msg += `\n`;
+  }
+
   if (latestStrategy) {
     msg += `💡 *Strategi Optimasi Otomatis (AI Chief Strategist):*\n`;
     msg += `• *Evaluasi*: ${latestStrategy.summary}\n`;
     msg += `• *Rencana Aksi*: ${latestStrategy.recommendations}\n`;
   }
 
-  msg += `\n_Sistem otomatis memperbarui analitik dan menyetel bobot konten setiap hari._`;
+  msg += `\n_Sistem autopilot mengunci pilar viral dan adaptif mencari tren baru setiap hari._`;
   return msg;
 }
 
@@ -285,5 +451,8 @@ module.exports = {
   trackAllInsights,
   analyzePerformanceAndStrategize,
   generateInsightReportMarkdown,
-  countRealReplies
+  countRealReplies,
+  syncNicheAnalytics,
+  evaluateAndLockWinningNiches,
+  normalizeNicheTag
 };

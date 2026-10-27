@@ -207,7 +207,67 @@ async function runTests() {
   console.log('  ✓ Cleaned Topic Tag:', cleanTag);
   console.log('  ✓ Pre-Publish Multi-Slide Fiction Sanitizer: 100% Verified');
 
-  console.log('\n🎉 === ALL 10 TESTS PASSED SUCCESSFULLY! === 🎉');
+  // TEST 11: Anti-Freak Auto-Reply & Zero Interrogative Verification
+  console.log('\n[Test 11] Testing Anti-Freak Auto-Reply & Zero Interrogative Sanitizer...');
+  // 1. Uji pemotongan pertanyaan kepo di akhir kalimat
+  const freakSample1 = sanitizeReply('Wkwk relate banget ini mah. Kamu sendiri pernah ngalamin gitu juga gak?');
+  assert(!freakSample1.includes('?'), 'Sanitizer must remove all question marks');
+  assert(!freakSample1.toLowerCase().includes('kamu sendiri'), 'Interrogative clause must be stripped');
+  assert(freakSample1.toLowerCase().includes('relate banget'), 'Core human reaction must be preserved');
+  console.log('  ✓ Freak interview stripped cleanly:', freakSample1);
+
+  // 2. Uji jika seluruh input adalah pertanyaan survei bot
+  const freakSample2 = sanitizeReply('Menurut lu gimana solusinya?');
+  assert(!freakSample2.includes('?'), 'Pure interrogative converted to natural statement without ?');
+  assert(freakSample2.length > 5, 'Fallback reaction must be meaningful');
+  console.log('  ✓ Pure interview converted to spontaneous reaction:', freakSample2);
+
+  // 3. Uji penghapusan emoji melodramatis / bot
+  const emojiSample = sanitizeReply('Sedih banget liatnya 😭🥺🙏 haha');
+  assert(!emojiSample.includes('😭') && !emojiSample.includes('🥺') && !emojiSample.includes('🙏'), 'Melodramatic emojis must be stripped');
+  console.log('  ✓ Melodramatic bot emojis stripped:', emojiSample);
+
+  // 4. Live generator reply test
+  const liveReply = await generateEngagementReply('Drama Gaji UMR', 'Parah banget emang bos kayak gitu', 'andi_jakarta');
+  console.log('  ✓ Live generated engagement reply:', `"${liveReply}"`);
+  assert(liveReply && liveReply.length > 5, 'Reply must exist');
+  assert(!liveReply.includes('?'), 'Live reply must NOT ask questions back (Anti-Freak)');
+  assert(!liveReply.toLowerCase().includes('kamu sendiri'), 'Live reply must NOT contain "kamu sendiri" survey pattern');
+  console.log('  ✓ Anti-Freak & Zero Interrogative: 100% Verified');
+
+  // TEST 12: Adaptive Multi-Niche Tracking & Auto-Locking Algorithm
+  console.log('\n[Test 12] Testing Adaptive Multi-Niche Tracking & Auto-Locking Algorithm...');
+  const { syncNicheAnalytics, evaluateAndLockWinningNiches, normalizeNicheTag } = require('../src/growthEngine');
+
+  assert.strictEqual(normalizeNicheTag('finansial|ekonomi'), 'finansial', 'Tag normalizer finansial');
+  assert.strictEqual(normalizeNicheTag('krl_jabodetabek'), 'krl', 'Tag normalizer krl');
+  assert.strictEqual(normalizeNicheTag('drama_kantor_toxic'), 'duniakerja', 'Tag normalizer duniakerja');
+  assert.strictEqual(normalizeNicheTag('kamar_kosan'), 'anakkos', 'Tag normalizer anakkos');
+
+  const lockedNiches = db.getLockedNiches();
+  const exploringNiches = db.getExploringNiches();
+  console.log('  ✓ Initial Locked Niches:', lockedNiches);
+  console.log('  ✓ Initial Exploring Niches:', exploringNiches);
+  assert(lockedNiches.length >= 1, 'There should be at least 1 locked niche (core anchor)');
+  assert(exploringNiches.length >= 1, 'There should be exploring niches for continuous wave discovery');
+
+  // Uji sync analytics & evaluasi auto-lock
+  await syncNicheAnalytics();
+  const evalResult = await evaluateAndLockWinningNiches();
+  console.log('  ✓ Niche evaluation result:', {
+    lockedCount: evalResult.currentLocked.length,
+    exploringCount: evalResult.currentExploring.length,
+    newlyLocked: evalResult.newlyLocked
+  });
+
+  // Uji toggle manual lock & unlock
+  db.setNicheLock('anakkos', true, 'Test Manual Lock');
+  assert(db.getLockedNiches().includes('anakkos'), 'anakkos should now be locked');
+  db.setNicheLock('anakkos', false, 'Test Manual Unlock');
+  assert(db.getExploringNiches().includes('anakkos'), 'anakkos should now be back to exploring');
+  console.log('  ✓ Manual Lock & Unlock Mechanism: Verified');
+
+  console.log('\n🎉 === ALL 12 TESTS PASSED SUCCESSFULLY! === 🎉');
 }
 
 runTests().catch(err => {

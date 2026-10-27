@@ -221,43 +221,76 @@ async function produceCuratedStory(options = null) {
   if (!storyOpts.topic) {
     const recentTopics = db.getRecentStoryTopics ? db.getRecentStoryTopics(12) : [];
     
-    // 1. Cek apakah ada tren Threads real-time dari Social Radar
-    let radarCandidate = null;
-    try {
-      const { scanThreadsViralTrends } = require('./socialRadar');
-      const liveTrends = await scanThreadsViralTrends();
-      if (Array.isArray(liveTrends) && liveTrends.length > 0) {
-        const freshRadar = liveTrends.filter(t => !recentTopics.some(rt => rt.toLowerCase().includes(t.topic.toLowerCase().slice(0, 20))));
-        if (freshRadar.length > 0) {
-          radarCandidate = freshRadar[Math.floor(Math.random() * freshRadar.length)];
+    // 1. Tentukan pilar niche (Locked vs Explore)
+    let targetNiche = storyOpts.topicTag || storyOpts.topic_tag || null;
+    if (!targetNiche) {
+      if (storyOpts.targetNicheType === 'locked') {
+        const lockedList = db.getLockedNiches();
+        if (lockedList.length > 0) {
+          targetNiche = lockedList[Math.floor(Math.random() * lockedList.length)];
+        }
+      } else if (storyOpts.targetNicheType === 'explore') {
+        const exploringList = db.getExploringNiches();
+        if (exploringList.length > 0) {
+          targetNiche = exploringList[0]; // paling lama belum diuji
         }
       }
-    } catch (e) {
-      console.warn('[EditorialBoard] Social radar scan error:', e.message);
     }
 
-    if (radarCandidate) {
-      storyOpts.topic = radarCandidate.topic;
-      storyOpts.topicTag = radarCandidate.topic_tag;
-      console.log(`[EditorialBoard] 📡 Menggunakan topik viral terdeteksi dari Threads Social Radar: "${radarCandidate.title}" [Tag: ${radarCandidate.topic_tag}]`);
-    } else {
-      // 2. Cek apakah AI Chief Strategist memiliki rekomendasi topik prioritas berdasarkan data insight nyata
-      let priorityCandidates = [];
-      const prioritySetting = db.getSetting('PRIORITY_TOPICS');
-      if (prioritySetting) {
-        try {
-          const parsed = JSON.parse(prioritySetting);
-          if (Array.isArray(parsed) && parsed.length > 0) {
-            priorityCandidates = parsed.filter(t => !recentTopics.some(rt => rt.toLowerCase().includes(t.toLowerCase().slice(0, 20))));
-          }
-        } catch (e) {}
+    if (!targetNiche) {
+      const isLockedTurn = Math.random() < 0.5;
+      const pool = isLockedTurn ? db.getLockedNiches() : db.getExploringNiches();
+      targetNiche = (pool && pool.length > 0) ? pool[Math.floor(Math.random() * pool.length)] : 'finansial';
+    }
+
+    storyOpts.topicTag = targetNiche;
+    try { db.recordNichePostUsage(targetNiche); } catch (e) {}
+
+    // 2. Hubungkan topik dengan niche yang dipilih
+    if (targetNiche === 'radar_viral') {
+      let radarCandidate = null;
+      try {
+        const { scanThreadsViralTrends } = require('./socialRadar');
+        const liveTrends = await scanThreadsViralTrends();
+        if (Array.isArray(liveTrends) && liveTrends.length > 0) {
+          const freshRadar = liveTrends.filter(t => !recentTopics.some(rt => rt.toLowerCase().includes(t.topic.toLowerCase().slice(0, 20))));
+          if (freshRadar.length > 0) radarCandidate = freshRadar[0];
+        }
+      } catch (e) {
+        console.warn('[EditorialBoard] Social radar scan error:', e.message);
+      }
+      if (radarCandidate) {
+        storyOpts.topic = radarCandidate.topic;
+        console.log(`[EditorialBoard] 📡 Menggunakan topik viral dari Social Radar: "${radarCandidate.title}" [Tag: ${radarCandidate.topic_tag}]`);
+      }
+    }
+
+    if (!storyOpts.topic) {
+      // Filter topik sesuai niche yang dipilih
+      let nicheMatchingTopics = [];
+      if (targetNiche === 'finansial') {
+        nicheMatchingTopics = TOPICS.filter(t => /gaji|slip|uang|biaya|ekonomi|kantor/i.test(t));
+      } else if (targetNiche === 'krl') {
+        nicheMatchingTopics = [
+          'Drama KRL Jam Sibuk 7 Pagi (Desak-desakan Stasiun Manggarai vs emosi bawaan kantor)',
+          'Naik Transportasi Publik vs Cicilan Motor (Realitas biaya harian komuter Jabodetabek)',
+          'Drama Ojol vs Jalan Kaki Menuju Stasiun (Ngejar kereta pagi tapi kejebak macet gang sempit)'
+        ];
+      } else if (targetNiche === 'duniakerja') {
+        nicheMatchingTopics = TOPICS.filter(t => /magang|lembur|hrd|bos|cuti|gaji|karyawan|resign|meeting/i.test(t));
+      } else if (targetNiche === 'anakkos') {
+        nicheMatchingTopics = TOPICS.filter(t => /kos|kontrakan|token listrik|teman sekamar|kamar/i.test(t));
+      } else if (targetNiche === 'relasi') {
+        nicheMatchingTopics = TOPICS.filter(t => /pacar|pasangan|kencan|mertua|suami|istri|hb/i.test(t));
+      } else if (targetNiche === 'rumahtangga') {
+        nicheMatchingTopics = TOPICS.filter(t => /tetangga|pagar|arisan|komplek|sampah/i.test(t));
       }
 
-      if (priorityCandidates.length > 0) {
-        storyOpts.topic = priorityCandidates[Math.floor(Math.random() * priorityCandidates.length)];
-        console.log(`[EditorialBoard] Menggunakan topik prioritas hasil evaluasi insight: "${storyOpts.topic}"`);
+      const freshNiche = nicheMatchingTopics.filter(t => !recentTopics.some(rt => rt.toLowerCase().includes(t.toLowerCase().slice(0, 20))));
+      if (freshNiche.length > 0) {
+        storyOpts.topic = freshNiche[Math.floor(Math.random() * freshNiche.length)];
+        console.log(`[EditorialBoard] Menggunakan topik pilar niche "${targetNiche}": "${storyOpts.topic}"`);
       } else {
-        // 3. Fallback: Prioritaskan topik dari bank topik yang belum pernah dipakai dalam 12 postingan terakhir
         const freshTopics = TOPICS.filter(t => !recentTopics.some(rt => rt.toLowerCase().includes(t.toLowerCase().slice(0, 20))));
         if (freshTopics.length > 0) {
           storyOpts.topic = freshTopics[Math.floor(Math.random() * freshTopics.length)];
@@ -355,7 +388,13 @@ async function replenishStockBuffer(targetBuffer = 18) {
           chosenFormat = viralFormats[Math.floor(Math.random() * viralFormats.length)];
         }
 
-        const story = await produceCuratedStory({ formatType: chosenFormat });
+        // Seimbangkan 50% pilar viral terkunci & 50% pilar eksplorasi gelombang baru
+        const targetNicheType = (i % 2 === 0) ? 'locked' : 'explore';
+
+        const story = await produceCuratedStory({ 
+          formatType: chosenFormat,
+          targetNicheType
+        });
         const id = db.addStoryToQueue({
           title: story.title,
           topic: story.topic,

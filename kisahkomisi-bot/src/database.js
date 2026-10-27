@@ -211,10 +211,48 @@ function initSchema() {
       created_at DATETIME DEFAULT CURRENT_TIMESTAMP
     );
 
+    CREATE TABLE IF NOT EXISTS niche_analytics (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      niche_tag TEXT UNIQUE NOT NULL,
+      category_label TEXT NOT NULL,
+      is_locked INTEGER DEFAULT 0,
+      lock_reason TEXT,
+      total_posts INTEGER DEFAULT 0,
+      total_views INTEGER DEFAULT 0,
+      total_likes INTEGER DEFAULT 0,
+      total_replies INTEGER DEFAULT 0,
+      avg_views REAL DEFAULT 0,
+      avg_replies REAL DEFAULT 0,
+      last_tested_at DATETIME,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+    );
+
     CREATE INDEX IF NOT EXISTS idx_snapshots_media ON post_snapshots(threads_media_id);
     CREATE INDEX IF NOT EXISTS idx_snapshots_interval ON post_snapshots(snapshot_interval);
     CREATE INDEX IF NOT EXISTS idx_exp_schedule_date ON experiment_schedule(scheduled_date, slot_time);
+    CREATE INDEX IF NOT EXISTS idx_niche_locked ON niche_analytics(is_locked);
   `);
+
+  // Seed pilar niche awal jika tabel baru dibuat
+  const nicheCount = db.prepare(`SELECT COUNT(*) as cnt FROM niche_analytics`).get()?.cnt || 0;
+  if (nicheCount === 0) {
+    const seedNiches = [
+      { tag: 'finansial', label: 'Finansial & In This Economy', locked: 1, reason: 'Pilar Viral: Simulasi Gaji & Realitas Finansial' },
+      { tag: 'krl', label: 'Komuter & Transportasi Publik', locked: 1, reason: 'Pilar Viral: Realitas Jam Sibuk & Perjalanan Kerja' },
+      { tag: 'duniakerja', label: 'Dunia Kerja & Kantor', locked: 1, reason: 'Pilar Utama: Drama Rekan Kantor & Lembur' },
+      { tag: 'anakkos', label: 'Anak Kos & Kontrakan', locked: 0, reason: null },
+      { tag: 'relasi', label: 'Percintaan & Kencan', locked: 0, reason: null },
+      { tag: 'rumahtangga', label: 'Tetangga & Lingkungan', locked: 0, reason: null },
+      { tag: 'lifestyle_belanja', label: 'Belanja & Gaya Hidup', locked: 0, reason: null },
+      { tag: 'radar_viral', label: 'Live Real-time Trending Radar', locked: 0, reason: null }
+    ];
+    const insertNiche = db.prepare(`
+      INSERT OR IGNORE INTO niche_analytics (niche_tag, category_label, is_locked, lock_reason)
+      VALUES (?, ?, ?, ?)
+    `);
+    seedNiches.forEach(n => insertNiche.run(n.tag, n.label, n.locked, n.reason));
+  }
 }
 
 initSchema();
@@ -676,6 +714,54 @@ module.exports = {
       console.warn('[DB] Maintenance warning:', e.message);
       return false;
     }
+  },
+
+  // Adaptive Multi-Niche Lock & Explorer Helpers
+  getLockedNiches: () => {
+    const rows = db.prepare(`SELECT niche_tag FROM niche_analytics WHERE is_locked = 1 ORDER BY avg_views DESC`).all();
+    return rows.map(r => r.niche_tag);
+  },
+
+  getExploringNiches: () => {
+    const rows = db.prepare(`SELECT niche_tag FROM niche_analytics WHERE is_locked = 0 ORDER BY last_tested_at ASC, id ASC`).all();
+    return rows.map(r => r.niche_tag);
+  },
+
+  getAllNiches: () => {
+    return db.prepare(`SELECT * FROM niche_analytics ORDER BY is_locked DESC, avg_views DESC`).all();
+  },
+
+  setNicheLock: (nicheTag, isLocked, reason = null) => {
+    return db.prepare(`
+      UPDATE niche_analytics 
+      SET is_locked = ?, lock_reason = ?, updated_at = CURRENT_TIMESTAMP
+      WHERE niche_tag = ?
+    `).run(isLocked ? 1 : 0, reason, nicheTag);
+  },
+
+  recordNichePostUsage: (nicheTag) => {
+    return db.prepare(`
+      UPDATE niche_analytics 
+      SET total_posts = total_posts + 1, last_tested_at = CURRENT_TIMESTAMP, updated_at = CURRENT_TIMESTAMP
+      WHERE niche_tag = ?
+    `).run(nicheTag);
+  },
+
+  updateNicheMetrics: (nicheTag, { views = 0, likes = 0, replies = 0 }) => {
+    const current = db.prepare(`SELECT total_posts, total_views, total_likes, total_replies FROM niche_analytics WHERE niche_tag = ?`).get(nicheTag);
+    if (!current) return false;
+    const newViews = current.total_views + views;
+    const newLikes = current.total_likes + likes;
+    const newReplies = current.total_replies + replies;
+    const posts = Math.max(current.total_posts, 1);
+    const avgViews = Number((newViews / posts).toFixed(1));
+    const avgReplies = Number((newReplies / posts).toFixed(1));
+
+    return db.prepare(`
+      UPDATE niche_analytics 
+      SET total_views = ?, total_likes = ?, total_replies = ?, avg_views = ?, avg_replies = ?, updated_at = CURRENT_TIMESTAMP
+      WHERE niche_tag = ?
+    `).run(newViews, newLikes, newReplies, avgViews, avgReplies, nicheTag);
   },
 
   getDbPath: () => dbPath
