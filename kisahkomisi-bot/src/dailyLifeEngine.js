@@ -155,13 +155,20 @@ async function generateDailyLifeUpdate(options = {}) {
   if (callbackCandidate) {
     mode = 'VIRAL_CALLBACK';
     guidance = `
-MODE: CALLBACK POSTINGAN LAMA YANG VIRAL
-Kamu baru saja viral beberapa hari lalu di postingan #${callbackCandidate.storyId} (Views: ${callbackCandidate.views}):
-"${callbackCandidate.firstSlide}"
+MODE: CALLBACK POSTINGAN LAMA YANG VIRAL (UPDATE ORGANIK)
+Kamu beberapa hari lalu mengunggah postingan ini dan tembus ${callbackCandidate.views} views di Threads:
+"""
+${callbackCandidate.firstSlide}
+"""
 
-TUGAS KAMU: Buat SATU postingan single update baru yang menyinggung atau mengeluhkan kelanjutan kejadian tersebut dengan konyol & santai.
-Contoh gaya persona Kiki:
-"HEEEEH, baru kemarin curhat duit tinggal sisa sejuta pas-pasan, ini malah diajak party lagi di senopati. gas aja kali yaak hahaha wkwk."
+TUGAS KAMU:
+Buat SATU postingan single update baru yang merupakan RESPON / PERKEMBANGAN / KELANJUTAN LANGSUNG dari apa yang kamu ceritakan di atas.
+
+ATURAN WAJIB CALLBACK:
+1. Respon WAJIB 100% nyambung dengan topik spesifik postingan di atas (jika kemarin bahas kosan, bahas update kosan; jika kemarin bahas bos/lembur, bahas kelanjutan kantor; jika kemarin bahas sisa gaji, bahas situasi pengeluaran baru).
+2. DILARANG MENYALIN TEKS POSTINGAN LAMA. Ini adalah reaksi/curhat baru di hari ini terhadap situasi tersebut.
+3. Gunakan nada spontan warganet (misal: "update soal...", "kemarin baru aja ngeluh...", "plot twist kejadian kemarin...", "masih kepikiran...", "heeeeh...").
+4. DILARANG menggunakan template kaku. Buat seakan-akan kamu manusia nyata yang mengabarkan update hidupnya ke followers.
 `;
   } else if (trendHeadline && Math.random() < 0.5) {
     mode = 'CURRENT_NEWS_REACTION';
@@ -172,8 +179,7 @@ Ada isu hangat yang lagi ramai di Indonesia hari ini:
 
 TUGAS KAMU: Buat SATU postingan tanggapan santai, ceplas-ceplos, dan empatik dari sudut pandang Kiki anak muda korporat Jaksel yang terdampak macet / kehidupan kota.
 Bukan buzzer politik kaku, tapi anak muda sipil yang relate!
-Contoh saat ada demo/isu politik:
-"denger denger ada demo yaa, semangat kawan kawan mahasiswa, biar kuterjang macet ini asal aspirasi tersampaikan dengan baik, stay safe kawan kawan"
+Contoh saat ada demo/isu politik: tanggapi dengan santai, support mahasiswa/aspirasi warga, ingatkan stay safe di jalanan macet. DILARANG menyalin kata per kata dari contoh.
 `;
   } else {
     mode = 'TEMPORAL_LIFE_UPDATE';
@@ -201,6 +207,7 @@ ATURAN KETAT:
 3. Gaya bahasa warganet anak muda korporat Jaksel (lu-gue, bgt, wkwk, haha, boncos, burnout, anjir). Huruf kecil santai layaknya ngetik cepat di HP pas jam kantor.
 4. DILARANG MENULIS LABEL APAPUN (Dilarang "[Cerita Fiksi]", "[Fiksi]", dll).
 5. DILARANG IKLAN/AFFILIATE APAPUN (100% Organik Murni).
+6. DILARANG MENJIPLAK TEKS CONTOH! Tulis kalimat orisinal baru yang segar.
 
 Keluarkan HANYA JSON:
 {
@@ -264,9 +271,13 @@ Keluarkan HANYA JSON:
   let slideText = parsed?.slide_text;
   if (!slideText) {
     if (callbackCandidate) {
-      slideText = 'HEEEEH, duit gw sisa dikit di kosan malah diajak party mulu, gas aja kali yaak hahaha wkwk.';
+      const cleanTopic = (callbackCandidate.topic || callbackCandidate.title || 'kejadian')
+        .replace(/\(.*?\)/g, '')
+        .trim()
+        .toLowerCase();
+      slideText = `update soal ${cleanTopic} kemarin: ternyata kelanjutannya makin bikin geleng-geleng kepala wkwk. in this economy emang hidup di jakarta serba plot twist.`;
     } else {
-      slideText = `pagi-pagi stasiun sudirman udah brutal bgt desak-desakannya. in this economy nyawa belum kumpul tapi fisik udah dipaksa profesional di kantor wkwk.`;
+      slideText = `in this economy energi buat kerja hari ini sisa tipis bgt. baru nyampe meja kantor udah pengen langsung logout laptop wkwk.`;
     }
   }
 
