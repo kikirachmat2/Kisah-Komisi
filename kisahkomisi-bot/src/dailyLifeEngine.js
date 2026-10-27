@@ -366,7 +366,7 @@ async function generateAnonymousCurhatStory(options = {}) {
       name: 'CERITA TEMAN KIKI (KIKI NYERITAIN TEMANNYA DARI BERBAGAI SIRKEL)',
       guidance: 'Kiki adalah anak yang EXTROVERT MENTOK dan circle pertemanannya bejibun luas: ada temen kantor sekarang, temen zaman kuliah dulu (skripsi/kosan), temen sekolah dari SD sampe SMA, temen nongkrong warkop, temen main futsal/gym, atau temen hobi random. Kiki memposisikan diri sebagai pencerita yang ikut kaget/gregetan/ngakak sama kelakuan temannya.',
       hookInstruction: 'Kiki menceritakan temannya dari berbagai sirkel hidupnya. Variasikan sirkel temennya (contoh: "kemarin pas reunian temen SMA gue cerita...", "tadi pas makan siang di kantin, temen kantor gue curhat...", "temen kuliah gue dulu semalem ngabarin...", "temen nongkrong warkop gue kemarin ngomel-ngomel...", "ada temen sekelas gue jaman sekolah dulu yang nasibnya...", "temen main futsal gue kemarin cerita apes bgt..."). DILARANG sebut kata DM atau anonim.',
-      credit: '(cerita temen tongkrongan)',
+      credit: null,
       origin: 'friend_circle'
     },
     {
