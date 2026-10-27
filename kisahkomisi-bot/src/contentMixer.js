@@ -30,7 +30,12 @@ const MENFESS_SPILL_THEMES = [
   'Alasan paling gak masuk akal pas atasan nolak pengajuan cuti tahunan',
   'Momen dititipin oleh-oleh pas liburan sama temen kantor tapi duitnya gak pernah diganti',
   'Pengalaman diajak temen lama reuni taunya diprospek jualan asuransi atau MLM',
-  'Kelakuan tetangga komplek/kontrakan paling bikin ngelus dada soal parkir mobil'
+  'Kelakuan tetangga komplek/kontrakan paling bikin ngelus dada soal parkir mobil',
+  'Hari ini di kantor atau kerjaan lu ada drama apa lagi? Drop ceritanya di reply',
+  'Sebutin 1 pengeluaran paling boncos minggu ini yang sebenernya gak penting tapi tetep lu beli',
+  'Momen paling bikin lu pengen langsung logout laptop dan pura-pura amnesia pas jam kerja',
+  'Sebutin 1 kebohongan paling sering lu ucapin ke atasan pas lagi WFH atau izin kerja',
+  'Rekor lembur paling gak masuk akal yang pernah lu jalanin demi gaji yang gak seberapa'
 ];
 
 // Bank tema Hal Receh Sehari-hari (Absurditas & Kerecehan Urban)
