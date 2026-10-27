@@ -18,43 +18,39 @@ const FORMAT_TYPES = {
 
 // Bank tema Menfess Spill (Crowdsourcing reply bait)
 const MENFESS_SPILL_THEMES = [
-  'Kelakuan paling di luar nalar dari mantan teman sekamar kos',
+  'Kelakuan paling di luar nalar dari mantan teman sekamar kosan',
   'Aturan gak tertulis di kantor yang kalau dilanggar bakal dijauhin satu divisi',
-  'Hal paling zonk pas kencan pertama pas giliran bayar tagihan makan',
-  'Pengalaman barang di kulkas kosan raib misterius tanpa jejak',
-  'Momen disuruh ngerjain tugas di luar jobdesk oleh atasan tapi gak ada apresiasi',
-  'Kelakuan tetangga komplek paling bikin ngelus dada soal parkir atau sampah',
-  'Momen dipinjemin uang sama temen tapi pas ditagih malah kita yang disemprot',
+  'Pengalaman barang atau makanan di kulkas kantor/kosan raib tanpa jejak',
+  'Momen disuruh ngerjain tugas di luar jobdesk oleh atasan tapi pas sukses gak dimention',
+  'Hal paling zonk pas kencan pertama pas giliran split bill makanan',
+  'Kelakuan rekan kerja satu tim yang hobi lempar revisian pas udah jam 5 sore',
   'Alasan paling gak masuk akal pas atasan nolak pengajuan cuti tahunan',
   'Momen dititipin oleh-oleh pas liburan sama temen kantor tapi duitnya gak pernah diganti',
-  'Hal paling bikin ilfeel pas PDKT pas liat cara dia memperlakukan pelayan resto',
-  'Pengalaman diajak temen lama reuni taunya diprospek jualan MLM atau asuransi',
-  'Kelakuan rekan kerja satu tim yang paling jago cari muka di depan bos besar'
+  'Pengalaman diajak temen lama reuni taunya diprospek jualan asuransi atau MLM',
+  'Kelakuan tetangga komplek/kontrakan paling bikin ngelus dada soal parkir mobil'
 ];
 
-// Bank tema Financial Breakdown (In this economy reality check)
+// Bank tema Financial Breakdown (In this economy reality check - Variasi Lengkap)
 const FINANCIAL_THEMES = [
-  'Gaji UMR Jakarta vs realitas biaya kos, makan warteg, dan cicilan motor',
-  'Ironi beli kopi susu 40 ribu santai tapi ongkir belanja online 8 ribu mikir keras',
-  'Simulasi biaya hidup lajang vs ekspektasi nikah mewah di hotel bintang empat',
-  'Potongan slip gaji BPJS dan pajak bertambah tapi fasilitas publik gak berubah',
-  'Gaji 7 juta kirim ortu 2 juta sisa tabungan receh buat dana darurat',
-  'Fenomena FOMO nongkrong cafe tiap weekend padahal limit paylater udah mepet',
-  'Gaji 5.5 juta di Jaksel vs realitas sewa kos sepetak dan makan siang kantor',
-  'Simulasi nabung nikah 2 tahun gaji 6 juta vs inflasi harga katering dan sewa gedung',
-  'Sandwich generation gaji 7 juta nanggung adik sekolah dan cicilan motor orang tua',
-  'Realitas split bill kencan pertama: pesen steak mewah tapi pas bayar minta bagi dua rata'
+  'Realitas gaji fresh grad UMR vs biaya kos sepetak, makan warteg, dan KRL',
+  'Breakdown biaya hidup staff 2 tahun di Jakarta: sandwich gen kirim ortu vs tabungan darurat',
+  'Simulasi cash flow anak agensi SCBD: lembur marathon, coffee run harian, dan reimburse nombok',
+  'Pengeluaran riil remote / tech worker: biaya listrik AC 24 jam, wifi kenceng, dan sewa kosan',
+  'Simulasi biaya pasangan muda baru nikah sewa kontrakan vs target nabung DP rumah',
+  'Realitas gaji dua digit di Jakarta: potongan PPh 21, BPJS, dan ilusi gaya hidup naik kelas',
+  'Biaya komuter harian Bintaro - Sudirman vs pengeluaran makan siang kantor',
+  'Simulasi belanja bulanan & dana darurat gaji 7 jutaan di tengah inflasi harga bahan pokok'
 ];
 
-// Bank tema Hot Takes Sarkasme
+// Bank tema Hot Takes Sarkasme (Anak Muda Corporate Jaksel)
 const HOT_TAKE_THEMES = [
-  'Orang yang hobi bales chat kerjaan pas weekend itu bukan loyal tapi gak punya hobi',
+  'Orang yang hobi bales chat kerjaan pas weekend itu bukan loyal tapi gak punya kehidupan pribadi',
   'Normalisasi gak ikut patungan kado nikahan teman kantor yang gak pernah nyapa di pantry',
-  'Pekerja loyal 5 tahun gajinya kalah sama karyawan baru yang jago nego pas interview',
-  'Istilah loyalitas perusahaan itu cuma mitos pas giliran efisiensi karyawan',
-  'Makin dewasa lingkaran pertemanan mengecil bukan karena sombong tapi sama-sama capek dan ga ada duit',
-  'Gelar sarjana sekarang cuma syarat administrasi, yang nentuin keterima tetep orang dalem atau hoki',
-  'Kerja lembur tiap hari bukan tanda produktif, tapi tanda manajemen kerjaannya berantakan'
+  'Pekerja loyal 4 tahun gajinya kalah sama karyawan baru yang jago nego pas interview',
+  'Istilah loyalitas perusahaan itu cuma dongeng HRD pas giliran efisiensi karyawan',
+  'Makin dewasa lingkaran pertemanan mengecil bukan karena sombong tapi sama-sama capek dan gak ada bandwidth',
+  'Kerja lembur tiap hari bukan tanda produktif tapi tanda manajemen timeline atasan yang berantakan',
+  'Meeting marathon 2 jam bahas hal yang sebenernya bisa selesai di 3 baris pesan Slack'
 ];
 
 /**
@@ -149,22 +145,23 @@ async function generateHotTake(options = {}) {
 
   const prompt = `
 Kamu adalah Kiki Rachmat (@ceritakikiii), kurator Threads. Bio: "In this economy mau nulis cerita orang-orang aja lah".
-Tuliskan SATU (1) POSTINGAN SARKASME / HOT TAKE PENDEK (1-2 kalimat padat, panjang 90-180 karakter).
+Persona: Anak muda korporat Jakarta Selatan (usia 25-27 thn, kerja di agensi/tech/kantor SCBD-Kuningan).
+Gaya ngetik: Human typing sejati warganet Threads Indonesia. Huruf kecil santai, kalimat padat (1-2 kalimat, 90-170 karakter), sinis-realistis, self-deprecating (menertawakan nasib sendiri).
 
 TEMA REALITAS:
 "${theme}"
 
-ATURAN KETAT:
+ATURAN KETAT ANAK KORPORAT JAKSEL:
 1. DILARANG sapaan basi (Guys, Halo, Selamat Pagi).
 2. DILARANG HASHTAG (#) apapun.
-3. Gaya bahasa gaul santai, tajam, menertawakan nasib sendiri (self-deprecating), yang bikin orang langsung pengen me-repost ke profilnya.
-4. DILARANG iklan/promosi apapun.
-Output HANYA teks postingan langsung tanpa tanda kutip.
+3. DILARANG bahasa baku kaku atau nasihat motivasi ala LinkedIn.
+4. Gunakan istilah korporat & warganet yang natural (burnout, boncos, WFO/WFH, commute, split bill, paylater, reimburse, overhead, bandwidth, wkwk, haha, bgt).
+5. Output HANYA teks postingan langsung tanpa tanda kutip. Huruf kecil santai.
 `;
 
   let text = await callAiWithFallback(prompt, 0.8);
   if (!text || text.length < 40) {
-    text = `Orang yang hobi bales chat kerjaan pas weekend itu bukan loyal, tapi gak punya kehidupan pribadi di luar kantor. In this economy kewarasan emang ada harganya.`;
+    text = `orang yang hobi bales chat kerjaan pas weekend itu bukan loyal, tapi gak punya kehidupan pribadi di luar kantor. in this economy kewarasan emang ada harganya.`;
   }
 
   // Bersihkan kutip, markdown asterisks, hashtag, dan batasi panjang
@@ -193,7 +190,8 @@ async function generateMenfessSpill(options = {}) {
 
   const prompt = `
 Kamu adalah Kiki Rachmat (@ceritakikiii), kurator Threads. Bio: "In this economy mau nulis cerita orang-orang aja lah".
-Tuliskan SATU (1) POSTINGAN CROWDSOURCING / MENFESS SPILL PENDEK (panjang 110-180 karakter) untuk memancing ratusan komentar warganet.
+Persona: Anak muda korporat Jakarta Selatan.
+Tuliskan SATU (1) POSTINGAN CROWDSOURCING / MENFESS SPILL PENDEK (panjang 110-180 karakter) untuk memancing warganet Threads bercerita.
 
 TOPIK PANCINGAN:
 "${theme}"
@@ -201,15 +199,15 @@ TOPIK PANCINGAN:
 ATURAN KETAT:
 1. DILARANG sapaan basi (Guys, Halo, Selamat Pagi).
 2. DILARANG HASHTAG (#) apapun.
-3. LANGSUNG mulai dengan formula pancingan: "Spill..." atau "Sebutin 1..." atau "Hal paling absurd...".
-4. Akhiri dengan ajakan curhat yang santai (contoh: "Coba cerita di bawah, pengen tau seaneh apa.", "Kalian ada yang pernah ngalamin lebih parah?").
-5. DILARANG iklan/promosi apapun.
-Output HANYA teks postingan langsung tanpa tanda kutip.
+3. DILARANG konsep asing / halusinasi (seperti koin sen atau budaya barat). Harus 100% realitas urban Indonesia (kantor Jabodetabek, kosan, KRL, warteg, ojol, split bill).
+4. Mulai langsung dengan gaya pancingan santai: "spill...", "sebutin 1...", "hal paling absurd...", atau "kelakuan paling zonk...".
+5. Akhiri dengan ajakan curhat santai (contoh: "coba cerita di bawah, pengen tau seaneh apa.", "ada yang pernah ngalamin lebih parah?").
+6. Output HANYA teks postingan langsung tanpa tanda kutip. Huruf kecil santai.
 `;
 
   let text = await callAiWithFallback(prompt, 0.8);
   if (!text || text.length < 40) {
-    text = `Spill kelakuan paling gak masuk akal dari mantan temen sekamar kos lu yang bikin lu langsung mikir 'gue harus pindah minggu ini juga'. Pengen tau se-absurd apa.`;
+    text = `spill kelakuan paling gak masuk akal dari mantan temen sekamar kosan lu yang bikin lu langsung mikir 'gue harus pindah minggu ini juga'. pengen tau se-absurd apa.`;
   }
 
   // Bersihkan kutip, markdown asterisks, hashtag, dan batasi panjang
@@ -243,30 +241,59 @@ function formatRupiahJt(jt) {
 }
 
 /**
+ * Bank celetukan penutup (punchlines) realistis anak muda korporat Jaksel
+ * Anti-klise: Dilarang keras formula basi 'ngajak nongkrong senopati mending pura-pura pingsan/tipes'!
+ */
+const AUTHENTIC_CORPORATE_PUNCHLINES = [
+  'reimburse kantor 1.4jt belum cair udah kayak gue yg jadi angel investor perusahaan.',
+  'tiap mau checkout kopi mikir dulu: ini setara jam kerja 45 menit di depan laptop.',
+  'gaji numpang napas 3 hari di m-banking terus balik mode survival sampe tanggal 25.',
+  'pas ditanya resolusi karir: survive satu quarter ke depan tanpa kena mental dulu.',
+  'sisa tabungan segitu tipis kesenggol biaya servis laptop dikit langsung wassalam.',
+  'potongan pajak sama bpjs naik tiap tahun tapi fasilitas krl tetep dempet-dempetan.',
+  'tiap liat kalender tanggal 18 rasanya pengen skip langsung ke tanggal gajian.',
+  'mau healing tapi pas liat sisa saldo malah nambah beban pikiran.',
+  'kerja keras bagai kuda, pas liat sisa saldo cuma cukup buat beli koyo sama tolak angin.',
+  'meeting seharian bahas efisiensi perusahaan, padahal gaji sendiri yang paling efisien.',
+  'sisa tabungan receh mau investasi saham rasanya kayak ngasih makan dinosaurus pake biskuit.',
+  'nombok belanja keperluan kantor berasa kayak founder startup bakar duit pribadi.'
+];
+
+function sanitizePunchline(punchline) {
+  let clean = (punchline || '').replace(/#\w+/g, '').replace(/[*_~`]/g, '').trim();
+  // Filter klise basi yang dilarang keras
+  const bannedCliches = /(ngajak nongkrong.*(senopati|cafe|500rb).*pura-pura|kopi susu 40.*ongkir|mending gue pura-pura (pingsan|tipes|amnesia|mati)|pura-pura (pingsan|tipes))/i;
+  if (!clean || bannedCliches.test(clean) || clean.length < 15) {
+    clean = AUTHENTIC_CORPORATE_PUNCHLINES[Math.floor(Math.random() * AUTHENTIC_CORPORATE_PUNCHLINES.length)];
+  }
+  if (clean.length > 150) clean = clean.substring(0, 145) + '...';
+  return clean;
+}
+
+/**
  * Merakit teks postingan financial breakdown dengan kalkulasi matematika 100% presisi.
  * Menghitung Total Pengeluaran dan Sisa Tabungan dalam kode JavaScript (Zero Hallucination).
  */
-function buildFinancialBreakdownText({ incomeJt, location, items, punchline }) {
+function buildFinancialBreakdownText({ incomeJt, location, items, punchline, headerStyle }) {
   const totalExpense = Number(items.reduce((sum, it) => sum + it.amountJt, 0).toFixed(2));
   const sisaJt = Number((incomeJt - totalExpense).toFixed(2));
 
   let sisaLine;
   if (sisaJt > 0) {
-    sisaLine = `Sisa ${formatRupiahJt(sisaJt)} buat tabungan darurat.`;
+    sisaLine = `sisa ${formatRupiahJt(sisaJt)} buat tabungan darurat.`;
   } else if (sisaJt === 0) {
-    sisaLine = `Sisa 0 rupiah alias pas-pasan banget.`;
+    sisaLine = `sisa 0 rupiah alias pas-pasan banget.`;
   } else {
-    sisaLine = `Defisit ${formatRupiahJt(Math.abs(sisaJt))} alias minus ditambal paylater.`;
+    sisaLine = `defisit ${formatRupiahJt(Math.abs(sisaJt))} alias minus ditambal paylater.`;
   }
 
-  // Sanitasi punchline agar tidak ada hashtag, markdown, dan panjangnya terkontrol
-  let safePunchline = (punchline || '').replace(/#\w+/g, '').replace(/[*_~`]/g, '').trim();
-  if (safePunchline.length > 150) {
-    safePunchline = safePunchline.substring(0, 145) + '...';
-  }
+  const safePunchline = sanitizePunchline(punchline);
+
+  // Gunakan header bergaya kasual anak muda korporat (lowercase, organik)
+  const header = headerStyle || `realita gaji ${formatRupiahJt(incomeJt)} di ${location}:`;
 
   const lines = [
-    `Gaji ${formatRupiahJt(incomeJt)} di ${location}:`,
+    header,
     ...items.map(it => `• ${it.label}: ${formatRupiahJt(it.amountJt)}`),
     sisaLine,
     safePunchline
@@ -280,123 +307,195 @@ function buildFinancialBreakdownText({ incomeJt, location, items, punchline }) {
 }
 
 /**
- * Bank template anggaran riil tervalidasi 100% akurat secara matematis
+ * Bank template anggaran riil tervalidasi 100% akurat secara matematis (Zero Hallucination)
+ * Mencakup variasi nominal gaji dan lokasi yang berbeda-beda agar tidak pernah kembar.
  */
 const VERIFIED_BUDGETS = [
   {
-    incomeJt: 6.0,
-    location: 'Jakarta',
-    items: [
-      { label: 'Kos (listrik + air)', amountJt: 1.8 },
-      { label: 'Makan sehari-hari', amountJt: 1.5 },
-      { label: 'KRL & ojol', amountJt: 0.5 },
-      { label: 'Kirim ortu', amountJt: 1.0 },
-      { label: 'Kuota & langganan', amountJt: 0.2 }
-    ],
-    punchline: 'Terus ada yang ngajak nongkrong di Senopati? Mending gue pura-pura pingsan.'
-  },
-  {
-    incomeJt: 5.5,
-    location: 'Jaksel',
-    items: [
-      { label: 'Kos sepetak', amountJt: 1.6 },
-      { label: 'Makan warteg siang-malam', amountJt: 1.4 },
-      { label: 'MRT & transport', amountJt: 0.5 },
-      { label: 'Kirim adik sekolah', amountJt: 0.8 },
-      { label: 'Tagihan paylater belanja', amountJt: 0.7 },
-      { label: 'Kuota & pulsa', amountJt: 0.2 }
-    ],
-    punchline: 'Beli kopi susu 40rb berani, pas kena ongkir 9rb mikirnya 3 hari.'
-  },
-  {
-    incomeJt: 7.0,
-    location: 'Jakarta',
-    items: [
-      { label: 'Kos AC + parkir', amountJt: 2.0 },
-      { label: 'Makan & ngopi kantor', amountJt: 1.8 },
-      { label: 'Kirim ortu kampung', amountJt: 1.5 },
-      { label: 'Cicilan motor', amountJt: 0.8 },
-      { label: 'Transport & bensin', amountJt: 0.4 },
-      { label: 'Kuota & laundry', amountJt: 0.3 }
-    ],
-    punchline: 'Sandwich generation: gaji cuma numpang lewat 5 menit di M-Banking.'
-  },
-  {
     incomeJt: 5.2,
-    location: 'Jakarta Barat',
+    location: 'Kuningan (Jaksel)',
+    headerStyle: 'realita gaji 5.2jt di kuningan (fresh grad UMR):',
     items: [
-      { label: 'Sewa kamar kos', amountJt: 1.4 },
-      { label: 'Makan hemat + masak', amountJt: 1.3 },
-      { label: 'Ongkos KRL & angkot', amountJt: 0.4 },
-      { label: 'Kirim keluarga', amountJt: 1.0 },
-      { label: 'Keperluan mandi & kos', amountJt: 0.3 },
-      { label: 'Paket data', amountJt: 0.15 }
+      { label: 'Kos sepetak jalan kaki ke kantor', amountJt: 1.5 },
+      { label: 'Makan warteg siang & malam', amountJt: 1.4 },
+      { label: 'Ongkos ojol pas ujan & darurat', amountJt: 0.4 },
+      { label: 'Kirim adik/ortu', amountJt: 0.8 },
+      { label: 'Kuota & keperluan mandi', amountJt: 0.3 }
     ],
-    punchline: 'Mau healing ke Bali tapi saldo tabungan cuma cukup buat beli cilok di depan gang.'
+    punchline: 'reimburse kantor 1.2jt belum cair udah kayak gue yg invest modal di perusahaan.'
+  },
+  {
+    incomeJt: 7.2,
+    location: 'Setiabudi (Jaksel)',
+    headerStyle: 'breakdown survive gaji 7.2jt anak kos setiabudi:',
+    items: [
+      { label: 'Kos AC + wifi', amountJt: 2.1 },
+      { label: 'Makan sehari-hari + kopi kantor', amountJt: 1.8 },
+      { label: 'KRL & ojol commute', amountJt: 0.6 },
+      { label: 'Kirim ortu kampung', amountJt: 1.2 },
+      { label: 'Cicilan motor / paylater', amountJt: 0.6 },
+      { label: 'Kuota & streaming', amountJt: 0.2 }
+    ],
+    punchline: 'tiap mau checkout kopi mikir dulu: ini setara jam kerja 45 menit di depan laptop.'
+  },
+  {
+    incomeJt: 8.5,
+    location: 'SCBD / Sudirman',
+    headerStyle: 'cash flow gaji 8.5jt anak agensi di scbd:',
+    items: [
+      { label: 'Sewa studio kos Benhil', amountJt: 2.5 },
+      { label: 'Makan delivery & coffee run lembur', amountJt: 2.2 },
+      { label: 'MRT & transport harian', amountJt: 0.6 },
+      { label: 'Kirim keluarga', amountJt: 1.5 },
+      { label: 'Laundry & printilan kos', amountJt: 0.4 },
+      { label: 'Paket data & cloud storage', amountJt: 0.25 }
+    ],
+    punchline: 'gaji numpang napas 3 hari di m-banking terus balik mode survival sampe tanggal 25.'
   },
   {
     incomeJt: 6.5,
-    location: 'Tangerang / BSD',
+    location: 'Bintaro - Sudirman',
+    headerStyle: 'simulasi pengeluaran gaji 6.5jt komuter bintaro - sudirman:',
     items: [
-      { label: 'Sewa studio kos', amountJt: 1.9 },
-      { label: 'Makan & jajan pantry', amountJt: 1.6 },
-      { label: 'Bensin & tol', amountJt: 0.8 },
-      { label: 'Kirim ortu', amountJt: 1.0 },
-      { label: 'Cicilan HP', amountJt: 0.6 },
-      { label: 'Kuota & Netflix', amountJt: 0.2 }
+      { label: 'Kos / kontrakan Bintaro', amountJt: 1.7 },
+      { label: 'Makan hemat + jajan pantry', amountJt: 1.5 },
+      { label: 'KRL bulanan + ojol stasiun', amountJt: 0.5 },
+      { label: 'Kirim orang tua', amountJt: 1.0 },
+      { label: 'Cicilan HP / laptop kerja', amountJt: 0.7 },
+      { label: 'Kuota internet', amountJt: 0.2 }
     ],
-    punchline: 'Tiap tanggal muda ngerasa sultan, tanggal 20 udah makan mie instan dibagi dua.'
+    punchline: 'pas ditanya resolusi karir: survive satu quarter ke depan tanpa kena mental dulu.'
   },
   {
-    incomeJt: 7.5,
-    location: 'Jakarta Pusat',
+    incomeJt: 9.8,
+    location: 'Tebet (Jaksel)',
+    headerStyle: 'pengeluaran riil gaji 9.8jt di tebet (tech worker):',
     items: [
-      { label: 'Kos jalan kaki ke kantor', amountJt: 2.2 },
-      { label: 'Makan siang & malam', amountJt: 1.7 },
-      { label: 'Kirim orang tua', amountJt: 1.5 },
-      { label: 'Nabung rencana nikah', amountJt: 1.2 },
-      { label: 'Gym & kuota', amountJt: 0.3 }
+      { label: 'Sewa apartemen studio / kos eksklusif', amountJt: 2.8 },
+      { label: 'Makan + ngopi wfh', amountJt: 2.3 },
+      { label: 'Listrik AC & internet kenceng', amountJt: 0.7 },
+      { label: 'Kirim keluarga', amountJt: 1.8 },
+      { label: 'Asuransi kesehatan mandiri', amountJt: 0.6 },
+      { label: 'Gym & lifestyle', amountJt: 0.4 }
     ],
-    punchline: 'Simulasi nikah mewah di hotel, pas liat tabungan langsung kepikiran nikah di KUA aja deh.'
+    punchline: 'sisa tabungan segitu tipis kesenggol biaya servis laptop dikit langsung wassalam.'
+  },
+  {
+    incomeJt: 12.0,
+    location: 'Jakarta Selatan',
+    headerStyle: 'realita gaji 12jt di jaksel (setelah potongan pph 21 & bpjs):',
+    items: [
+      { label: 'Kos eksklusif / cicilan KPR', amountJt: 3.5 },
+      { label: 'Makan & transport kerja', amountJt: 2.8 },
+      { label: 'Kirim keluarga sandwich gen', amountJt: 2.5 },
+      { label: 'Tabungan nikah / dana darurat', amountJt: 1.5 },
+      { label: 'Investasi & asuransi', amountJt: 0.8 }
+    ],
+    punchline: 'potongan pajak sama bpjs naik tiap tahun tapi fasilitas krl tetep dempet-dempetan.'
+  },
+  {
+    incomeJt: 4.8,
+    location: 'Cilandak (Jaksel)',
+    headerStyle: 'simulasi survive gaji 4.8jt anak kos cilandak:',
+    items: [
+      { label: 'Kos non-AC gang senggol', amountJt: 1.2 },
+      { label: 'Makan warteg 2x sehari', amountJt: 1.3 },
+      { label: 'Ongkos KRL & jalan kaki', amountJt: 0.35 },
+      { label: 'Kirim adik sekolah', amountJt: 0.8 },
+      { label: 'Kebutuhan mandi & sabun', amountJt: 0.25 },
+      { label: 'Kuota hemat', amountJt: 0.15 }
+    ],
+    punchline: 'tiap liat kalender tanggal 18 rasanya pengen skip langsung ke tanggal gajian.'
   }
 ];
 
-function getRandomVerifiedFinancialBudget() {
+function getRandomVerifiedFinancialBudget(excludedIncomes = new Set()) {
+  const eligible = VERIFIED_BUDGETS.filter(b => !excludedIncomes.has(b.incomeJt));
+  if (eligible.length > 0) {
+    return eligible[Math.floor(Math.random() * eligible.length)];
+  }
   return VERIFIED_BUDGETS[Math.floor(Math.random() * VERIFIED_BUDGETS.length)];
 }
 
 /**
  * Generate 1 Financial Breakdown ("In this economy" Reality Check)
  * Menjamin 100% akurasi matematis tanpa halusinasi angka.
+ * Terintegrasi matriks rotasi dinamis & deduplikasi agar nominal & lokasi tidak pernah kembar.
  */
 async function generateFinancialBreakdown(options = {}) {
-  const theme = options.theme || FINANCIAL_THEMES[Math.floor(Math.random() * FINANCIAL_THEMES.length)];
   const topicTag = 'finansial';
+
+  // 1. Ekstraksi riwayat nominal gaji dan lokasi terakhir dari database (Cegah Duplikasi)
+  const recentFinancials = db.getRecentFinancialDetails ? db.getRecentFinancialDetails(14) : [];
+  const usedIncomes = new Set(recentFinancials.map(f => f.incomeJt).filter(Boolean));
+  const recentLocations = recentFinancials.slice(0, 3).map(f => (f.location || '').toLowerCase());
+
+  // 2. Tentukan nominal gaji yang belum pernah dipakai dalam rolling 14 hari
+  const ALL_INCOMES = [4.8, 5.2, 5.8, 6.5, 7.2, 7.8, 8.5, 9.8, 12.0, 14.5];
+  let availableIncomes = ALL_INCOMES.filter(inc => !usedIncomes.has(inc));
+  if (availableIncomes.length === 0) availableIncomes = ALL_INCOMES;
+  const targetIncome = availableIncomes[Math.floor(Math.random() * availableIncomes.length)];
+
+  // 3. Tentukan lokasi kota/area kerja yang fresh
+  const ALL_LOCATIONS = [
+    'Kuningan (Jaksel)',
+    'Setiabudi (Jaksel)',
+    'Tebet (Jaksel)',
+    'Cilandak (Jaksel)',
+    'SCBD / Senopati',
+    'Benhil (Jakpus)',
+    'Palmerah (Jakpus)',
+    'Bintaro (Tangsel)',
+    'BSD (Tangerang)',
+    'Cikarang (Kawasan Industri)'
+  ];
+  let availableLocations = ALL_LOCATIONS.filter(loc => !recentLocations.some(rl => rl.includes(loc.split(' ')[0].toLowerCase())));
+  if (availableLocations.length === 0) availableLocations = ALL_LOCATIONS;
+  const targetLocation = availableLocations[Math.floor(Math.random() * availableLocations.length)];
+
+  // 4. Pilih arketipe pekerja korporat
+  const ARCHETYPES = [
+    { role: 'Fresh Grad / Junior Staff', focus: 'Survive masa probation, kos sepetak, makan warteg, KRL desak-desakan' },
+    { role: 'Staff 2-3 Tahun (Sandwich Gen)', focus: 'Kirim adik/ortu, cicilan motor, sisa tabungan receh' },
+    { role: 'Anak Agensi / Start-up Hustler', focus: 'Lembur marathon, taksi ujan, coffee run harian, reimburse nombok' },
+    { role: 'Tech / Hybrid Worker', focus: 'Listrik AC 24 jam, wifi kenceng, langganan cloud/tools, lifestyle creep' },
+    { role: 'Pasangan Muda Baru Menikah', focus: 'Sewa kontrakan, split bill belanja bulanan, tabungan DP rumah' },
+    { role: 'Senior Specialist / Lead', focus: 'Gaji dua digit tapi dipotong pajak PPh 21, BPJS, dan overhead gaya hidup' }
+  ];
+  const chosenArchetype = ARCHETYPES[Math.floor(Math.random() * ARCHETYPES.length)];
+
+  const theme = options.theme || `Realitas gaji ${targetIncome}jt di ${targetLocation} (${chosenArchetype.role})`;
 
   const prompt = `
 Kamu adalah Kiki Rachmat (@ceritakikiii), kurator Threads. Bio: "In this economy mau nulis cerita orang-orang aja lah".
-Buat rincian data pengeluaran bulanan yang realistis dan relatable untuk pekerja di kota besar Indonesia.
+Persona: Anak muda korporat Jakarta Selatan (usia 25-27 thn, kerja di kantor SCBD/Kuningan/Jaksel).
+Tugas: Buat rincian data pengeluaran bulanan yang realistis dan relatable untuk ${chosenArchetype.role} (${chosenArchetype.focus}).
 
-TEMA: "${theme}"
+TARGET PARAMETER WAJIB:
+- Nominal Gaji: ${targetIncome} juta
+- Lokasi: "${targetLocation}"
+- Nominal yang SUDAH PERNAH DIPAKAI (DILARANG DIPAKAI LAGI): [${Array.from(usedIncomes).join(', ')}]
+- DILARANG menggunakan nominal 6.0 juta (karena baru saja diposting)!
 
 Berikan output HANYA berupa JSON valid persis seperti ini:
 {
-  "incomeJt": 6.0,
-  "location": "Jakarta",
+  "incomeJt": ${targetIncome},
+  "location": "${targetLocation}",
+  "headerStyle": "realita gaji ${targetIncome}jt di ${targetLocation.toLowerCase()}:",
   "items": [
-    { "label": "Kos (listrik + air)", "amountJt": 1.8 },
+    { "label": "Kos / Kontrakan", "amountJt": 1.8 },
     { "label": "Makan sehari-hari", "amountJt": 1.5 },
-    { "label": "KRL & ojol", "amountJt": 0.5 },
-    { "label": "Kirim ortu", "amountJt": 1.0 },
-    { "label": "Kuota & langganan", "amountJt": 0.2 }
+    { "label": "KRL & transport harian", "amountJt": 0.5 },
+    { "label": "Kirim ortu / keluarga", "amountJt": 1.0 },
+    { "label": "Kuota & keperluan kos", "amountJt": 0.3 }
   ],
-  "punchline": "Terus ada yang ngajak nongkrong di Senopati? Mending gue pura-pura pingsan."
+  "punchline": "tulis celetukan sinis-realistis khas anak korporat jaksel (lowercase, tanpa hashtag)"
 }
 
-ATURAN KETAT:
-1. Total pengeluaran items HARUS lebih kecil dari incomeJt (sisakan 400rb - 1.2jt untuk sisa tabungan).
+ATURAN KETAT ANTI-DUPLIKASI & GAYA ANAK KORPORAT:
+1. Total pengeluaran items HARUS lebih kecil dari ${targetIncome} (sisakan 400rb - 1.2jt untuk sisa tabungan).
 2. DILARANG menghitung sisa sendiri dalam JSON, sistem kode yang akan menghitung sisa secara eksak.
-3. Punchline harus bernada sarkasme santai warganet, relatable, tanpa hashtag (#).
+3. DILARANG PUNCHLINE KLISE BASI seperti: "ngajak nongkrong di senopati... mending pura-pura pingsan/tipes" atau "kopi 40rb vs ongkir 8rb". Buat celetukan segar tentang nasib kerjaan, reimburse kantor, potongan pajak, atau tabungan tipis.
 4. Output HANYA JSON murni tanpa markdown, tanpa teks pengantar.
 `;
 
@@ -409,6 +508,12 @@ ATURAN KETAT:
       const parsed = JSON.parse(cleanJson);
       if (parsed && typeof parsed.incomeJt === 'number' && Array.isArray(parsed.items) && parsed.items.length >= 3) {
         let validIncome = Number(Number(parsed.incomeJt).toFixed(1));
+        
+        // Tolak jika AI halusinasi kembali ke 6.0 padahal 6.0 dilarang
+        if (validIncome === 6.0 && targetIncome !== 6.0) {
+          validIncome = targetIncome;
+        }
+
         let validItems = parsed.items.map(it => ({
           label: String(it.label || 'Kebutuhan lain').replace(/^[•\-\*]\s*/, '').trim(),
           amountJt: Number(Number(it.amountJt).toFixed(2))
@@ -422,9 +527,10 @@ ATURAN KETAT:
 
         budgetData = {
           incomeJt: validIncome,
-          location: parsed.location || 'Jakarta',
+          location: parsed.location || targetLocation,
+          headerStyle: parsed.headerStyle || `realita gaji ${formatRupiahJt(validIncome)} di ${targetLocation}:`,
           items: validItems,
-          punchline: parsed.punchline || 'Terus ada yang ngajak nongkrong di Senopati? Mending gue pura-pura pingsan.'
+          punchline: sanitizePunchline(parsed.punchline)
         };
       }
     } catch (e) {
@@ -432,9 +538,9 @@ ATURAN KETAT:
     }
   }
 
-  // Jika AI gagal / parsing error, gunakan template terverifikasi 100% akurat
+  // Jika AI gagal / parsing error, gunakan template terverifikasi 100% akurat yang belum pernah dipakai
   if (!budgetData) {
-    budgetData = getRandomVerifiedFinancialBudget();
+    budgetData = getRandomVerifiedFinancialBudget(usedIncomes);
   }
 
   // Bangun teks dengan kalkulasi matematika eksak via JavaScript

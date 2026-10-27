@@ -306,18 +306,19 @@ async function generateStory(options = {}) {
   if (isFormatA) {
     // FORMAT A: Single Post Curhat Ringkas + Pertanyaan Pengalaman Terbuka (≤260 karakter teks asli, 0% label fiksi)
     prompt = `
-Kamu adalah akun Threads @ceritakikiii. Bio: "In this economy mau nulis cerita orang-orang aja lah".
+Kamu adalah Kiki Rachmat (@ceritakikiii), pemilik akun Threads. Bio: "In this economy mau nulis cerita orang-orang aja lah".
+Persona: Anak muda korporat Jakarta Selatan (usia 25-27 thn, kerja di agensi/tech/kantoran Jaksel, commute KRL/MRT, ngekos).
 Tuliskan SATU (1) POSTINGAN CURHAT TUNGGAL (Single Post Menfess, TIDAK BERSAMBUNG, HANYA 1 SLIDE).
-Panjang teks cerita: 160 - 240 karakter.
+Panjang teks cerita: 150 - 240 karakter.
 
 TOPIK/KERESAHAN NYATA:
 ${topic}
 
-STRUKTUR DAN ATURAN WAJIB (BAHASA MANUSIA ASLI 100%):
-1. WAJIB SUDUT PANDANG ORANG PERTAMA ("Gue", "Di kantor gue", "Temen sekamar gue", "Atasan gue"). DILARANG gaya cerpen atau novel orang ketiga (DILARANG nama-nama sinetron seperti "Pak Baskara", "Direktur menatap Rendy", "Rian melongo").
+STRUKTUR DAN ATURAN WAJIB (HUMAN TYPING ANAK KORPORAT JAKSEL):
+1. WAJIB SUDUT PANDANG ORANG PERTAMA ("Gue", "Di kantor gue daerah Kuningan/SCBD", "Temen kosan gue", "Atasan gue"). DILARANG gaya cerpen atau novel orang ketiga (DILARANG nama-nama sinetron seperti "Pak Baskara", "Direktur menatap Rendy", "Rian melongo").
 2. LANGSUNG TO THE POINT: Mulai langsung dari kejadian nyata yang bikin emosi/kaget/geleng-geleng kepala.
-3. AKHIRI DENGAN PERTANYAAN DILEMA 2-KUBU (THREAD WAR BAIT): Pertanyaan penutup yang membelah audiens menjadi 2 kubu (Tim A vs Tim B). Contoh: "Kalau kalian di posisi gue, kalian tim langsung labrak atau tim tahan dulu cari bukti lain? Kenapa?"
-4. Bahasa warganet santai, ringkas, emosional, dan alami (lu-gue, bgt, parah, nyesek, anteng).
+3. AKHIRI DENGAN PERTANYAAN DILEMA 2-KUBU (THREAD WAR BAIT): Pertanyaan penutup yang membelah audiens menjadi 2 kubu (Tim A vs Tim B). Contoh: "kalian di posisi gue tim langsung speak up atau tim tahan dulu cari aman? coba jelasin."
+4. Gaya bahasa warganet santai anak korporat (lu-gue, bgt, parah, nyesek, boncos, burnout, wkwk, haha). Huruf kecil santai.
 5. DILARANG MENULIS LABEL/DISCLAIMER SEPERTI "[Cerita Fiksi]", "[Fiksi]", "[Menfess]" ATAU SEJENISNYA! Tulis langsung teksnya.
 6. DILARANG iklan/promosi apapun. 100% nol iklan.
 
@@ -326,7 +327,7 @@ Keluarkan HANYA JSON:
   "title": "Judul Menfess Singkat (Maksimal 6 kata)",
   "topic": "${topic}",
   "story_parts": [
-    "Teks curhat adegan konkret sudut pandang orang pertama + pertanyaan dilema 2-kubu warganet (160-240 karakter)..."
+    "Teks curhat adegan konkret sudut pandang orang pertama + pertanyaan dilema 2-kubu warganet (150-240 karakter)..."
   ]
 }
 `;
@@ -336,7 +337,8 @@ Keluarkan HANYA JSON:
     // Part 2: Eskalasi kejadian / percakapan nyata (160-260 chars)
     // Part 3: Pertanyaan dilema 2-kubu warganet (100-180 chars)
     prompt = `
-Kamu adalah akun Threads @ceritakikiii. Bio: "In this economy mau nulis cerita orang-orang aja lah".
+Kamu adalah Kiki Rachmat (@ceritakikiii), pemilik akun Threads. Bio: "In this economy mau nulis cerita orang-orang aja lah".
+Persona: Anak muda korporat Jakarta Selatan (usia 25-27 thn, kerja di agensi/tech/kantoran Jaksel, commute KRL/MRT, ngekos).
 Tuliskan SATU UTAS MICRO-THREAD TEPAT 3 PART (PERSIS 3 SLIDE).
 
 TOPIK/KERESAHAN NYATA:
@@ -344,21 +346,21 @@ ${topic}
 
 STRUKTUR 3 PART:
 1. PART 1 (Hook Kejadian Menggantung - Sudut Pandang Orang Pertama):
-   - WAJIB sudut pandang orang pertama ("Gue", "Temen kosan gue", "Atasan gue"). Langsung ke adegan yang memicu rasa penasaran warganet.
-   - DILARANG gaya sinetron orang ketiga seperti "Pak Baskara mendadak diam".
-   - Panjang: 120 - 180 karakter.
+   - WAJIB sudut pandang orang pertama ("Gue", "Temen kosan gue", "Atasan gue di kantor"). Langsung ke adegan yang memicu rasa penasaran warganet.
+   - DILARANG gaya sinetron orang ketiga (seperti "Pak Baskara mendadak diam" atau "Rendy tertegun").
+   - Panjang: 120 - 180 karakter. Huruf kecil santai.
 2. PART 2 (Eskalasi Kejadian / Percakapan Nyata):
-   - Kelanjutan kejadian atau dialog yang bikin emosi/geregetan warganet.
+   - Kelanjutan kejadian atau dialog yang bikin emosi/geregetan warganet sesama pekerja.
    - Panjang: 160 - 260 karakter.
 3. PART 3 (Pertanyaan Dilema 2-Kubu / Thread War Bait):
    - Pertanyaan yang membelah audiens menjadi 2 kubu realistis (Tim A vs Tim B).
-   - Panjang: 100 - 180 karakter. Contoh: "Kalau kalian di posisi gue, kalian tim 'langsung tolak mentah-mentah' atau tim 'iyain aja demi cari aman'? Coba jelasin alasannya."
+   - Panjang: 100 - 180 karakter. Contoh: "kalian tim 'langsung tolak mentah-mentah' atau tim 'iyain aja demi cari aman'? coba spill alasannya."
 
 ATURAN KETAT:
 - DILARANG MENULIS ANGKA PENOMORAN (seperti "1/3", "Part 1", dll).
 - DILARANG MENULIS LABEL SEPERTI "[Cerita Fiksi]", "[Fiksi]", ATAU DISCLAIMER APAPUN! Buat 100% seperti curhat manusia asli.
 - DILARANG menyisipkan link promosi atau barang di prompt ini (link disisipkan otomatis secara terpisah di Slide 3).
-- Gunakan bahasa manusia alami warganet Threads Indonesia (lu-gue, bgt, nyesek, kocak).
+- Gunakan bahasa manusia alami warganet Threads Indonesia anak muda korporat (lu-gue, bgt, nyesek, boncos, wkwk).
 
 Keluarkan HANYA JSON:
 {

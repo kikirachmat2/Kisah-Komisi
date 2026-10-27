@@ -618,6 +618,74 @@ module.exports = {
     `).all(limit);
   },
 
+  getRecentStoriesForDeduplication: (limit = 40) => {
+    const rows = db.prepare(`
+      SELECT id, title, topic, format_type, slides_json, status, created_at, published_at
+      FROM stories
+      WHERE status IN ('published', 'queued')
+      ORDER BY id DESC
+      LIMIT ?
+    `).all(limit);
+
+    return rows.map(r => {
+      let slides = [];
+      try {
+        slides = JSON.parse(r.slides_json);
+      } catch (e) {
+        slides = [r.slides_json];
+      }
+      return {
+        ...r,
+        slides
+      };
+    });
+  },
+
+  getRecentFinancialDetails: (limit = 20) => {
+    const stories = db.prepare(`
+      SELECT id, slides_json, topic, format_type, published_at
+      FROM stories
+      WHERE status IN ('published', 'queued')
+        AND (format_type = 'financial_breakdown' OR topic LIKE '%gaji%' OR slides_json LIKE '%gaji%')
+      ORDER BY id DESC
+      LIMIT ?
+    `).all(limit);
+
+    const details = [];
+    for (const s of stories) {
+      let text = '';
+      try {
+        const parsed = JSON.parse(s.slides_json);
+        text = Array.isArray(parsed) ? parsed.join(' ') : String(parsed);
+      } catch (e) {
+        text = String(s.slides_json);
+      }
+
+      // Ekstraksi nominal gaji (contoh: "Gaji 6 juta", "gaji 5.5 jt", "gaji 1.8jt")
+      const incomeMatch = text.match(/(?:gaji|income)\s*(?:sebesar)?\s*(\d+[,\.]?\d*)\s*(jt|juta|ribu|rb)?/i);
+      let incomeJt = null;
+      if (incomeMatch && incomeMatch[1]) {
+        let valStr = incomeMatch[1].replace(',', '.');
+        let val = parseFloat(valStr);
+        const unit = (incomeMatch[2] || '').toLowerCase();
+        if (unit === 'ribu' || unit === 'rb') val = val / 1000;
+        incomeJt = Number(val.toFixed(1));
+      }
+
+      // Ekstraksi lokasi (contoh: "di Jakarta", "di Jaksel", "di Kuningan")
+      const locationMatch = text.match(/di\s+([A-Z][a-zA-Z\s\/\(\)]+?)(?::|\n|\r|,|\.|$)/);
+      const location = locationMatch ? locationMatch[1].trim() : null;
+
+      details.push({
+        id: s.id,
+        incomeJt,
+        location,
+        textSnippet: text.slice(0, 150)
+      });
+    }
+    return details;
+  },
+
   recordStrategyLog: (summary, recommendations, topTopics = null) => {
     return db.prepare(`
       INSERT INTO strategy_logs (summary, recommendations, top_topics)

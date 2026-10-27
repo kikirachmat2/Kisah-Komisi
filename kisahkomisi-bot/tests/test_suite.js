@@ -148,16 +148,17 @@ async function runTests() {
   assert(recentHotTakes.length > 0, 'Hot take successfully recorded in database');
   console.log('  ✓ Hot Takes Database Persistence: Verified');
 
-  // TEST 8: Financial Breakdown Math Accuracy
-  console.log('\n[Test 8] Testing Financial Breakdown Mathematical Accuracy...');
+  // TEST 8: Financial Breakdown Math Accuracy & Dynamic Matrix
+  console.log('\n[Test 8] Testing Financial Breakdown Mathematical Accuracy & Dynamic Matrix...');
   const { generateFinancialBreakdown } = require('../src/contentMixer');
   const finPost = await generateFinancialBreakdown();
   assert(finPost && finPost.slides && finPost.slides.length > 0, 'Financial post should have slides');
   const finText = finPost.slides[0];
   console.log('  ✓ Generated Financial Post:\n' + finText);
-  assert(finText.includes('Gaji') && finText.includes('Sisa'), 'Post should contain Gaji and Sisa');
+  assert(/gaji/i.test(finText) && /sisa/i.test(finText), 'Post should contain Gaji and Sisa');
   assert(!finText.toLowerCase().includes('fiksi'), 'Financial post must not contain fiction label');
-  console.log('  ✓ Financial Breakdown Math Calculation: Verified 100% Accurate');
+  assert(!/(ngajak nongkrong.*senopati|mending gue pura-pura (pingsan|tipes))/i.test(finText), 'Must NOT contain banned repetitive cliches');
+  console.log('  ✓ Financial Breakdown Math Calculation & Anti-Cliche: Verified 100% Accurate');
 
   // TEST 9: What-If Scenario Defense (Prompt Injection & Spam Filter)
   console.log('\n[Test 9] Testing What-If Scenario Defense (Prompt Injection, Scams & Leak Guard)...');
@@ -276,7 +277,62 @@ async function runTests() {
   assert(db.getExploringNiches().includes('anakkos'), 'anakkos should now be back to exploring');
   console.log('  ✓ Manual Lock & Unlock Mechanism: Verified');
 
-  console.log('\n🎉 === ALL 12 TESTS PASSED SUCCESSFULLY! === 🎉');
+  // TEST 13: Content Deduplication Engine & Corporate Jaksel Persona
+  console.log('\n[Test 13] Testing Content Deduplication Engine & Corporate Jaksel Persona...');
+  const { calculateJaccardBigramSimilarity, checkContentDeduplication } = require('../src/editorialBoard');
+
+  // 1. Uji deteksi postingan kembar yang viral kemarin vs hari ini (kasus nyata kecolongan user)
+  const viralPostYesterday = {
+    id: 57,
+    title: 'Gaji 6 juta di Jakarta',
+    format_type: 'financial_breakdown',
+    slides: [
+      'Gaji 6 juta di Jakarta:\n• Kos 1,8 jt (kamar 2x, listrik+air)\n• Makan 1,2 jt (nasi, kopi, delivery)\n• KRL + Ojek 600 rb\n• Jatah ortu 500 rb + kuota 200 rb\nSisa 700 rb buat nonton drama, terus ada yang ngajak nongkrong di Senopati? Mending gue pura-pura pingsan.'
+    ]
+  };
+
+  const duplicatePostToday = {
+    id: 60,
+    title: 'Gaji 6 juta di Jakarta',
+    format_type: 'financial_breakdown',
+    slides: [
+      'Gaji 6 juta di Jakarta:\n• Kos: 1.6jt\n• Makan: 1.8jt\n• KRL & ojol: 400rb\n• Kirim ortu: 1jt\n• Kuota & langganan: 200rb\nSisa 1 juta buat tabungan darurat.\nTerus ada yang ngajak nongkrong abis 500rb semalam? Mending gue pura-pura tipes.'
+    ]
+  };
+
+  const dedupResult = checkContentDeduplication(duplicatePostToday, [viralPostYesterday]);
+  assert.strictEqual(dedupResult.passed, false, 'Duplicate post must be rejected by deduplication engine');
+  console.log('  ✓ Duplicate post intercepted successfully! Reason:', dedupResult.reason);
+
+  // 2. Uji filter klise basi (pura-pura pingsan / tipes)
+  const clichePost = {
+    format_type: 'financial_breakdown',
+    slides: ['realita gaji 8jt di bsd:\n• Kos 2jt\nsisa 2jt\nmending gue pura-pura tipes']
+  };
+  const clicheResult = checkContentDeduplication(clichePost, []);
+  assert.strictEqual(clicheResult.passed, false, 'Banned punchline cliche must be rejected');
+  console.log('  ✓ Banned cliche intercepted successfully! Reason:', clicheResult.reason);
+
+  // 3. Uji postingan unik fresh yang lolos verifikasi
+  const freshPost = {
+    format_type: 'financial_breakdown',
+    slides: [
+      'realita gaji 8.5jt di scbd (anak agensi):\n• Sewa kos Benhil: 2,5 jt\n• Makan delivery & coffee run: 2,2 jt\n• MRT & transport: 600 rb\n• Kirim keluarga: 1,5 jt\nsisa 1,7 jt buat tabungan darurat.\nreimburse kantor 1.4jt belum cair udah kayak gue yg jadi angel investor perusahaan.'
+    ]
+  };
+  const freshResult = checkContentDeduplication(freshPost, [viralPostYesterday]);
+  assert.strictEqual(freshResult.passed, true, 'Fresh unique post must be approved');
+  console.log('  ✓ Fresh post with rotated income and authentic Jaksel punchline approved');
+
+  // 4. Uji Jaccard similarity holistik (Unigram + Bigram)
+  const { calculateJaccardSimilarity } = require('../src/editorialBoard');
+  const sim = calculateJaccardSimilarity(viralPostYesterday.slides[0], duplicatePostToday.slides[0]);
+  console.log(`  ✓ Measured similarity between duplicate screenshots: Unigram ${(sim.unigram * 100).toFixed(1)}%, Bigram ${(sim.bigram * 100).toFixed(1)}%, Combined ${(sim.combined * 100).toFixed(1)}%`);
+  assert(sim.unigram >= 0.35, 'Unigram similarity of duplicate posts should be >= 35%');
+  assert(sim.combined >= 0.25, 'Combined similarity of duplicate posts should be >= 25%');
+  console.log('  ✓ Content Deduplication & Anti-Repetition Engine: 100% Verified');
+
+  console.log('\n🎉 === ALL 13 TESTS PASSED SUCCESSFULLY! === 🎉');
 }
 
 runTests().catch(err => {

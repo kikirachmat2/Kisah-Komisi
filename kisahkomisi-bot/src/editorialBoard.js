@@ -9,6 +9,133 @@ const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
 let isReplenishing = false;
 
 /**
+ * Menghitung Jaccard Similarity (Unigram & Bigram) antara dua string teks
+ * Mengukur tingkat kemiripan leksikal dan struktur kalimat secara holistik
+ */
+function calculateJaccardSimilarity(textA, textB) {
+  if (!textA || !textB) return { unigram: 0, bigram: 0, combined: 0 };
+
+  const tokenize = (t) => {
+    return t.toLowerCase()
+      .replace(/[^a-z0-9\s]/g, ' ')
+      .split(/\s+/)
+      .filter(w => w.length > 2);
+  };
+
+  const wordsA = tokenize(textA);
+  const wordsB = tokenize(textB);
+
+  const setA = new Set(wordsA);
+  const setB = new Set(wordsB);
+  const uInter = new Set([...setA].filter(x => setB.has(x)));
+  const uUnion = new Set([...setA, ...setB]);
+  const unigram = uUnion.size === 0 ? 0 : uInter.size / uUnion.size;
+
+  let bigram = 0;
+  if (wordsA.length >= 2 && wordsB.length >= 2) {
+    const bgA = new Set();
+    for (let i = 0; i < wordsA.length - 1; i++) bgA.add(`${wordsA[i]}_${wordsA[i + 1]}`);
+    const bgB = new Set();
+    for (let i = 0; i < wordsB.length - 1; i++) bgB.add(`${wordsB[i]}_${wordsB[i + 1]}`);
+    const bInter = new Set([...bgA].filter(x => bgB.has(x)));
+    const bUnion = new Set([...bgA, ...bgB]);
+    bigram = bUnion.size === 0 ? 0 : bInter.size / bUnion.size;
+  }
+
+  const combined = Number((0.5 * unigram + 0.5 * bigram).toFixed(3));
+  return { unigram, bigram, combined };
+}
+
+function calculateJaccardBigramSimilarity(textA, textB) {
+  return calculateJaccardSimilarity(textA, textB).bigram;
+}
+
+/**
+ * Engine Deduplikasi Konten Leksikal & Semantik (Anti-Kecolongan Konten Kembar)
+ * Memverifikasi bahwa draft konten tidak menduplikasi nominal gaji, punchline, atau frasa dari postingan sebelumnya.
+ */
+function checkContentDeduplication(draft, recentStories = []) {
+  const newSlides = draft.slides || [];
+  const newFullText = newSlides.join('\n');
+  const newFormat = draft.format_type || draft.formatType || 'story_affiliate';
+
+  // 1. Ekstraksi nominal gaji jika ini format finansial
+  let newIncomeJt = null;
+  if (newFormat === 'financial_breakdown' || /gaji/i.test(newFullText)) {
+    const m = newFullText.match(/(?:gaji|income)\s*(?:sebesar)?\s*(\d+[,\.]?\d*)\s*(jt|juta|ribu|rb)?/i);
+    if (m && m[1]) {
+      let val = parseFloat(m[1].replace(',', '.'));
+      const unit = (m[2] || '').toLowerCase();
+      if (unit === 'ribu' || unit === 'rb') {
+        val = val / 1000;
+      }
+      newIncomeJt = Number(val.toFixed(1));
+    }
+  }
+
+  // 2. Cek klise punchline terlarang
+  const bannedCliches = /(ngajak nongkrong.*(senopati|cafe|500rb).*pura-pura|kopi susu 40.*ongkir|mending gue pura-pura (pingsan|tipes|amnesia|mati)|pura-pura (pingsan|tipes))/i;
+  if (bannedCliches.test(newFullText)) {
+    return {
+      passed: false,
+      reason: 'Mengandung punchline klise terlarang (ngajak nongkrong/senopati/pura-pura pingsan/tipes).'
+    };
+  }
+
+  // 3. Iterasi setiap postingan riwayat (published dan queued)
+  for (const prev of recentStories) {
+    if (prev.id && draft.id && prev.id === draft.id) continue;
+
+    const prevSlides = prev.slides || [];
+    const prevFullText = prevSlides.join('\n');
+
+    // Rule A: Jika format finansial, DILARANG SAMA SEKALI nominal gaji kembar!
+    if (newIncomeJt !== null && newIncomeJt > 0 && (prev.format_type === 'financial_breakdown' || /gaji/i.test(prevFullText))) {
+      const prevM = prevFullText.match(/(?:gaji|income)\s*(?:sebesar)?\s*(\d+[,\.]?\d*)\s*(jt|juta|ribu|rb)?/i);
+      if (prevM && prevM[1]) {
+        let prevVal = parseFloat(prevM[1].replace(',', '.'));
+        const prevUnit = (prevM[2] || '').toLowerCase();
+        if (prevUnit === 'ribu' || prevUnit === 'rb') {
+          prevVal = prevVal / 1000;
+        }
+        const prevIncomeJt = Number(prevVal.toFixed(1));
+
+        if (prevIncomeJt > 0 && prevIncomeJt === newIncomeJt) {
+          return {
+            passed: false,
+            reason: `Nominal gaji ${newIncomeJt}jt persis sama dengan postingan #${prev.id || 'antrean'} ("${prev.title}"). Wajib rotasi nominal.`
+          };
+        }
+      }
+    }
+
+    // Rule B: Jaccard Text Similarity (Tolak jika kemiripan kata >= 38% atau bigram >= 22% atau combined >= 28%)
+    const sim = calculateJaccardSimilarity(newFullText, prevFullText);
+    if (sim.combined >= 0.28 || sim.unigram >= 0.38 || sim.bigram >= 0.22) {
+      return {
+        passed: false,
+        reason: `Tingkat kemiripan teks terlalu tinggi (Unigram ${(sim.unigram * 100).toFixed(0)}%, Bigram ${(sim.bigram * 100).toFixed(0)}%) dengan postingan #${prev.id || 'antrean'} ("${prev.title}"). Potensi duplikasi konten.`
+      };
+    }
+
+    // Rule C: Opening Hook Overlap (Tolak jika 50 karakter awal mirip >= 45%)
+    const newHook = (newSlides[0] || '').slice(0, 60).toLowerCase();
+    const prevHook = (prevSlides[0] || '').slice(0, 60).toLowerCase();
+    if (newHook.length > 20 && prevHook.length > 20) {
+      const hookSim = calculateJaccardSimilarity(newHook, prevHook);
+      if (hookSim.combined >= 0.45 || hookSim.unigram >= 0.50) {
+        return {
+          passed: false,
+          reason: `Hook pembuka mirip (${(hookSim.unigram * 100).toFixed(0)}%) dengan postingan #${prev.id || 'antrean'}. Wajib variasi angle pembuka.`
+        };
+      }
+    }
+  }
+
+  return { passed: true };
+}
+
+/**
  * Stage 2: Chief Editor / QC Kurator
  * Menilai cerita menfess yang dibuat Creator berdasarkan 4 pilar engagement Threads.
  */
@@ -300,17 +427,41 @@ async function produceCuratedStory(options = null) {
   }
 
   const formatType = storyOpts.formatType || storyOpts.format_type || 'story_affiliate';
+  const recentStories = [
+    ...(storyOpts.inMemoryRecent || []),
+    ...(db.getRecentStoriesForDeduplication ? db.getRecentStoriesForDeduplication(40) : [])
+  ];
+
   if (formatType && formatType !== 'story_affiliate') {
     const { generateMixedPost } = require('./contentMixer');
-    const mixed = await generateMixedPost(formatType, storyOpts);
+    let bestMixed = null;
+    const maxMixedAttempts = 3;
+
+    for (let att = 1; att <= maxMixedAttempts; att++) {
+      const mixed = await generateMixedPost(formatType, storyOpts);
+      const dedupCheck = checkContentDeduplication(mixed, recentStories);
+
+      if (dedupCheck.passed) {
+        console.log(`[EditorialBoard] Postingan (${formatType}: "${mixed.title}") lolos uji orisinalitas & deduplikasi (Percobaan ${att}).`);
+        return {
+          ...mixed,
+          qcScore: 9.2,
+          qcNotes: `[ContentMixer & Anti-Duplikasi] Lolos uji orisinalitas & rotasi matriks.`
+        };
+      }
+
+      console.warn(`[EditorialBoard] Format ${formatType} percobaan ${att} ditolak deduplikasi: ${dedupCheck.reason}`);
+      bestMixed = mixed;
+    }
+
     return {
-      ...mixed,
-      qcScore: 9.0,
-      qcNotes: `[ContentMixer] Format ${formatType} disetujui kurator otomatis.`
+      ...bestMixed,
+      qcScore: 8.0,
+      qcNotes: `[ContentMixer] Diterima setelah ${maxMixedAttempts} iterasi deduplikasi.`
     };
   }
 
-  const maxAttempts = 2;
+  const maxAttempts = 3;
   let lastDraft = null;
   let lastQC = null;
 
@@ -318,8 +469,17 @@ async function produceCuratedStory(options = null) {
     console.log(`[EditorialBoard] Memproduksi draf cerita (Percobaan ${attempt}/${maxAttempts})...`);
     const draft = await generateStory(storyOpts);
     draft.format_type = 'story_affiliate';
-    const qc = await evaluateStoryWithQC(draft);
 
+    // 1. Cek Deduplikasi Konten Leksikal & Semantik
+    const dedupCheck = checkContentDeduplication(draft, recentStories);
+    if (!dedupCheck.passed) {
+      console.warn(`[EditorialBoard] Draf percobaan ${attempt} ditolak filter deduplikasi: ${dedupCheck.reason}`);
+      lastDraft = draft;
+      continue;
+    }
+
+    // 2. Evaluasi dengan Dewan Redaksi QC
+    const qc = await evaluateStoryWithQC(draft);
     console.log(`[EditorialBoard] Hasil QC (${qc.provider}): Skor ${qc.total_score} | Approved: ${qc.approved}`);
     console.log(`[EditorialBoard] Catatan: "${qc.curator_note}"`);
 
@@ -335,13 +495,13 @@ async function produceCuratedStory(options = null) {
     lastQC = qc;
   }
 
-  // Bila attempt 2 masih belum tembus 7.5 tapi sudah di atas 6.5, terima dengan catatan
+  // Bila attempt 3 masih belum tembus tapi sudah lolos deduplikasi, terima dengan catatan batas toleransi
   console.log('[EditorialBoard] Ambang batas disesuaikan untuk memastikan pasokan antrean tidak macet.');
   return {
     ...lastDraft,
     format_type: 'story_affiliate',
     qcScore: lastQC?.total_score || 7.2,
-    qcNotes: `[Auto-Approved] ${lastQC?.curator_note || 'Lolos kriteria batas toleransi.'}`
+    qcNotes: `[Auto-Approved] ${lastQC?.curator_note || 'Lolos kriteria batas toleransi editorial.'}`
   };
 }
 
@@ -377,6 +537,7 @@ async function replenishStockBuffer(targetBuffer = 18) {
 
     const viralFormats = ['hot_take', 'menfess_spill', 'financial_breakdown'];
 
+    const inMemoryBatch = [];
     let addedCount = 0;
     for (let i = 0; i < toCreate; i++) {
       try {
@@ -393,8 +554,12 @@ async function replenishStockBuffer(targetBuffer = 18) {
 
         const story = await produceCuratedStory({ 
           formatType: chosenFormat,
-          targetNicheType
+          targetNicheType,
+          inMemoryRecent: inMemoryBatch
         });
+
+        inMemoryBatch.unshift(story); // update deduplication memory buffer
+
         const id = db.addStoryToQueue({
           title: story.title,
           topic: story.topic,
@@ -482,6 +647,9 @@ async function auditAffiliateLinks() {
 }
 
 module.exports = {
+  calculateJaccardSimilarity,
+  calculateJaccardBigramSimilarity,
+  checkContentDeduplication,
   evaluateStoryWithQC,
   produceCuratedStory,
   replenishStockBuffer,
