@@ -13,10 +13,13 @@ const FORMAT_TYPES = {
   STORY_AFFILIATE: 'story_affiliate',
   HOT_TAKE: 'hot_take',
   MENFESS_SPILL: 'menfess_spill',
-  FINANCIAL_BREAKDOWN: 'financial_breakdown'
+  FINANCIAL_BREAKDOWN: 'financial_breakdown',
+  RECEH_DAILY: 'receh_daily',
+  RANDOM_HOBBIES: 'random_hobbies',
+  SERIALIZED_STORY: 'serialized_story'
 };
 
-// Bank tema Menfess Spill (Crowdsourcing reply bait)
+// Bank tema Menfess Spill (Crowdsourcing reply bait - Obrolan Komunitas)
 const MENFESS_SPILL_THEMES = [
   'Kelakuan paling di luar nalar dari mantan teman sekamar kosan',
   'Aturan gak tertulis di kantor yang kalau dilanggar bakal dijauhin satu divisi',
@@ -30,7 +33,37 @@ const MENFESS_SPILL_THEMES = [
   'Kelakuan tetangga komplek/kontrakan paling bikin ngelus dada soal parkir mobil'
 ];
 
-// Bank tema Financial Breakdown (In this economy reality check - Variasi Lengkap)
+// Bank tema Hal Receh Sehari-hari (Absurditas & Kerecehan Urban)
+const RECEH_DAILY_THEMES = [
+  'Drama ditarik parkir 2 ribu pas cuma beli permen di minimarket tanpa karcis',
+  'Shower kosan mendadak mati pas kepala udah berbusa sampo',
+  'Headset mati sebelah pas naik KRL jam pulang kerja di stasiun Manggarai',
+  'Sandal jepit putus pas lagi nyebrang jalan protokol Sudirman-Kuningan',
+  'Laptop freeze pas revisi dokumen seharian belum sempat di-save',
+  'Charger laptop ketinggalan di kosan padahal baterai sisa 11 persen pas meeting',
+  'Momen pasrah pesen ojol motor pas mendadak hujan badai tanpa jas hujan cadangan',
+  'Beli kopi estetik 45 ribu tanpa mikir tapi ongkir makanan 10 ribu dipikirin 20 menit'
+];
+
+// Bank tema Hobi Random & Adulting Dilemmas
+const RANDOM_HOBBIES_THEMES = [
+  'FOMO main padel atau running GBK beli jersey 2 juta larinya cuma 400 meter',
+  'Tiba-tiba pengen melihara tanaman hias monstera estetik seminggu kemudian layu',
+  'Ritual nyeduh kopi V60 pake timbangan digital 20 menit tiap pagi padahal telat finger print',
+  'Ngerakit lego atau gundam di umur 26 tahun demi nyembuhin inner child tapi boncos',
+  'Thrift shop pasar senen niat hemat dapet baju vintage bau apek dan ongkos cuci lebih mahal',
+  'Beli buku self-improvement di pameran tebal 400 halaman yang dibaca cuma bab 1 doang'
+];
+
+// Bank tema Cerita Berseri (Obrolan Sana-Sini Multi-Slide)
+const SERIALIZED_STORY_THEMES = [
+  'Denger dari obrolan sana-sini soal audit dadakan divisi sebelah yang bikin manajer panik',
+  'Obrolan warung kopi soal temen satu kosan yang paketnya numpuk tapi gak pernah keluar kamar',
+  'Cerita dari obrolan kantor soal rekan kerja yang mendadak resign tanpa pamit pas dapet proyek gede',
+  'Denger obrolan tongkrongan soal drama pembagian warisan keluarga yang awalnya adem ayem'
+];
+
+// Bank tema Financial Breakdown (In this economy reality check - Variasi Lengkap & Dibatasi)
 const FINANCIAL_THEMES = [
   'Realitas gaji fresh grad UMR vs biaya kos sepetak, makan warteg, dan KRL',
   'Breakdown biaya hidup staff 2 tahun di Jakarta: sandwich gen kirim ortu vs tabungan darurat',
@@ -182,7 +215,7 @@ ATURAN KETAT ANAK KORPORAT JAKSEL:
 }
 
 /**
- * Generate 1 Menfess Spill (Crowdsourcing Reply Magnet)
+ * Generate 1 Menfess Spill (Crowdsourcing Reply Magnet - Obrolan Komunitas)
  */
 async function generateMenfessSpill(options = {}) {
   const theme = options.theme || MENFESS_SPILL_THEMES[Math.floor(Math.random() * MENFESS_SPILL_THEMES.length)];
@@ -201,7 +234,7 @@ ATURAN KETAT:
 2. DILARANG HASHTAG (#) apapun.
 3. DILARANG konsep asing / halusinasi (seperti koin sen atau budaya barat). Harus 100% realitas urban Indonesia (kantor Jabodetabek, kosan, KRL, warteg, ojol, split bill).
 4. Mulai langsung dengan gaya pancingan santai: "spill...", "sebutin 1...", "hal paling absurd...", atau "kelakuan paling zonk...".
-5. Akhiri dengan ajakan curhat santai (contoh: "coba cerita di bawah, pengen tau seaneh apa.", "ada yang pernah ngalamin lebih parah?").
+5. DILARANG MENGGUNAKAN FRASA "masuk DM", "kiriman DM", atau "DM gue"! Gunakan ajakan reply di kolom komentar (contoh: "coba cerita di bawah, pengen tau seaneh apa.", "ada yang pernah ngalamin juga? coba spill di reply.").
 6. Output HANYA teks postingan langsung tanpa tanda kutip. Huruf kecil santai.
 `;
 
@@ -224,6 +257,157 @@ ATURAN KETAT:
     slides: [text],
     variant: 'A',
     origin: 'crowdsource'
+  };
+}
+
+/**
+ * Generate 1 Hal Receh Sehari-hari (Absurditas & Kerecehan Kehidupan Urban)
+ */
+async function generateRecehDaily(options = {}) {
+  const theme = options.theme || RECEH_DAILY_THEMES[Math.floor(Math.random() * RECEH_DAILY_THEMES.length)];
+  const topicTag = options.topicTag || getAutoTopicTag(theme);
+
+  const prompt = `
+Kamu adalah Kiki Rachmat (@ceritakikiii), anak muda korporat Jakarta Selatan (usia 25-27 thn). Bio: "In this economy mau nulis cerita orang-orang aja lah".
+Tuliskan SATU (1) POSTINGAN HAL RECEH SEHARI-HARI (panjang 120-220 karakter) tentang absurditas/kesialan kecil sehari-hari di kota besar.
+
+TOPIK RECEH:
+"${theme}"
+
+ATURAN KETAT:
+1. DILARANG sapaan basi (Guys, Halo, Selamat Pagi).
+2. DILARANG HASHTAG (#) apapun.
+3. DILARANG label fiksi atau AI apapun. Tulis murni curhatan manusiawi.
+4. Gaya ngetik warganet Threads: Huruf kecil santai, nada pasrah/self-deprecating (wkwk, capek bgt, parah sih, asli).
+5. Output HANYA teks postingan langsung tanpa tanda kutip.
+`;
+
+  let text = await callAiWithFallback(prompt, 0.8);
+  if (!text || text.length < 40) {
+    text = `drama beli permen 1500 di minimarket tapi ditarik tukang parkir 2000 tanpa karcis adalah salah satu alasan kenapa gue ngerasa in this economy bertahan hidup itu butuh mental baja wkwk.`;
+  }
+
+  text = text.replace(/^["']|["']$/g, '').replace(/[*_~`]/g, '').replace(/#\w+/g, '').trim();
+  if (text.length > 480) text = text.substring(0, 475) + '...';
+
+  return {
+    title: `Receh: ${theme.slice(0, 30)}...`,
+    topic: theme,
+    format_type: FORMAT_TYPES.RECEH_DAILY,
+    topic_tag: topicTag,
+    product_name: null,
+    product_url: null,
+    slides: [text],
+    variant: 'A',
+    origin: 'observation'
+  };
+}
+
+/**
+ * Generate 1 Hobi Random & Adulting Dilemmas
+ */
+async function generateRandomHobbies(options = {}) {
+  const theme = options.theme || RANDOM_HOBBIES_THEMES[Math.floor(Math.random() * RANDOM_HOBBIES_THEMES.length)];
+  const topicTag = options.topicTag || getAutoTopicTag(theme);
+
+  const prompt = `
+Kamu adalah Kiki Rachmat (@ceritakikiii), anak muda korporat Jakarta Selatan (usia 25-27 thn). Bio: "In this economy mau nulis cerita orang-orang aja lah".
+Tuliskan SATU (1) POSTINGAN HOBI RANDOM / PELARIAN STRES ADULTING (panjang 120-220 karakter).
+
+TOPIK HOBI:
+"${theme}"
+
+ATURAN KETAT:
+1. DILARANG sapaan basi dan HASHTAG (#).
+2. Menertawakan fenomena impulsif diri sendiri / circle sebaya (FOMO olahraga mahal, beli mainan inner child, ngerakit sesuatu pas lagi stres kerjaan).
+3. Gaya santai anak Jaksel (boncos, burnout, inner child, wkwk, healing). Huruf kecil santai.
+4. Output HANYA teks postingan langsung tanpa tanda kutip.
+`;
+
+  let text = await callAiWithFallback(prompt, 0.8);
+  if (!text || text.length < 40) {
+    text = `umur 26 tahun tiba-tiba beli lego demi nyembuhin inner child, pas liat total checkout di kasir malah inner child gue yang minta maaf ke rekening tabungan wkwk.`;
+  }
+
+  text = text.replace(/^["']|["']$/g, '').replace(/[*_~`]/g, '').replace(/#\w+/g, '').trim();
+  if (text.length > 480) text = text.substring(0, 475) + '...';
+
+  return {
+    title: `Hobi: ${theme.slice(0, 30)}...`,
+    topic: theme,
+    format_type: FORMAT_TYPES.RANDOM_HOBBIES,
+    topic_tag: topicTag,
+    product_name: null,
+    product_url: null,
+    slides: [text],
+    variant: 'A',
+    origin: 'observation'
+  };
+}
+
+/**
+ * Generate 1 Cerita Berseri (Obrolan Sana-Sini Multi-Slide)
+ */
+async function generateSerializedStory(options = {}) {
+  const theme = options.theme || SERIALIZED_STORY_THEMES[Math.floor(Math.random() * SERIALIZED_STORY_THEMES.length)];
+  const topicTag = options.topicTag || getAutoTopicTag(theme);
+
+  const prompt = `
+Kamu adalah Kiki Rachmat (@ceritakikiii), kurator Threads. Bio: "In this economy mau nulis cerita orang-orang aja lah".
+Tuliskan SATU (1) UTAS CERITA BERSERI PENDEK TEPAT 2 SLIDE berdasarkan obrolan nyata warganet / teman kantor.
+
+TOPIK CERITA:
+"${theme}"
+
+STRUKTUR 2 SLIDE:
+- SLIDE 1 (Hook Awal Menggantung):
+  * WAJIB gunakan framing alami obrolan: "denger dari obrolan sana-sini...", "cerita dari tongkrongan kemarin...", atau "lagi di pantry denger obrolan...".
+  * DILARANG KERAS menggunakan frasa "masuk DM", "kiriman DM", atau "spill di DM"!
+  * DILARANG penomoran "Part 1" atau "[Cerita Fiksi]".
+  * Panjang: 120-180 karakter. Huruf kecil santai.
+- SLIDE 2 (Eskalasi & Dilema Menggantung):
+  * Kelanjutan fakta yang bikin geleng-geleng kepala + celetukan penutup atau pancingan diskusi.
+  * Panjang: 140-220 karakter. Huruf kecil santai.
+
+Keluarkan HANYA JSON:
+{
+  "title": "Judul Cerita Berseri (Maksimal 6 kata)",
+  "slides": [
+    "Slide 1 hook menggantung obrolan sana-sini...",
+    "Slide 2 kelanjutan fakta dan celetukan menggantung..."
+  ]
+}
+`;
+
+  let slides = null;
+  const rawResponse = await callAiWithFallback(prompt, 0.8);
+  if (rawResponse) {
+    try {
+      const cleanJson = rawResponse.replace(/```json/gi, '').replace(/```/gi, '').trim();
+      const parsed = JSON.parse(cleanJson);
+      if (parsed && Array.isArray(parsed.slides) && parsed.slides.length >= 2) {
+        slides = parsed.slides.slice(0, 2).map(s => String(s).replace(/^["']|["']$/g, '').replace(/[*_~`]/g, '').replace(/#\w+/g, '').trim());
+      }
+    } catch (e) {}
+  }
+
+  if (!slides || slides.length < 2) {
+    slides = [
+      `denger dari obrolan sana-sini, temen satu kosan gue ada yang paketnya numpuk depan pintu selama 4 hari tapi lampunya selalu nyala dan gak pernah keluar kamar sama sekali.`,
+      `pas ditegur bapak kos tadi pagi, taunya doi lagi sprint marathon kerjaan remote 3 klien luar negeri demi kejar setoran nikah. antara salut sama kasihan liat matanya udah kayak panda wkwk.`
+    ];
+  }
+
+  return {
+    title: `Cerita: ${theme.slice(0, 30)}...`,
+    topic: theme,
+    format_type: FORMAT_TYPES.SERIALIZED_STORY,
+    topic_tag: topicTag,
+    product_name: null,
+    product_url: null,
+    slides,
+    variant: 'B',
+    origin: 'curation'
   };
 }
 
@@ -289,8 +473,8 @@ function buildFinancialBreakdownText({ incomeJt, location, items, punchline, hea
 
   const safePunchline = sanitizePunchline(punchline);
 
-  // Gunakan header bergaya kasual anak muda korporat (lowercase, organik)
-  const header = headerStyle || `realita gaji ${formatRupiahJt(incomeJt)} di ${location}:`;
+  // Gunakan header bergaya kurator obrolan sana-sini (lowercase, organik, bukan aku-akuan)
+  const header = headerStyle || `denger dari obrolan sana-sini, ini rincian gaji ${formatRupiahJt(incomeJt)} di ${location}:`;
 
   const lines = [
     header,
@@ -314,7 +498,7 @@ const VERIFIED_BUDGETS = [
   {
     incomeJt: 5.2,
     location: 'Kuningan (Jaksel)',
-    headerStyle: 'realita gaji 5.2jt di kuningan (fresh grad UMR):',
+    headerStyle: 'denger dari obrolan sana-sini, ini rincian gaji 5.2jt di kuningan:',
     items: [
       { label: 'Kos sepetak jalan kaki ke kantor', amountJt: 1.5 },
       { label: 'Makan warteg siang & malam', amountJt: 1.4 },
@@ -327,7 +511,7 @@ const VERIFIED_BUDGETS = [
   {
     incomeJt: 7.2,
     location: 'Setiabudi (Jaksel)',
-    headerStyle: 'breakdown survive gaji 7.2jt anak kos setiabudi:',
+    headerStyle: 'obrolan anak kos setiabudi soal survive gaji 7.2jt:',
     items: [
       { label: 'Kos AC + wifi', amountJt: 2.1 },
       { label: 'Makan sehari-hari + kopi kantor', amountJt: 1.8 },
@@ -341,7 +525,7 @@ const VERIFIED_BUDGETS = [
   {
     incomeJt: 8.5,
     location: 'SCBD / Sudirman',
-    headerStyle: 'cash flow gaji 8.5jt anak agensi di scbd:',
+    headerStyle: 'denger rincian cash flow anak agensi scbd (gaji 8.5jt):',
     items: [
       { label: 'Sewa studio kos Benhil', amountJt: 2.5 },
       { label: 'Makan delivery & coffee run lembur', amountJt: 2.2 },
@@ -355,7 +539,7 @@ const VERIFIED_BUDGETS = [
   {
     incomeJt: 6.5,
     location: 'Bintaro - Sudirman',
-    headerStyle: 'simulasi pengeluaran gaji 6.5jt komuter bintaro - sudirman:',
+    headerStyle: 'kemarin denger obrolan komuter bintaro - sudirman (gaji 6.5jt):',
     items: [
       { label: 'Kos / kontrakan Bintaro', amountJt: 1.7 },
       { label: 'Makan hemat + jajan pantry', amountJt: 1.5 },
@@ -369,7 +553,7 @@ const VERIFIED_BUDGETS = [
   {
     incomeJt: 9.8,
     location: 'Tebet (Jaksel)',
-    headerStyle: 'pengeluaran riil gaji 9.8jt di tebet (tech worker):',
+    headerStyle: 'obrolan warkop tebet soal pengeluaran riil tech worker gaji 9.8jt:',
     items: [
       { label: 'Sewa apartemen studio / kos eksklusif', amountJt: 2.8 },
       { label: 'Makan + ngopi wfh', amountJt: 2.3 },
@@ -383,7 +567,7 @@ const VERIFIED_BUDGETS = [
   {
     incomeJt: 12.0,
     location: 'Jakarta Selatan',
-    headerStyle: 'realita gaji 12jt di jaksel (setelah potongan pph 21 & bpjs):',
+    headerStyle: 'denger obrolan anak jaksel soal realita sisa gaji 12jt:',
     items: [
       { label: 'Kos eksklusif / cicilan KPR', amountJt: 3.5 },
       { label: 'Makan & transport kerja', amountJt: 2.8 },
@@ -396,7 +580,7 @@ const VERIFIED_BUDGETS = [
   {
     incomeJt: 4.8,
     location: 'Cilandak (Jaksel)',
-    headerStyle: 'simulasi survive gaji 4.8jt anak kos cilandak:',
+    headerStyle: 'obrolan survive anak kos cilandak gaji 4.8jt:',
     items: [
       { label: 'Kos non-AC gang senggol', amountJt: 1.2 },
       { label: 'Makan warteg 2x sehari', amountJt: 1.3 },
@@ -568,6 +752,12 @@ async function generateMixedPost(formatType, options = {}) {
       return await generateHotTake(options);
     case FORMAT_TYPES.MENFESS_SPILL:
       return await generateMenfessSpill(options);
+    case FORMAT_TYPES.RECEH_DAILY:
+      return await generateRecehDaily(options);
+    case FORMAT_TYPES.RANDOM_HOBBIES:
+      return await generateRandomHobbies(options);
+    case FORMAT_TYPES.SERIALIZED_STORY:
+      return await generateSerializedStory(options);
     case FORMAT_TYPES.FINANCIAL_BREAKDOWN:
       return await generateFinancialBreakdown(options);
     case FORMAT_TYPES.STORY_AFFILIATE:
@@ -582,28 +772,31 @@ async function generateMixedPost(formatType, options = {}) {
 }
 
 /**
- * Menentukan format ideal untuk setiap dari 6 slot harian:
- * Slot 1 (07:15 Pagi): HOT_TAKE / SPILL (0% Ad, Pagi komuter, magnet repost)
- * Slot 2 (10:00 Pagi): MENFESS_SPILL (0% Ad, Coffee break, magnet reply)
+ * Menentukan format ideal untuk setiap dari 6 slot harian (Rotasi Berimbang & Teratur):
+ * Slot 1 (07:15 Pagi): RECEH_DAILY / HOT_TAKE (0% Ad, Pagi komuter KRL/ojol, relatable)
+ * Slot 2 (10:00 Pagi): MENFESS_SPILL / RANDOM_HOBBIES (0% Ad, Coffee break, magnet reply)
  * Slot 3 (12:30 Siang): STORY_AFFILIATE (AFFILIATE #1, Jam makan siang kantor)
- * Slot 4 (16:30 Sore): FINANCIAL_BREAKDOWN / HOT_TAKE (0% Ad, Pulang kantor)
+ * Slot 4 (16:30 Sore): SERIALIZED_STORY / HOT_TAKE / FINANCIAL_BREAKDOWN (0% Ad, Pulang kantor, gaji dibatasi!)
  * Slot 5 (19:30 Malam): STORY_AFFILIATE (AFFILIATE #2, Santai sehabis maghrib)
- * Slot 6 (21:45 Malam): STORY_AFFILIATE (AFFILIATE #3, Peak rebahan malam)
+ * Slot 6 (21:45 Malam): SERIALIZED_STORY / STORY_AFFILIATE (Peak rebahan malam santai)
  */
 function getFormatForSlotNumber(slotNumber) {
   switch (Number(slotNumber)) {
     case 1:
-      return Math.random() > 0.4 ? FORMAT_TYPES.HOT_TAKE : FORMAT_TYPES.MENFESS_SPILL;
+      return Math.random() > 0.5 ? FORMAT_TYPES.RECEH_DAILY : FORMAT_TYPES.HOT_TAKE;
     case 2:
-      return FORMAT_TYPES.MENFESS_SPILL;
+      return Math.random() > 0.5 ? FORMAT_TYPES.MENFESS_SPILL : FORMAT_TYPES.RANDOM_HOBBIES;
     case 3:
-      return FORMAT_TYPES.STORY_AFFILIATE; // Wajib Affiliate
-    case 4:
-      return Math.random() > 0.5 ? FORMAT_TYPES.FINANCIAL_BREAKDOWN : FORMAT_TYPES.HOT_TAKE;
+      return FORMAT_TYPES.STORY_AFFILIATE; // Wajib Affiliate #1
+    case 4: {
+      // Rotasi sore: Utamakan cerita berseri & hot take. Gaji dibatasi maksimal sesekali.
+      const soreOptions = [FORMAT_TYPES.SERIALIZED_STORY, FORMAT_TYPES.HOT_TAKE, FORMAT_TYPES.RECEH_DAILY, FORMAT_TYPES.FINANCIAL_BREAKDOWN];
+      return soreOptions[Math.floor(Math.random() * soreOptions.length)];
+    }
     case 5:
-      return FORMAT_TYPES.STORY_AFFILIATE; // Wajib Affiliate
+      return FORMAT_TYPES.STORY_AFFILIATE; // Wajib Affiliate #2
     case 6:
-      return FORMAT_TYPES.STORY_AFFILIATE; // Wajib Affiliate
+      return Math.random() > 0.4 ? FORMAT_TYPES.STORY_AFFILIATE : FORMAT_TYPES.SERIALIZED_STORY;
     default:
       return FORMAT_TYPES.STORY_AFFILIATE;
   }
@@ -613,6 +806,9 @@ module.exports = {
   FORMAT_TYPES,
   generateHotTake,
   generateMenfessSpill,
+  generateRecehDaily,
+  generateRandomHobbies,
+  generateSerializedStory,
   generateFinancialBreakdown,
   generateMixedPost,
   getFormatForSlotNumber

@@ -332,7 +332,84 @@ async function runTests() {
   assert(sim.combined >= 0.25, 'Combined similarity of duplicate posts should be >= 25%');
   console.log('  ✓ Content Deduplication & Anti-Repetition Engine: 100% Verified');
 
-  console.log('\n🎉 === ALL 13 TESTS PASSED SUCCESSFULLY! === 🎉');
+  // TEST 14: Expanded Persona Pillars & Strict Anti-Repetition (New User Directive)
+  console.log('\n[Test 14] Testing Expanded Persona Pillars & Strict Anti-Repetition...');
+  const { FORMAT_TYPES, generateRecehDaily, generateRandomHobbies, generateSerializedStory } = require('../src/contentMixer');
+
+  // 1. Verifikasi tipe format baru
+  assert(FORMAT_TYPES.RECEH_DAILY === 'receh_daily', 'FORMAT_TYPES.RECEH_DAILY exists');
+  assert(FORMAT_TYPES.RANDOM_HOBBIES === 'random_hobbies', 'FORMAT_TYPES.RANDOM_HOBBIES exists');
+  assert(FORMAT_TYPES.SERIALIZED_STORY === 'serialized_story', 'FORMAT_TYPES.SERIALIZED_STORY exists');
+  console.log('  ✓ New format types verified (receh_daily, random_hobbies, serialized_story)');
+
+  // 2. Uji tolak frasa DM terlarang
+  const dmPost = {
+    title: 'Curhat DM',
+    topic: 'Curhatan Kantor',
+    format_type: 'hot_take',
+    slides: ['masuk dm curhatan anak agensi kuningan soal lemburan gak dibayar. capek bgt liatnya.']
+  };
+  const dmCheck = checkContentDeduplication(dmPost, []);
+  assert.strictEqual(dmCheck.passed, false, 'Post with "masuk dm" must be rejected');
+  assert(dmCheck.reason.includes('frasa DM terlarang'), 'Reason mentions DM ban');
+  console.log('  ✓ Banned DM phrase intercepted successfully! Reason:', dmCheck.reason);
+
+  // 3. Uji tolak label [Cerita Fiksi]
+  const fiksiPost = {
+    title: 'Cerita Fiksi',
+    topic: 'Kisah Kantor',
+    format_type: 'story_affiliate',
+    slides: ['[Cerita Fiksi] Temen kantor gue mendadak dapet promosi jabatan tapi gajinya tetep sama.']
+  };
+  const fiksiCheck = checkContentDeduplication(fiksiPost, []);
+  assert.strictEqual(fiksiCheck.passed, false, 'Post with [Cerita Fiksi] must be rejected');
+  assert(fiksiCheck.reason.includes('label fiksi'), 'Reason mentions fiction ban');
+  console.log('  ✓ Banned fiction label intercepted successfully! Reason:', fiksiCheck.reason);
+
+  // 4. Uji tolak topik kembar (Topic Overlap)
+  const basePost = {
+    id: 101,
+    title: 'Parkir Minimarket',
+    topic: 'Drama Parkir Minimarket 2 Ribu (Cuma beli permen karet tapi ditarik 2 ribu)',
+    format_type: 'receh_daily',
+    slides: ['beli permen karet doang seribu tapi pas mau keluar motor ditarik tukang parkir dua ribu. in this economy emang parkir lebih mahal dari belanjaannya.']
+  };
+  const similarTopicPost = {
+    title: 'Parkir Indomaret Lagi',
+    topic: 'Drama Parkir Minimarket 2 Ribu (Beli permen ditarik 2 ribu)',
+    format_type: 'receh_daily',
+    slides: ['tiap ke minimarket beli barang seribuan selalu dipalak parkir dua ribu tanpa karcis.']
+  };
+  const topicCheck = checkContentDeduplication(similarTopicPost, [basePost]);
+  assert.strictEqual(topicCheck.passed, false, 'Similar topic must be rejected');
+  console.log('  ✓ Topic overlap intercepted successfully! Reason:', topicCheck.reason);
+
+  // 5. Uji tolak opening hook mirip
+  const similarHookPost = {
+    title: 'Parkir Unik',
+    topic: 'Topik Baru Berbeda Total',
+    format_type: 'receh_daily',
+    slides: ['beli permen karet doang seribu tapi pas mau keluar motor ditarik tukang parkir lima ribu.']
+  };
+  const hookCheck = checkContentDeduplication(similarHookPost, [basePost]);
+  assert.strictEqual(hookCheck.passed, false, 'Similar opening hook must be rejected');
+  console.log('  ✓ Opening hook overlap intercepted successfully! Reason:', hookCheck.reason);
+
+  // 6. Uji fallback generator receh, hobi, dan berseri
+  const receh = await generateRecehDaily({ theme: 'Drama ditarik parkir 2 ribu' });
+  assert(receh.slides.length === 1, 'Receh daily has 1 slide');
+  assert(!receh.slides[0].includes('[Cerita Fiksi]'), 'Receh has no fiction label');
+  assert(!receh.slides[0].toLowerCase().includes('masuk dm'), 'Receh has no DM phrase');
+
+  const hobi = await generateRandomHobbies({ theme: 'FOMO main padel atau running GBK' });
+  assert(hobi.slides.length === 1, 'Hobi random has 1 slide');
+
+  const seri = await generateSerializedStory({ theme: 'Obrolan warung kopi soal temen kosan' });
+  assert(seri.slides.length === 2, 'Serialized story has 2 slides');
+  assert(!seri.slides[0].toLowerCase().includes('masuk dm'), 'Serialized story uses natural obrolan framing');
+  console.log('  ✓ New generators produced valid human typing posts without fiction or DM tags');
+
+  console.log('\n🎉 === ALL 14 TESTS PASSED SUCCESSFULLY! === 🎉');
 }
 
 runTests().catch(err => {

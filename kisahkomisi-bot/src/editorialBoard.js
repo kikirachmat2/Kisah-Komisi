@@ -52,14 +52,34 @@ function calculateJaccardBigramSimilarity(textA, textB) {
 
 /**
  * Engine Deduplikasi Konten Leksikal & Semantik (Anti-Kecolongan Konten Kembar)
- * Memverifikasi bahwa draft konten tidak menduplikasi nominal gaji, punchline, atau frasa dari postingan sebelumnya.
+ * Memeriksa riwayat 30 postingan terakhir:
+ * 1. Menolak topik atau opening hook yang mirip
+ * 2. Menolak nominal gaji kembar
+ * 3. Menolak punchline klise terlarang
+ * 4. Menolak frasa DM ("masuk dm") & label fiksi ("cerita fiksi")
  */
 function checkContentDeduplication(draft, recentStories = []) {
   const newSlides = draft.slides || [];
   const newFullText = newSlides.join('\n');
   const newFormat = draft.format_type || draft.formatType || 'story_affiliate';
 
-  // 1. Ekstraksi nominal gaji jika ini format finansial
+  // 1. Filter label fiksi terlarang (Data insight menunjukkan konten relatable jauh lebih tembus)
+  if (/(\[|\()?\s*(cerita fiksi|fiksi|fiktif|buatan ai)\s*(\]|\))?/i.test(newFullText)) {
+    return {
+      passed: false,
+      reason: 'Mengandung label fiksi/AI terlarang. Konten wajib 100% relatable tanpa label fiksi.'
+    };
+  }
+
+  // 2. Filter frasa "masuk DM" terlarang (Wajib framing "denger dari obrolan sana-sini")
+  if (/(masuk\s*dm|kiriman\s*dm|spill\s*di\s*dm)/i.test(newFullText)) {
+    return {
+      passed: false,
+      reason: 'Mengandung frasa DM terlarang. Wajib gunakan framing kurator: "denger dari obrolan sana-sini".'
+    };
+  }
+
+  // 3. Ekstraksi nominal gaji jika ini format finansial
   let newIncomeJt = null;
   if (newFormat === 'financial_breakdown' || /gaji/i.test(newFullText)) {
     const m = newFullText.match(/(?:gaji|income)\s*(?:sebesar)?\s*(\d+[,\.]?\d*)\s*(jt|juta|ribu|rb)?/i);
@@ -73,7 +93,7 @@ function checkContentDeduplication(draft, recentStories = []) {
     }
   }
 
-  // 2. Cek klise punchline terlarang
+  // 4. Cek klise punchline terlarang
   const bannedCliches = /(ngajak nongkrong.*(senopati|cafe|500rb).*pura-pura|kopi susu 40.*ongkir|mending gue pura-pura (pingsan|tipes|amnesia|mati)|pura-pura (pingsan|tipes))/i;
   if (bannedCliches.test(newFullText)) {
     return {
@@ -82,14 +102,16 @@ function checkContentDeduplication(draft, recentStories = []) {
     };
   }
 
-  // 3. Iterasi setiap postingan riwayat (published dan queued)
-  for (const prev of recentStories) {
+  // 5. Jendela 30 postingan terakhir (Anti-Repetisi Window)
+  const windowStories = recentStories.slice(0, 30);
+
+  for (const prev of windowStories) {
     if (prev.id && draft.id && prev.id === draft.id) continue;
 
     const prevSlides = prev.slides || [];
     const prevFullText = prevSlides.join('\n');
 
-    // Rule A: Jika format finansial, DILARANG SAMA SEKALI nominal gaji kembar!
+    // Rule A: Jika format finansial, DILARANG SAMA SEKALI nominal gaji kembar dalam 30 post terakhir!
     if (newIncomeJt !== null && newIncomeJt > 0 && (prev.format_type === 'financial_breakdown' || /gaji/i.test(prevFullText))) {
       const prevM = prevFullText.match(/(?:gaji|income)\s*(?:sebesar)?\s*(\d+[,\.]?\d*)\s*(jt|juta|ribu|rb)?/i);
       if (prevM && prevM[1]) {
@@ -109,26 +131,37 @@ function checkContentDeduplication(draft, recentStories = []) {
       }
     }
 
-    // Rule B: Jaccard Text Similarity (Tolak jika kemiripan kata >= 38% atau bigram >= 22% atau combined >= 28%)
+    // Rule B: Topik Overlap (Tolak jika topik terlalu mirip >= 40%)
+    if (draft.topic && prev.topic) {
+      const topicSim = calculateJaccardSimilarity(draft.topic, prev.topic);
+      if (topicSim.combined >= 0.38 || topicSim.unigram >= 0.40) {
+        return {
+          passed: false,
+          reason: `Topik ("${draft.topic.slice(0, 35)}...") terlalu mirip (${(topicSim.unigram * 100).toFixed(0)}%) dengan postingan #${prev.id || 'antrean'}. Wajib rotasi topik.`
+        };
+      }
+    }
+
+    // Rule C: Opening Hook Overlap (Tolak jika kalimat/frasa pembuka mirip >= 38%)
+    const newHook = (newSlides[0] || '').slice(0, 65).toLowerCase();
+    const prevHook = (prevSlides[0] || '').slice(0, 65).toLowerCase();
+    if (newHook.length > 20 && prevHook.length > 20) {
+      const hookSim = calculateJaccardSimilarity(newHook, prevHook);
+      if (hookSim.combined >= 0.35 || hookSim.unigram >= 0.38) {
+        return {
+          passed: false,
+          reason: `Hook pembuka mirip (${(hookSim.unigram * 100).toFixed(0)}%) dengan postingan #${prev.id || 'antrean'}. Wajib variasi angle pembuka.`
+        };
+      }
+    }
+
+    // Rule D: Jaccard Text Similarity (Tolak jika kemiripan kata >= 38% atau bigram >= 22% atau combined >= 28%)
     const sim = calculateJaccardSimilarity(newFullText, prevFullText);
     if (sim.combined >= 0.28 || sim.unigram >= 0.38 || sim.bigram >= 0.22) {
       return {
         passed: false,
         reason: `Tingkat kemiripan teks terlalu tinggi (Unigram ${(sim.unigram * 100).toFixed(0)}%, Bigram ${(sim.bigram * 100).toFixed(0)}%) dengan postingan #${prev.id || 'antrean'} ("${prev.title}"). Potensi duplikasi konten.`
       };
-    }
-
-    // Rule C: Opening Hook Overlap (Tolak jika 50 karakter awal mirip >= 45%)
-    const newHook = (newSlides[0] || '').slice(0, 60).toLowerCase();
-    const prevHook = (prevSlides[0] || '').slice(0, 60).toLowerCase();
-    if (newHook.length > 20 && prevHook.length > 20) {
-      const hookSim = calculateJaccardSimilarity(newHook, prevHook);
-      if (hookSim.combined >= 0.45 || hookSim.unigram >= 0.50) {
-        return {
-          passed: false,
-          reason: `Hook pembuka mirip (${(hookSim.unigram * 100).toFixed(0)}%) dengan postingan #${prev.id || 'antrean'}. Wajib variasi angle pembuka.`
-        };
-      }
     }
   }
 
@@ -406,9 +439,15 @@ async function produceCuratedStory(options = null) {
       } else if (targetNiche === 'duniakerja') {
         nicheMatchingTopics = TOPICS.filter(t => /magang|lembur|hrd|bos|cuti|gaji|karyawan|resign|meeting/i.test(t));
       } else if (targetNiche === 'anakkos') {
-        nicheMatchingTopics = TOPICS.filter(t => /kos|kontrakan|token listrik|teman sekamar|kamar/i.test(t));
-      } else if (targetNiche === 'relasi') {
-        nicheMatchingTopics = TOPICS.filter(t => /pacar|pasangan|kencan|mertua|suami|istri|hb/i.test(t));
+        nicheMatchingTopics = TOPICS.filter(t => /kos|kontrakan|token listrik|teman sekamar|kamar|shower/i.test(t));
+      } else if (targetNiche === 'relasi' || targetNiche === 'keluarga') {
+        nicheMatchingTopics = TOPICS.filter(t => /pacar|pasangan|kencan|mertua|suami|istri|ipar|nikah|kondangan/i.test(t));
+      } else if (targetNiche === 'receh' || targetNiche === 'halreceh') {
+        nicheMatchingTopics = TOPICS.filter(t => /parkir|shower|headset|sandal|laptop|charger|ojol|permen/i.test(t));
+      } else if (targetNiche === 'hobi' || targetNiche === 'hobirandom') {
+        nicheMatchingTopics = TOPICS.filter(t => /padel|running|monstera|kopi|v60|lego|gundam|thrift/i.test(t));
+      } else if (targetNiche === 'berseri') {
+        nicheMatchingTopics = TOPICS.filter(t => /part 1|obrolan kasus|misteri temen|skandal/i.test(t));
       } else if (targetNiche === 'rumahtangga') {
         nicheMatchingTopics = TOPICS.filter(t => /tetangga|pagar|arisan|komplek|sampah/i.test(t));
       }
@@ -533,20 +572,35 @@ async function replenishStockBuffer(targetBuffer = 18) {
     // Cek komposisi antrean yang sudah ada
     const breakdown = db.getQueuedFormatBreakdown ? db.getQueuedFormatBreakdown() : {};
     const affiliateCount = breakdown['story_affiliate'] || 0;
-    const viralCount = (breakdown['hot_take'] || 0) + (breakdown['menfess_spill'] || 0) + (breakdown['financial_breakdown'] || 0);
+    const viralCount = (breakdown['hot_take'] || 0) + 
+      (breakdown['menfess_spill'] || 0) + 
+      (breakdown['receh_daily'] || 0) + 
+      (breakdown['random_hobbies'] || 0) + 
+      (breakdown['serialized_story'] || 0) + 
+      (breakdown['financial_breakdown'] || 0);
 
-    const viralFormats = ['hot_take', 'menfess_spill', 'financial_breakdown'];
+    // Kumpulan format pilar viral non-affiliate (Rotasi Berimbang)
+    const baseViralFormats = [
+      'receh_daily',
+      'random_hobbies',
+      'hot_take',
+      'menfess_spill',
+      'serialized_story'
+    ];
 
     const inMemoryBatch = [];
     let addedCount = 0;
     for (let i = 0; i < toCreate; i++) {
       try {
-        // Jaga keseimbangan 50% affiliate, 50% viral insight
+        // Jaga keseimbangan 50% affiliate, 50% pilar viral insight
         let chosenFormat;
         if (affiliateCount + (addedCount > 0 ? 1 : 0) <= viralCount) {
           chosenFormat = 'story_affiliate';
         } else {
-          chosenFormat = viralFormats[Math.floor(Math.random() * viralFormats.length)];
+          // Batasi ketat financial_breakdown: hanya sertakan jika antrean & batch sekarang belum ada financial_breakdown
+          const hasFinancial = (breakdown['financial_breakdown'] || 0) > 0 || inMemoryBatch.some(b => b.format_type === 'financial_breakdown');
+          const currentPool = hasFinancial ? baseViralFormats : [...baseViralFormats, 'financial_breakdown'];
+          chosenFormat = currentPool[Math.floor(Math.random() * currentPool.length)];
         }
 
         // Seimbangkan 50% pilar viral terkunci & 50% pilar eksplorasi gelombang baru
@@ -560,10 +614,18 @@ async function replenishStockBuffer(targetBuffer = 18) {
 
         inMemoryBatch.unshift(story); // update deduplication memory buffer
 
+        // Pastikan slide 100% bersih dari label [Cerita Fiksi] / (Cerita Fiksi)
+        const cleanSlides = (story.slides || []).map(s => 
+          String(s)
+            .replace(/\[\s*(Cerita Fiksi|Kiriman Warganet|Kisah Fiksi|Fiksi|Fiktif)\s*\]/gi, '')
+            .replace(/\(\s*(Cerita Fiksi|Kiriman Warganet|Kisah Fiksi|Fiksi|Fiktif)\s*\)/gi, '')
+            .trim()
+        );
+
         const id = db.addStoryToQueue({
           title: story.title,
           topic: story.topic,
-          slides: story.slides,
+          slides: cleanSlides,
           productName: story.product_name,
           productUrl: story.product_url,
           scheduledFor: new Date().toISOString(),
@@ -571,7 +633,7 @@ async function replenishStockBuffer(targetBuffer = 18) {
           qcNotes: story.qcNotes,
           topicTag: story.topic_tag || story.topicTag || 'curhat',
           variant: story.variant || 'B',
-          origin: story.origin || 'fiction',
+          origin: story.origin || 'curation',
           formatType: story.format_type || chosenFormat
         });
         addedCount++;

@@ -37,10 +37,55 @@ const TOPICS_SOCIAL_DILEMMA = [
   'Teman Kantor Pinjam Barang Ga Balik (Minjem charger dan earphone berminggu-minggu pas diminta balik malah sinis)'
 ];
 
+const TOPICS_HAL_RECEH = [
+  'Drama Parkir Minimarket 2 Ribu (Cuma beli permen karet seribu tapi ditarik parkir 2 ribu tanpa karcis)',
+  'Shower Kosan Mati Pas Lagi Sampoan (Mata pedih kena busa terpaksa bilas pake air minum galon)',
+  'Headset Mati Sebelah Pas Commute KRL (Stasiun Manggarai lagi rusuh tapi telinga cuma denger suara sebelah)',
+  'Sandal Jepit Putus Pas Nyebrang Jalan Protokol (Lagi buru-buru nyebrang Sudirman sandal putus terpaksa jalan pincang)',
+  'Laptop Kantor Freeze Pas Belum Save Dokumen (Revisi seharian hilang seketika pas atasan minta dikirim sekarang)',
+  'Charger Ketinggalan di Kosan Baterai 11% (Kepanikan massal anak magang pas jam kerja baru mulai)'
+];
+
+const TOPICS_KELUARGA_RELASI = [
+  'Ipar Numpang Hidup di Kontrakan Pasutri Muda (Gak kerja gak bantu beres-beres tapi ngeluh makanan kurang enak)',
+  'Kumpul Keluarga Ditanya Kapan Nikah & Beli Rumah (Gaji UMR dituntut standar kesuksesan paman konglomerat)',
+  'Drama Kondangan 4 Kali Sebulan (Amplop jebol honor sebulan abis buat kondangan temen yang jarang nyapa)',
+  'Pasutri Muda vs Ekspektasi Mertua (Mertua banding-bandingin cara ngurus anak sama zaman dulu)',
+  'Pasangan Gak Ada Inisiatif Urusan Masa Depan (Ditanya arah hubungan selalu jawab jalanin aja dulu santai)'
+];
+
+const TOPICS_HOBI_RANDOM = [
+  'FOMO Padel & Running GBK Demi Konten (Beli jersey 2 juta baru lari 400 meter udah minta duduk di pinggir)',
+  'Tiba-tiba Pengen Melihara Tanaman Hias di Kosan (Beli monstera estetik seminggu kemudian daunnya kuning layu)',
+  'Nyeduh Kopi Manual V60 Pake Timbangan Digital (Ritual 20 menit tiap pagi demi kopi estetik padahal telat absen finger print)',
+  'Ngerakit Lego / Gundam di Umur 26 Tahun (Menyembuhkan inner child tapi dompet yang kena luka batin)',
+  'Thrift Shop Baju Bekas Niat Irit Malah Boncos (Niat hemat borong jaket vintage taunya bau apek dan ongkos cuci dry clean lebih mahal)'
+];
+
+const TOPICS_HOT_TAKE_RINGAN = [
+  'Americano Dingin Tanpa Gula Itu Pahit Doang (Stop pura-pura nikmatin rasa arang demi keliatan mature di tongkrongan)',
+  'Pake Earphone Tanpa Lagu di Kantor (Alasan utama bukan denger musik tapi proteksi diri biar ga diajak ngobrol)',
+  'Weekend Dua Hari Adalah Penipuan Publik (Sabtu buat tepar bayar utang tidur, Minggu udah stres mikirin Senin)',
+  'Meeting yang Harusnya Bisa Selesai di 1 Email (Bentuk teror mental terselubung manajer yang kesepian di kantor)',
+  'Split Bill Makan Bareng Dibulatkan ke Atas (Yang pesen wagyu bayar sama rata sama yang cuma pesen es teh manis)'
+];
+
+const TOPICS_CERITA_BERSERI = [
+  'Obrolan Kasus Skandal Kantor Divisi Sebelah (Part 1: Kejanggalan laporan audit kas kecil berujung saling lempar tanggung jawab)',
+  'Misteri Temen Kosan Kamar Ujung yang Gak Pernah Keliatan (Part 1: Paket numpuk depan pintu tapi lampu selalu nyala)',
+  'Drama Warisan Tanah Keluarga di Kampung (Part 1: Paman yang gak pernah nengok mendadak pulang bawa sertifikat)',
+  'Dilema Resign vs Bertahan di Kantor Toksik (Part 1: SP1 misterius turun setelah menolak disuruh lembur weekend)'
+];
+
 const TOPICS = [
   ...TOPICS_CORPORATE,
   ...TOPICS_INTIMATE_MENFESS,
-  ...TOPICS_SOCIAL_DILEMMA
+  ...TOPICS_SOCIAL_DILEMMA,
+  ...TOPICS_HAL_RECEH,
+  ...TOPICS_KELUARGA_RELASI,
+  ...TOPICS_HOBI_RANDOM,
+  ...TOPICS_HOT_TAKE_RINGAN,
+  ...TOPICS_CERITA_BERSERI
 ];
 
 // Menambahkan sub_id tracking ke link Shopee Affiliate secara aman dan terperinci
@@ -308,14 +353,18 @@ async function generateStory(options = {}) {
     prompt = `
 Kamu adalah Kiki Rachmat (@ceritakikiii), pemilik akun Threads. Bio: "In this economy mau nulis cerita orang-orang aja lah".
 Persona: Anak muda korporat Jakarta Selatan (usia 25-27 thn, kerja di agensi/tech/kantoran Jaksel, commute KRL/MRT, ngekos).
-Tuliskan SATU (1) POSTINGAN CURHAT TUNGGAL (Single Post Menfess, TIDAK BERSAMBUNG, HANYA 1 SLIDE).
+Tuliskan SATU (1) POSTINGAN CURHAT TUNGGAL (Single Post, TIDAK BERSAMBUNG, HANYA 1 SLIDE).
 Panjang teks cerita: 150 - 240 karakter.
 
 TOPIK/KERESAHAN NYATA:
 ${topic}
 
 STRUKTUR DAN ATURAN WAJIB (HUMAN TYPING ANAK KORPORAT JAKSEL):
-1. WAJIB SUDUT PANDANG ORANG PERTAMA ("Gue", "Di kantor gue daerah Kuningan/SCBD", "Temen kosan gue", "Atasan gue"). DILARANG gaya cerpen atau novel orang ketiga (DILARANG nama-nama sinetron seperti "Pak Baskara", "Direktur menatap Rendy", "Rian melongo").
+1. SUDUT PANDANG:
+   - Jika opini pribadi: Sudut pandang orang pertama ("gue di kantor...", "tiap senin pagi di stasiun...", "temen kosan gue...").
+   - Jika menceritakan pengalaman orang lain: WAJIB gunakan framing alami obrolan ("denger dari obrolan sana-sini...", "kemarin pas lagi nongkrong denger cerita...", "lagi di pantry denger obrolan...").
+   - DILARANG KERAS MENGGUNAKAN FRASA "masuk DM", "kiriman DM", ATAU "spill di DM"!
+   - DILARANG gaya cerpen/novel orang ketiga (DILARANG nama-nama sinetron seperti "Pak Baskara", "Direktur menatap Rendy").
 2. LANGSUNG TO THE POINT: Mulai langsung dari kejadian nyata yang bikin emosi/kaget/geleng-geleng kepala.
 3. AKHIRI DENGAN PERTANYAAN DILEMA 2-KUBU (THREAD WAR BAIT): Pertanyaan penutup yang membelah audiens menjadi 2 kubu (Tim A vs Tim B). Contoh: "kalian di posisi gue tim langsung speak up atau tim tahan dulu cari aman? coba jelasin."
 4. Gaya bahasa warganet santai anak korporat (lu-gue, bgt, parah, nyesek, boncos, burnout, wkwk, haha). Huruf kecil santai.
@@ -345,8 +394,9 @@ TOPIK/KERESAHAN NYATA:
 ${topic}
 
 STRUKTUR 3 PART:
-1. PART 1 (Hook Kejadian Menggantung - Sudut Pandang Orang Pertama):
-   - WAJIB sudut pandang orang pertama ("Gue", "Temen kosan gue", "Atasan gue di kantor"). Langsung ke adegan yang memicu rasa penasaran warganet.
+1. PART 1 (Hook Kejadian Menggantung):
+   - Sudut pandang: Jika opini sendiri ("gue", "atasan gue"), jika cerita orang lain gunakan framing obrolan ("denger dari obrolan sana-sini...", "kemarin pas nongkrong denger cerita...").
+   - DILARANG KERAS MENGGUNAKAN FRASA "masuk DM", "kiriman DM", ATAU "spill di DM"!
    - DILARANG gaya sinetron orang ketiga (seperti "Pak Baskara mendadak diam" atau "Rendy tertegun").
    - Panjang: 120 - 180 karakter. Huruf kecil santai.
 2. PART 2 (Eskalasi Kejadian / Percakapan Nyata):

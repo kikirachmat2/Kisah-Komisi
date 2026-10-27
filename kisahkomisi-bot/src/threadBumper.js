@@ -134,8 +134,8 @@ ATURAN KETAT INTEGRITAS:
 
   // Fallback aman dan utuh jika AI error
   const fallbacks = [
-    'Update dikit: Banyak banget yang DM nanyain kelanjutan kasus ini. Ternyata masalahnya udah mulai dimediasi sama pihak terkait tadi sore. Semoga ada solusi adil!',
-    'Btw ada update lanjutan: Katanya si pengirim cerita udah mutusin buat ambil sikap tegas setelah baca saran-saran di komen. Makasih banyak buat yang udah kasih insight!',
+    'Update dikit: Banyak obrolan sana-sini yang nanyain kelanjutan kasus ini. Ternyata masalahnya udah mulai dimediasi sama pihak terkait tadi sore. Semoga ada solusi adil!',
+    'Btw ada update lanjutan: Katanya si empunya cerita udah mutusin buat ambil sikap tegas setelah baca saran-saran di komen. Makasih banyak buat yang udah kasih insight!',
     'Barusan dapet kabar tambahan: Cerita ini ternyata rame dibahas di kantor sebelah juga. Realita dunia kerja emang kadang lebih drama dari sinetron wkwk. Tetap semangat pejuang rupiah!'
   ];
   return fallbacks[Math.floor(Math.random() * fallbacks.length)];
