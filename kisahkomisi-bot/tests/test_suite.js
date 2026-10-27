@@ -425,7 +425,32 @@ async function runTests() {
   console.log('  ✓ Slide Terakhir (Credit Anonim di Ujung):', lastSlide);
   console.log('  ✓ processAnonymousStory passed all requirements!');
 
-  console.log('\n🎉 === ALL 15 TESTS PASSED SUCCESSFULLY! === 🎉');
+  // TEST 16: Temporal Calendar Awareness, Viral Callback & 50/50 Rundown
+  console.log('\n[Test 16] Testing Temporal Calendar Awareness, Viral Callback & 50/50 Rundown...');
+  const { getCurrentLifeContext, getViralCallbackCandidate, generateDailyLifeUpdate, generateAnonymousCurhatStory } = require('../src/dailyLifeEngine');
+  const lifeContext = getCurrentLifeContext();
+  assert(lifeContext.dateFormatted, 'Must have formatted date');
+  assert(lifeContext.payrollPhase, 'Must have payroll phase');
+  console.log('  ✓ Life Context:', lifeContext.dateFormatted, '| Phase:', lifeContext.payrollPhase);
+
+  const callback = getViralCallbackCandidate();
+  console.log('  ✓ Viral Callback Candidate Found:', callback ? `#${callback.storyId} (${callback.title} - ${callback.views} views)` : 'None in current local DB');
+
+  const lifeUpdate = await generateDailyLifeUpdate();
+  assert(lifeUpdate.slides.length === 1, 'Life update must be 1 slide');
+  assert(!lifeUpdate.product_url, 'Life update must be 0% affiliate');
+  assert(!lifeUpdate.slides[0].includes('[Cerita Fiksi]'), 'Life update must not have fiction label');
+  console.log('  ✓ Single Life Update (0% Ad):', lifeUpdate.slides[0]);
+
+  const anonStory = await generateAnonymousCurhatStory();
+  assert(anonStory.slides.length >= 3, 'Anonymous story must be at least 3 slides');
+  assert(anonStory.slides[0].toLowerCase().includes('hari ini ada dm cerita anonim nih'), 'Slide 1 must have DM anonim hook');
+  const anonLastSlide = anonStory.slides[anonStory.slides.length - 1];
+  assert(anonLastSlide.includes('(cerita anonim dari obrolan warganet)'), 'Last slide must have anonymous credit');
+  console.log('  ✓ Anonymous Curhat Hook (Slide 1):', anonStory.slides[0]);
+  console.log('  ✓ Anonymous Curhat Ending (Credit di Ujung):', anonLastSlide);
+
+  console.log('\n🎉 === ALL 16 TESTS PASSED SUCCESSFULLY! === 🎉');
 }
 
 runTests().catch(err => {

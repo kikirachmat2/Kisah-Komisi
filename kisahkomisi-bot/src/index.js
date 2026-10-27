@@ -1047,19 +1047,18 @@ async function checkTokenExpiryReminder() {
 }
 
 // ==========================================
-// 📅 JADWAL 6 KONTEN HARIAN (GOLDEN HOURS WIB)
-// Strategi:
-// 1. Gedein Insight (Organik 0 Link): Slot 1, 2, 4 (Hot Take, Menfess Spill, Financial Breakdown)
-// 2. Jualan Affiliate (Shopee Contextual): Slot 3, 5, 6 (Story + Shopee Anchor Under 50k + 2-Kubu Closing)
+// 📅 JADWAL 6 KONTEN HARIAN (RUNDOWN 50/50 SEIMBANG)
+// 1. 50% Gedein Insight (Organik 0% Link): Slot 1, 2, 4 (Single Post Life Update Kiki, News/Demo, Viral Callback)
+// 2. 50% Jualan Affiliate (Shopee Contextual): Slot 3, 5, 6 (Curhat DM Anonim "hari ini ada dm cerita anonim nih..." + Shopee Anchor Under 50k)
 // 3. Fully Otomatis + Jitter Manusiawi (1-6 Menit)
 // ==========================================
 const DAILY_SLOTS = [
-  { slotNumber: 1, time: '07:15', vetoTime: '07:00', label: 'SLOT 1 - PAGI KOMUTER (07:15 WIB)', defaultFormat: 'hot_take', targetNicheType: 'locked', hasAffiliate: false },
-  { slotNumber: 2, time: '10:00', vetoTime: '09:45', label: 'SLOT 2 - COFFEE BREAK (10:00 WIB)', defaultFormat: 'menfess_spill', targetNicheType: 'explore', hasAffiliate: false },
-  { slotNumber: 3, time: '12:30', vetoTime: '12:15', label: 'SLOT 3 - MAKAN SIANG (12:30 WIB)', defaultFormat: 'story_affiliate', targetNicheType: 'locked', hasAffiliate: true },
-  { slotNumber: 4, time: '16:30', vetoTime: '16:15', label: 'SLOT 4 - SORE PULANG KANTOR (16:30 WIB)', defaultFormat: 'financial_breakdown', targetNicheType: 'locked', hasAffiliate: false },
+  { slotNumber: 1, time: '07:15', vetoTime: '07:00', label: 'SLOT 1 - PAGI KOMUTER (07:15 WIB)', defaultFormat: 'single_life_update', targetNicheType: 'locked', hasAffiliate: false },
+  { slotNumber: 2, time: '10:00', vetoTime: '09:45', label: 'SLOT 2 - COFFEE BREAK (10:00 WIB)', defaultFormat: 'single_life_update', targetNicheType: 'explore', hasAffiliate: false },
+  { slotNumber: 3, time: '12:30', vetoTime: '12:15', label: 'SLOT 3 - MAKAN SIANG (12:30 WIB)', defaultFormat: 'anonymous_curhat_story', targetNicheType: 'locked', hasAffiliate: true },
+  { slotNumber: 4, time: '16:30', vetoTime: '16:15', label: 'SLOT 4 - SORE PULANG KANTOR (16:30 WIB)', defaultFormat: 'single_life_update', targetNicheType: 'locked', hasAffiliate: false },
   { slotNumber: 5, time: '19:30', vetoTime: '19:15', label: 'SLOT 5 - MALAM SANTAI (19:30 WIB)', defaultFormat: 'story_affiliate', targetNicheType: 'explore', hasAffiliate: true },
-  { slotNumber: 6, time: '21:45', vetoTime: '21:30', label: 'SLOT 6 - PEAK REBAHAN (21:45 WIB)', defaultFormat: 'story_affiliate', targetNicheType: 'explore', hasAffiliate: true }
+  { slotNumber: 6, time: '21:45', vetoTime: '21:30', label: 'SLOT 6 - PEAK REBAHAN (21:45 WIB)', defaultFormat: 'anonymous_curhat_story', targetNicheType: 'explore', hasAffiliate: true }
 ];
 
 // ==========================================
@@ -1131,7 +1130,9 @@ async function prepareAndNotifyVetoSlot(slotTime, label, slotNumber = null) {
     const formatType = story.format_type || (story.product_url ? 'story_affiliate' : 'hot_take');
 
     let formatBadge = '📖 Cerita Relate + Shopee Affiliate';
-    if (formatType === 'hot_take') formatBadge = '🔥 Hot Take (1-Liner Sarcasm & Relatable Truth)';
+    if (formatType === 'single_life_update') formatBadge = '☕ Life Update Kiki (Real-Time Persona, 0% Iklan)';
+    else if (formatType === 'anonymous_curhat_story') formatBadge = '📩 Cerita DM Anonim Warganet (Add to thread + Shopee)';
+    else if (formatType === 'hot_take') formatBadge = '🔥 Hot Take (1-Liner Sarcasm & Relatable Truth)';
     else if (formatType === 'menfess_spill') formatBadge = '🗣️ Menfess Spill (Crowdsourcing Reply Magnet)';
     else if (formatType === 'financial_breakdown') formatBadge = '💸 Financial Breakdown (In This Economy)';
 
@@ -1286,7 +1287,9 @@ async function executeScheduledPosting(slotTime, label, slotNumber = null) {
 
       const formatType = story.format_type || (story.product_url ? 'story_affiliate' : 'hot_take');
       let formatBadge = '📖 Cerita Relate + Shopee Affiliate';
-      if (formatType === 'hot_take') formatBadge = '🔥 Hot Take (1-Liner Sarcasm & Relatable Truth)';
+      if (formatType === 'single_life_update') formatBadge = '☕ Life Update Kiki (Real-Time Persona, 0% Iklan)';
+      else if (formatType === 'anonymous_curhat_story') formatBadge = '📩 Cerita DM Anonim Warganet (Add to thread + Shopee)';
+      else if (formatType === 'hot_take') formatBadge = '🔥 Hot Take (1-Liner Sarcasm & Relatable Truth)';
       else if (formatType === 'menfess_spill') formatBadge = '🗣️ Menfess Spill (Crowdsourcing Reply Magnet)';
       else if (formatType === 'financial_breakdown') formatBadge = '💸 Financial Breakdown (In This Economy)';
 

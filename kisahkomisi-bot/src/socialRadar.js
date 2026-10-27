@@ -6,25 +6,24 @@ const { getAutoTopicTag } = require('./aiStory');
 const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
 const GROQ_API_KEY = process.env.GROQ_API_KEY;
 
-// Blacklist isu berbahaya/sensitif untuk menjaga keamanan akun Meta & UU ITE
+// Blacklist isu kriminal berat & pelanggaran berat Meta TOS (SARA, pornografi, terorisme, bunuh diri)
 const UNSAFE_KEYWORDS = [
   'tewas', 'meninggal', 'pembunuhan', 'jenazah', 'bunuh diri',
-  'perkosa', 'pelecehan', 'cabul', 'teroris', 'bom', 'sara', 'agama',
-  'partai', 'pilpres', 'pilkada', 'pemilu', 'menteri', 'presiden'
+  'perkosa', 'pelecehan', 'cabul', 'teroris', 'bom', 'sara'
 ];
 
 /**
- * Memindai isu atau topik kehidupan sehari-hari yang sedang ramai dibahas di Threads Indonesia
+ * Memindai isu atau topik kehidupan sehari-hari, demo, politik, atau tren viral yang SEDANG RAMAI di Indonesia
  * Menggunakan Gemini 2.5 Flash dengan Google Search Grounding real-time.
  */
 async function scanThreadsViralTrends(forceFresh = false) {
-  // Cek cache di settings (valid 6 jam)
+  // Cek cache di settings (valid 3 jam agar tetap segar)
   if (!forceFresh) {
     const cached = db.getSetting('THREADS_TRENDING_RADAR');
     const cachedAt = db.getSetting('THREADS_TRENDING_RADAR_AT');
     if (cached && cachedAt) {
       const ageHours = (Date.now() - new Date(cachedAt).getTime()) / (1000 * 60 * 60);
-      if (ageHours < 6) {
+      if (ageHours < 3) {
         try {
           return JSON.parse(cached);
         } catch (e) {}
@@ -39,18 +38,22 @@ async function scanThreadsViralTrends(forceFresh = false) {
 
   const prompt = `
 Kamu adalah Social Radar Specialist untuk audiens Threads Indonesia (@ceritakikiii).
-Lakukan pencarian Google real-time untuk topik, keluhan, curhatan, atau drama viral yang SEDANG RAMAI dibahas warganet Indonesia di platform Threads hari ini / minggu ini.
+Lakukan pencarian Google real-time untuk topik hangat, isu politik/kebijakan publik, demo, keluhan, curhatan, atau drama viral yang SEDANG RAMAI dibahas warganet Indonesia hari ini / minggu ini.
 
-Fokuskan pada kategori kehidupan nyata yang relatable:
-1. Dunia kerja (kantor toxic, lembur, gaji, bos narsis, teman cari muka, drama resign)
-2. Kehidupan anak kos / kontrakan (teman jorok, bawa pacar nginep, kulkas kosan, token listrik jebol)
-3. Relasi & asmara (kencan pertama zonk, friendzone, split bill ekstrem, ghosting)
-4. Kehidupan bertetangga / rumah tangga (parkir depan pagar, arisan macet, mertua)
-5. KRL / transportasi publik (rebutan kursi, drama ojol)
+Kategori yang sangat potensial memicu keterlibatan (engagement wave):
+1. Isu sosial & politik warganet (demo mahasiswa/buruh, kebijakan absurd, pajak/PPN, aturan kerja/tapera, fenomena "indonesia cemas/gelap")
+2. Dunia kerja & korporat (kantor toxic, lembur, gaji, bos narsis, drama resign)
+3. Kehidupan anak kos / kontrakan (biaya hidup, token listrik, teman kos)
+4. Relasi & asmara (kencan zonk, split bill, red flag)
+5. KRL & transportasi publik (macet jalanan, demo bundaran HI, commuter Sudirman)
+
+SUDUT PANDANG KIKI:
+Bukan buzzer politik kaku, melainkan anak muda korporat Jaksel yang adaptif, ceplas-ceplos, dan empatik.
+Contoh saat ada demo: "denger denger ada demo yaa, semangat kawan kawan mahasiswa, biar kuterjang macet ini asal aspirasi tersampaikan dengan baik, stay safe kawan kawan".
 
 ATURAN KETAT:
-- DILARANG isu politik praktis (menteri, capres, partai), kekerasan, atau berita duka.
-- Wajib isu yang memicu perdebatan / obrolan / curhat sesama warganet di Threads.
+- HANYA hindari konten pornografi, SARA ekstrem, atau glorifikasi kekerasan berat/pembunuhan.
+- Isu politik berani, kritik sosial, atau polemik publik SANGAT DIPERBOLEHKAN karena merupakan wave keterlibatan terbaik.
 - Keluarkan TEPAT 3 sampai 5 topik dalam format JSON persis seperti ini:
 
 [
@@ -58,7 +61,7 @@ ATURAN KETAT:
     "title": "Judul Singkat Menarik",
     "topic": "Penjelasan detail situasi/konflik 1-2 kalimat konkret",
     "topic_tag": "duniakerja|anakkos|krl|rumahtangga|finansial|curhat",
-    "vibe": "kantor|kosan|kencan|tetangga|keuangan"
+    "vibe": "kantor|kosan|politik|sosial|transportasi"
   }
 ]
 

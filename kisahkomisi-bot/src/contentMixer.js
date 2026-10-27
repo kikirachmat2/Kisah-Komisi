@@ -16,7 +16,9 @@ const FORMAT_TYPES = {
   FINANCIAL_BREAKDOWN: 'financial_breakdown',
   RECEH_DAILY: 'receh_daily',
   RANDOM_HOBBIES: 'random_hobbies',
-  SERIALIZED_STORY: 'serialized_story'
+  SERIALIZED_STORY: 'serialized_story',
+  SINGLE_LIFE_UPDATE: 'single_life_update',
+  ANONYMOUS_CURHAT_STORY: 'anonymous_curhat_story'
 };
 
 // Bank tema Menfess Spill (Crowdsourcing reply bait - Obrolan Komunitas)
@@ -753,6 +755,14 @@ ATURAN KETAT ANTI-DUPLIKASI & GAYA ANAK KORPORAT:
  */
 async function generateMixedPost(formatType, options = {}) {
   switch (formatType) {
+    case FORMAT_TYPES.SINGLE_LIFE_UPDATE: {
+      const { generateDailyLifeUpdate } = require('./dailyLifeEngine');
+      return await generateDailyLifeUpdate(options);
+    }
+    case FORMAT_TYPES.ANONYMOUS_CURHAT_STORY: {
+      const { generateAnonymousCurhatStory } = require('./dailyLifeEngine');
+      return await generateAnonymousCurhatStory(options);
+    }
     case FORMAT_TYPES.HOT_TAKE:
       return await generateHotTake(options);
     case FORMAT_TYPES.MENFESS_SPILL:
@@ -777,33 +787,32 @@ async function generateMixedPost(formatType, options = {}) {
 }
 
 /**
- * Menentukan format ideal untuk setiap dari 6 slot harian (Rotasi Berimbang & Teratur):
- * Slot 1 (07:15 Pagi): RECEH_DAILY / HOT_TAKE (0% Ad, Pagi komuter KRL/ojol, relatable)
- * Slot 2 (10:00 Pagi): MENFESS_SPILL / RANDOM_HOBBIES (0% Ad, Coffee break, magnet reply)
- * Slot 3 (12:30 Siang): STORY_AFFILIATE (AFFILIATE #1, Jam makan siang kantor)
- * Slot 4 (16:30 Sore): SERIALIZED_STORY / HOT_TAKE / FINANCIAL_BREAKDOWN (0% Ad, Pulang kantor, gaji dibatasi!)
- * Slot 5 (19:30 Malam): STORY_AFFILIATE (AFFILIATE #2, Santai sehabis maghrib)
- * Slot 6 (21:45 Malam): SERIALIZED_STORY / STORY_AFFILIATE (Peak rebahan malam santai)
+ * Menentukan format ideal untuk setiap dari 6 slot harian (Rundown 50/50 Seimbang):
+ * 50% SINGLE POST (Slot 1, 2, 4): Life update Kiki, real-time date/calendar, berita/demo, viral callback (0% Ad).
+ * 50% CERITA PANJANG / DM (Slot 3, 5, 6): Utas curhat DM anonim ("hari ini ada dm cerita anonim nih...") + Shopee Affiliate.
  */
 function getFormatForSlotNumber(slotNumber) {
   switch (Number(slotNumber)) {
     case 1:
-      return Math.random() > 0.5 ? FORMAT_TYPES.RECEH_DAILY : FORMAT_TYPES.HOT_TAKE;
+      // Slot 1 (07:15 Pagi Komuter): Life update pagi, KRL, cuaca, atau callback kemarin
+      return FORMAT_TYPES.SINGLE_LIFE_UPDATE;
     case 2:
-      return Math.random() > 0.5 ? FORMAT_TYPES.MENFESS_SPILL : FORMAT_TYPES.RANDOM_HOBBIES;
+      // Slot 2 (10:00 Coffee Break): Life update, respon isu/berita hari ini, demo, meeting kantor
+      return FORMAT_TYPES.SINGLE_LIFE_UPDATE;
     case 3:
-      return FORMAT_TYPES.STORY_AFFILIATE; // Wajib Affiliate #1
-    case 4: {
-      // Rotasi sore: Utamakan cerita berseri & hot take. Gaji dibatasi maksimal sesekali.
-      const soreOptions = [FORMAT_TYPES.SERIALIZED_STORY, FORMAT_TYPES.HOT_TAKE, FORMAT_TYPES.RECEH_DAILY, FORMAT_TYPES.FINANCIAL_BREAKDOWN];
-      return soreOptions[Math.floor(Math.random() * soreOptions.length)];
-    }
+      // Slot 3 (12:30 Makan Siang): Curhat DM Anonim + Shopee Affiliate #1
+      return FORMAT_TYPES.ANONYMOUS_CURHAT_STORY;
+    case 4:
+      // Slot 4 (16:30 Sore Pulang): Life update sore, macet jalanan, revisi mendadak, atau callback
+      return FORMAT_TYPES.SINGLE_LIFE_UPDATE;
     case 5:
-      return FORMAT_TYPES.STORY_AFFILIATE; // Wajib Affiliate #2
+      // Slot 5 (19:30 Malam Santai): Cerita berseri tongkrongan / relasi + Shopee Affiliate #2
+      return Math.random() > 0.5 ? FORMAT_TYPES.ANONYMOUS_CURHAT_STORY : FORMAT_TYPES.STORY_AFFILIATE;
     case 6:
-      return Math.random() > 0.4 ? FORMAT_TYPES.STORY_AFFILIATE : FORMAT_TYPES.SERIALIZED_STORY;
+      // Slot 6 (21:45 Peak Rebahan): Curhat mendalam warganet anonim + Shopee Affiliate #3
+      return FORMAT_TYPES.ANONYMOUS_CURHAT_STORY;
     default:
-      return FORMAT_TYPES.STORY_AFFILIATE;
+      return FORMAT_TYPES.SINGLE_LIFE_UPDATE;
   }
 }
 
