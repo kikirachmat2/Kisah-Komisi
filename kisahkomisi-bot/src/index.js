@@ -449,14 +449,14 @@ bot.command('stok', (ctx) => {
         const prodTag = s.product_name ? ` [Shopee: ${s.product_name.slice(0, 15)}...]` : ' [0% Ad]';
         msg += `• ${icon} *#${s.id}* - ${s.title.slice(0, 32)}...${scoreTag}${prodTag}\n`;
       });
-      msg += `\n⏰ *Jadwal Tayang (6x Sehari WIB):*\n`;
-      msg += `• 07:15 WIB: 🔥 Hot Take (0% Ad)\n`;
-      msg += `• 10:00 WIB: 🗣️ Menfess Spill (0% Ad)\n`;
-      msg += `• 12:30 WIB: 🛍️ Story + Shopee Affiliate\n`;
-      msg += `• 16:30 WIB: 💸 Financial Breakdown (0% Ad)\n`;
+      msg += `\n⏰ *Jadwal Tayang (6x Sehari WIB - Rundown 50/50 Seimbang):*\n`;
+      msg += `• 07:15 WIB: ☕ Life Update Kiki (0% Ad)\n`;
+      msg += `• 10:00 WIB: ☕ Life Update Kiki (0% Ad)\n`;
+      msg += `• 12:30 WIB: 📩 Cerita DM Anonim + Shopee Affiliate\n`;
+      msg += `• 16:30 WIB: ☕ Life Update Kiki (0% Ad)\n`;
       msg += `• 19:30 WIB: 🛍️ Story + Shopee Affiliate\n`;
-      msg += `• 21:45 WIB: 🛍️ Story + Shopee Affiliate\n\n`;
-      msg += `_Setiap postingan memiliki random human jitter 1-6 menit._`;
+      msg += `• 21:45 WIB: 📩 Cerita DM Anonim + Shopee Affiliate\n\n`;
+      msg += `_Setiap postingan memiliki random human jitter 10-30 menit (anti-ban Meta)._`;
     } else {
       msg += `_Antrean sedang kosong. Sistem autopilot akan segera mengisi otomatis di background, atau ketik \`/isi_stok\`!_`;
     }
@@ -1050,7 +1050,7 @@ async function checkTokenExpiryReminder() {
 // 📅 JADWAL 6 KONTEN HARIAN (RUNDOWN 50/50 SEIMBANG)
 // 1. 50% Gedein Insight (Organik 0% Link): Slot 1, 2, 4 (Single Post Life Update Kiki, News/Demo, Viral Callback)
 // 2. 50% Jualan Affiliate (Shopee Contextual): Slot 3, 5, 6 (Curhat DM Anonim "hari ini ada dm cerita anonim nih..." + Shopee Anchor Under 50k)
-// 3. Fully Otomatis + Jitter Manusiawi (1-6 Menit)
+// 3. Fully Otomatis + Jitter Manusiawi (10-30 Menit Anti-Ban)
 // ==========================================
 const DAILY_SLOTS = [
   { slotNumber: 1, time: '07:15', vetoTime: '07:00', label: 'SLOT 1 - PAGI KOMUTER (07:15 WIB)', defaultFormat: 'single_life_update', targetNicheType: 'locked', hasAffiliate: false },
@@ -1072,7 +1072,7 @@ async function prepareAndNotifyVetoSlot(slotTime, label, slotNumber = null) {
     const slotConf = DAILY_SLOTS.find(s => s.time === slotTime) || {
       slotNumber: slotNumber || 1,
       hasAffiliate: false,
-      defaultFormat: 'hot_take',
+      defaultFormat: 'single_life_update',
       targetNicheType: 'locked'
     };
 
@@ -1087,7 +1087,7 @@ async function prepareAndNotifyVetoSlot(slotTime, label, slotNumber = null) {
     }
 
     if (!story) {
-      const targetFormat = slotConf.hasAffiliate ? 'story_affiliate' : slotConf.defaultFormat;
+      const targetFormat = slotConf.defaultFormat || (slotConf.hasAffiliate ? 'anonymous_curhat_story' : 'single_life_update');
       story = db.getNextQueuedStory ? db.getNextQueuedStory(targetFormat) : null;
 
       if (!story) {
@@ -1147,7 +1147,7 @@ async function prepareAndNotifyVetoSlot(slotTime, label, slotNumber = null) {
       (slides.length > 1 ? `_Total ${slides.length} bagian thread._\n\n` : '') +
       (story.product_name ? `🛍️ *Rekomendasi Shopee*: ${story.product_name}\n🔗 *Link*: \`${story.product_url || '-'}\`\n\n` : '✨ *Murni Insight Organik* (0% Link Iklan - Memaksimalkan Reach & Repost)\n\n') +
       `⚠️ *Opsi Kontrol Owner:*\n` +
-      `Bot akan otomatis menerbitkan post ini sekitar jam *${slotTime} WIB* (dengan random human jitter 1-6 menit).\n` +
+      `Bot akan otomatis menerbitkan post ini sekitar jam *${slotTime} WIB* (dengan random human jitter 10-30 menit).\n` +
       `Ketik \`/veto\` untuk membatalkan tayang dalam 15 menit ke depan.`
     );
 
@@ -1165,7 +1165,7 @@ async function prepareAndNotifyVetoSlot(slotTime, label, slotNumber = null) {
 
 // ==========================================
 // ⏰ EKSEKUTOR POSTING DENGAN RANDOM HUMAN JITTER
-// Jitter acak 1-6 menit (60.000 - 360.000 ms) agar natural & bebas pola robotik
+// Jitter acak 10-30 menit (600.000 - 1.800.000 ms) agar natural & bebas pola robotik
 // ==========================================
 async function executeScheduledPosting(slotTime, label, slotNumber = null) {
   const nowWIB = new Date(new Date().toLocaleString('en-US', { timeZone: 'Asia/Jakarta' }));
@@ -1179,9 +1179,9 @@ async function executeScheduledPosting(slotTime, label, slotNumber = null) {
     return;
   }
 
-  // RANDOM JITTER MANUSIAWI (1 s/d 6 menit: 60.000 - 360.000 ms)
+  // RANDOM JITTER MANUSIAWI (10 s/d 30 menit: 600.000 - 1.800.000 ms)
   // Menghindari footprint posting kaku/robotik pada detik :00 agar aman dari deteksi algoritma Meta
-  const jitterMs = Math.floor(Math.random() * (360000 - 60000 + 1)) + 60000;
+  const jitterMs = Math.floor(Math.random() * (1800000 - 600000 + 1)) + 600000;
   const jitterSec = Math.round(jitterMs / 1000);
   const jitterMin = (jitterMs / 60000).toFixed(1);
   console.log(`[Scheduler] Random jitter manusiawi aktif untuk ${label}: menunggu ${jitterMin} menit (${jitterSec} detik)...`);
@@ -1221,7 +1221,7 @@ async function executeScheduledPosting(slotTime, label, slotNumber = null) {
     const slotConf = DAILY_SLOTS.find(s => s.time === slotTime) || {
       slotNumber: slotNumber || 1,
       hasAffiliate: false,
-      defaultFormat: 'hot_take'
+      defaultFormat: 'single_life_update'
     };
 
     let story = null;
@@ -1231,14 +1231,14 @@ async function executeScheduledPosting(slotTime, label, slotNumber = null) {
       if (story && story.status !== 'queued') story = null;
     }
 
+    const targetFormat = slotConf.defaultFormat || (slotConf.hasAffiliate ? 'anonymous_curhat_story' : 'single_life_update');
+
     if (!story) {
-      const targetFormat = slotConf.hasAffiliate ? 'story_affiliate' : slotConf.defaultFormat;
       story = db.getNextQueuedStory ? db.getNextQueuedStory(targetFormat) : null;
     }
 
     if (!story) {
       console.log(`[Scheduler] Antrean darurat kosong untuk slot ${label}, memproduksi langsung...`);
-      const targetFormat = slotConf.hasAffiliate ? 'story_affiliate' : slotConf.defaultFormat;
       const curated = await produceCuratedStory({
         formatType: targetFormat,
         targetNicheType: slotConf.targetNicheType || 'locked',
