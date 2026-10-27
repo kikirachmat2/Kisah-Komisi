@@ -235,6 +235,15 @@ async function runTests() {
   assert(!liveReply.toLowerCase().includes('kamu sendiri'), 'Live reply must NOT contain "kamu sendiri" survey pattern');
   console.log('  ✓ Anti-Freak & Zero Interrogative: 100% Verified');
 
+  // 5. Uji klasifikasi arketipe perilaku komentar warganet (Empirical Research Verification)
+  const { detectCommentArchetype } = require('../src/autoReplyEngine');
+  assert.strictEqual(detectCommentArchetype('Beli skincare basic sama jajan nongkinya mana kak?'), 'AUDITOR_EXPENSE', 'Auditor expense archetype');
+  assert.strictEqual(detectCommentArchetype('Gajiku 6jt kos 800k deket MRT'), 'CURHAT_SHARING', 'Curhat sharing archetype');
+  assert.strictEqual(detectCommentArchetype('Spill kosan daerah mana kak ada yg kosong ga?'), 'ASK_LOCATION', 'Ask location archetype');
+  assert.strictEqual(detectCommentArchetype('Konoha emang isinya full generasi sandwich'), 'SOCIAL_DILEMMA', 'Social dilemma archetype');
+  assert.strictEqual(detectCommentArchetype('Ini akun bot otomatis ya?'), 'BOT_ACCUSATION', 'Bot accusation archetype');
+  console.log('  ✓ Empirical Comment Behavioral Archetypes: 100% Verified');
+
   // TEST 12: Adaptive Multi-Niche Tracking & Auto-Locking Algorithm
   console.log('\n[Test 12] Testing Adaptive Multi-Niche Tracking & Auto-Locking Algorithm...');
   const { syncNicheAnalytics, evaluateAndLockWinningNiches, normalizeNicheTag } = require('../src/growthEngine');

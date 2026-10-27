@@ -145,6 +145,42 @@ function sanitizeReply(text) {
 }
 
 /**
+ * Klasifikasi Arketipe Perilaku Komentar Warganet Threads
+ * Berdasarkan riset data empiris postingan viral @ceritakikiii:
+ * 1. AUDITOR_EXPENSE: Menyoroti pos pengeluaran hilang (skincare, jajan, nongki, duit sejuta, salah hitung, panggil meta.ai)
+ * 2. CURHAT_SHARING: Membagikan nominal gaji/pengeluaran hidup mereka sendiri
+ * 3. ASK_LOCATION: Menanyakan info tempat/spill daerah kosan
+ * 4. SOCIAL_DILEMMA: Membahas sandwich generation, nikah, jatah ortu, UMR
+ * 5. BOT_ACCUSATION: Menuduh bot atau AI
+ * 6. GENERAL_WARGANET: Celetukan santai umum
+ */
+function detectCommentArchetype(text) {
+  const lower = (text || '').toLowerCase();
+  
+  if (/skincare|jajan|parfum|sabun|nongki|nongkrong|salah hitung|duit.*mana|1jt|sejuta|kurang|boros|meta\.ai|audit|kepleset/i.test(lower)) {
+    return 'AUDITOR_EXPENSE';
+  }
+
+  if (/gaji (gue|gua|aku|saya|ku)|gajiku|kosan (gue|gua|aku)|budget (gue|gua|aku)|kalo (gue|gua|aku)|aku di|gue di|gua di|di jkt/i.test(lower)) {
+    return 'CURHAT_SHARING';
+  }
+
+  if (/spill|daerah mana|jkt mana|jakarta mana|kos mana|kosan mana|ada kosong|info kos|dimana/i.test(lower)) {
+    return 'ASK_LOCATION';
+  }
+
+  if (/sandwich|nikah|ortu|orang tua|jatah|keluarga|umr|pemerintah|konoha/i.test(lower)) {
+    return 'SOCIAL_DILEMMA';
+  }
+
+  if (/bot|ai|robot|otomatis|chatgpt|gemini|groq/i.test(lower)) {
+    return 'BOT_ACCUSATION';
+  }
+
+  return 'GENERAL_WARGANET';
+}
+
+/**
  * Generate balasan santai ala Kiki Rachmat (@ceritakikiii)
  * Karakter: Manusia asli, warganet Threads Indonesia, ceplas-ceplos, santai, relate.
  * 
@@ -156,6 +192,29 @@ function sanitizeReply(text) {
 async function generateEngagementReply(storyTitle, netizenComment, authorUsername) {
   if (!netizenComment || !authorUsername) return null;
 
+  const archetype = detectCommentArchetype(netizenComment);
+  let archetypeGuideline = '';
+  switch (archetype) {
+    case 'AUDITOR_EXPENSE':
+      archetypeGuideline = 'Netizen bertindak sebagai AUDITOR jeli yang menyoroti pos pengeluaran hilang (jajan, skincare, nongki, duit sejuta, salah hitung). Ngeles santai & jenaka: sebut itu pos biaya ghoib yang sengaja gak ditulis biar gak makin nangis, atau sori otak udah ngebul akhir bulan jeli bener matanya.';
+      break;
+    case 'CURHAT_SHARING':
+      archetypeGuideline = 'Netizen curhat angka gaji/pengeluaran mereka sendiri. Beri solidaritas warganet sesama pejuang hidup: puji jika mereka hemat/hoki, atau tertawakan bareng nasib biaya hidup kota besar.';
+      break;
+    case 'ASK_LOCATION':
+      archetypeGuideline = 'Netizen bertanya lokasi kosan atau minta spill daerah. Jawab santai ala anak tongkrongan Jakarta (misal: daerah jakpus/setiabudi deket stasiun, emang rebutan bgt).';
+      break;
+    case 'SOCIAL_DILEMMA':
+      archetypeGuideline = 'Netizen membahas dilema sosial berat (sandwich gen, nikah, jatah ortu, UMR). Beri afirmasi empati mendalam warganet (lingkaran setan emang, serba salah kalo udah urusan keluarga).';
+      break;
+    case 'BOT_ACCUSATION':
+      archetypeGuideline = 'Netizen menduga ini bot/AI. Bercanda santai manusia warganet: "bukan bot woy haha jari gue masih pegel balesin komen lu nih". DILARANG MENGAKU AI/BOT/FIKSI!';
+      break;
+    default:
+      archetypeGuideline = 'Tanggapi celetukan netizen dengan tawa santai warganet, afirmasi, atau reaksi spontan yang relate.';
+      break;
+  }
+
   const prompt = `
 Kamu adalah Kiki Rachmat (@ceritakikiii), pemilik akun Threads. Bio: "In this economy mau nulis cerita orang-orang aja lah".
 Kamu MANUSIA ASLI (bukan bot, bukan AI). Gaya ngetik: santai, ceplas-ceplos, bahasa tongkrongan warganet Threads Indonesia ("gue", "lu", "wkwk", "haha", "anjir", "valid", "relate").
@@ -164,23 +223,18 @@ Postingan kamu (Judul: "${storyTitle}")
 Netizen (@${authorUsername}) baru saja berkomentar:
 "${netizenComment}"
 
+ARKETIPE PERILAKU KOMENTAR: ${archetype}
+PANDUAN KHUSUS SESUAI SITUASI:
+${archetypeGuideline}
+
 TUGAS: Tuliskan SATU (1) BALASAN SINGKAT (HANYA 5 - 14 KATA).
 
 PANDUAN MUTLAK & ILMIAH SUPAYA TIDAK FREAK / TIDAK TERLIHAT SEPERTI BOT:
 1. DILARANG BERTANYA BALIK! (JANGAN PERNAH tanya "kamu sendiri pernah ngalamin?", "menurut lu gimana?", atau bertanya apapun). Warganet asli TIDAK mewawancarai orang di kolom komentar.
 2. DILARANG GAYA CUSTOMER SERVICE / SURVEY: Jangan memancing feedback buatan. Cukup beri CELETUKAN SPONTAN, afirmasi tulus, atau tawa getir.
-3. JIKA KOMENTAR NORMAL / CURHAT / RELATE:
-   - Cukup celetukan santai: "wkwk asli relate bgt ini mah", "valid sih, pusing bgt emang haha", "bener anjir, ga habis pikir gue", "nyesek tapi nyata emang wkwk", "bisa gila kalo dipikirin terus haha".
-4. JIKA KOMPLAIN HITUNGAN / MATEMATIKA / DUIT / ANGKA SALAH:
-   - DILARANG MENGAKU FIKSI/AI!
-   - Ngeles manusiawi santai: "wkwk sori kepleset sejuta kelupaan ketulis buat jajan darurat haha", "haha iya sori otak udah ngebul akhir bulan jeli bener mata lu", "sejuta lagi menguap buat biaya tak terduga yang malu dispill wkwk".
-5. JIKA TUDUH BOT / AI ("bot ya?", "ini AI?", "robot"):
-   - Bercanda santai manusia warganet: "bukan bot woy haha jari gue masih pegel balesin komen lu nih", "enak aja bot, bot gak bakal relate puyengnya akhir bulan woy wkwk".
-
-ATURAN FORMAT:
-- DILARANG TANDA TANYA (?). DILARANG BERTANYA!
-- DILARANG EMOJI LEBAY (jangan pakai 😭🥺🙏✨). Cukup teks santai dengan wkwk/haha.
-- Output HANYA kalimat balasan langsung tanpa tanda kutip. Huruf kecil santai layaknya ngetik di HP.
+3. DILARANG MENGAKU BOT, AI, ATAU FIKSI.
+4. DILARANG EMOJI LEBAY (jangan pakai 😭🥺🙏✨). Cukup teks santai dengan wkwk/haha.
+5. Output HANYA kalimat balasan langsung tanpa tanda kutip. Huruf kecil santai layaknya ngetik di HP.
 `;
 
   // 1. Coba Gemini 2.5 Flash (tanpa thinking tokens agar tidak kepotong)
@@ -345,46 +399,47 @@ async function runAutoEngagementScan(userId) {
     const comments = await fetchPostComments(story.threads_media_id, token);
     const now = Date.now();
 
-    for (const comment of comments) {
+    // Saring kandidat komentar yang valid & urutkan berdasarkan Engagement Value tertinggi
+    const candidateComments = comments
+      .filter(comment => {
+        const author = (comment.username || '').toLowerCase().trim();
+        if (!author || ignoredUsernames.includes(author) || author.includes('meta.ai')) return false;
+
+        const textTrim = (comment.text || '').toLowerCase().trim();
+        if (!textTrim || textTrim === '@meta.ai' || textTrim === '@meta') return false;
+
+        if (db.isCommentReplied(comment.id)) return false;
+        if (db.hasRepliedToUserInMedia(story.threads_media_id, comment.username)) return false;
+
+        const commentTime = new Date(comment.timestamp).getTime();
+        const ageMinutes = (now - commentTime) / (1000 * 60);
+        if (ageMinutes < MIN_COMMENT_AGE_MINUTES || ageMinutes > (MAX_COMMENT_AGE_HOURS * 60)) return false;
+
+        if (!isCommentSafe(comment.text)) return false;
+        return true;
+      })
+      .map(comment => {
+        const archetype = detectCommentArchetype(comment.text);
+        let score = 0;
+        // Bobot prioritas arketipe: Auditor & Curhat paling memicu viralitas
+        if (archetype === 'AUDITOR_EXPENSE') score += 15;
+        else if (archetype === 'CURHAT_SHARING') score += 12;
+        else if (archetype === 'ASK_LOCATION') score += 10;
+        else if (archetype === 'SOCIAL_DILEMMA') score += 8;
+        else score += 3;
+
+        // Komentar dengan panjang proporsional (25 - 200 karakter) adalah rentang emas diskusi
+        if (comment.text.length >= 25 && comment.text.length <= 200) score += 5;
+
+        return { ...comment, archetype, score };
+      })
+      .sort((a, b) => b.score - a.score);
+
+    for (const comment of candidateComments) {
       if (dailyCount + totalRepliedThisRun >= MAX_DAILY_REPLIES) break;
       if (postReplyCount + (totalRepliedThisRun) >= MAX_REPLIES_PER_POST) break;
 
-      // 1. Abaikan komentar dari akun sendiri, Meta AI, atau bot
-      const author = (comment.username || '').toLowerCase().trim();
-      if (!author || ignoredUsernames.includes(author) || author.includes('meta.ai')) {
-        continue;
-      }
-
-      // Abaikan jika komentar kosong atau hanya mention bot tanpa teks
-      const textTrim = (comment.text || '').toLowerCase().trim();
-      if (!textTrim || textTrim === '@meta.ai' || textTrim === '@meta') {
-        continue;
-      }
-
-      // 2. Abaikan jika sudah pernah dibalas sebelumnya
-      if (db.isCommentReplied(comment.id)) {
-        continue;
-      }
-
-      // 2b. Abaikan jika user ini sudah pernah kita balas di postingan yang sama (cegah spam reply ke 1 orang)
-      if (db.hasRepliedToUserInMedia(story.threads_media_id, comment.username)) {
-        continue;
-      }
-
-      // 3. Cek usia komentar (harus >= 8 menit dan <= 24 jam)
-      const commentTime = new Date(comment.timestamp).getTime();
-      const ageMinutes = (now - commentTime) / (1000 * 60);
-      if (ageMinutes < MIN_COMMENT_AGE_MINUTES || ageMinutes > (MAX_COMMENT_AGE_HOURS * 60)) {
-        continue;
-      }
-
-      // 4. Guardrail keamanan sentimen
-      if (!isCommentSafe(comment.text)) {
-        console.log(`[AutoReply] Komentar dari @${comment.username} dilewati (filter sensitif): "${comment.text.substring(0, 30)}..."`);
-        continue;
-      }
-
-      console.log(`[AutoReply] Menemukan komentar netizen @${comment.username}: "${comment.text.substring(0, 40)}..."`);
+      console.log(`[AutoReply] Memproses komentar terpilih @${comment.username} [Arketipe: ${comment.archetype}, Score: ${comment.score}]: "${comment.text.substring(0, 45)}..."`);
 
       // 5. Generate balasan AI
       const replyText = await generateEngagementReply(story.title, comment.text, comment.username);
@@ -430,5 +485,6 @@ module.exports = {
   isCommentSafe,
   isAskingAboutBot,
   generateEngagementReply,
-  sanitizeReply
+  sanitizeReply,
+  detectCommentArchetype
 };
