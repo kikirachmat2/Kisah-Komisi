@@ -307,18 +307,67 @@ Keluarkan HANYA JSON:
  * Menghasilkan 50% Cerita Panjang / DM Anonim (Add to thread, 3-4 Slide bersambung + Affiliate di ujung)
  * Framing: "hari ini ada dm cerita anonim nih jadi ada yang cerita bla bla bla..."
  */
+/**
+ * Menghasilkan 50% Cerita Panjang / Curhat Relatable (Add to thread, 3-4 Slide bersambung + Affiliate di ujung)
+ * Rotasi Acak 3 Sudut Pandang Cerita:
+ * 1. PRIBADI: Pengalaman langsung Kiki ("masih gak habis pikir tadi siang...", "tadi pagi gue ngalamin zonk...")
+ * 2. TEMAN: Cerita rekan kantor / tongkrongan ("tadi pas makan siang temen gue cerita...", "kemarin denger curhatan temen...")
+ * 3. ANONIM: Curhatan warganet / DM ("ada yang curhat di dm...", "denger dari obrolan sana-sini...")
+ */
 async function generateAnonymousCurhatStory(options = {}) {
   const context = getCurrentLifeContext();
 
   const curatedScenarios = [
+    // Dunia Kerja & Kantor
     'Anak magang agensi disuruh lembur sampai jam 10 malam tapi pas evaluasi bulanan uang saku malah dipotong alasan telat absen',
     'Senior kantor lempar kesalahan revisi ke junior baru di depan klien pas meeting pitching direksi',
+    'Teman satu tim yang hobi lempar revisian pas jam 5 sore alasan buru-buru ada urusan keluarga',
+    'Manajer yang nolak pengajuan cuti tahunan dengan alasan tim lagi sibuk padahal dia sendiri liburan 2 minggu',
     'Teman kantor pinjam laptop kerja buat download film taunya kena virus ransomware dan nolak ganti rugi',
+    'Rekan kerja yang suka cari muka ke bos pas meeting tapi pas kerja lapangan numpang nama doang',
+    'Atasan yang suka chat urusan kerjaan jam 10 malam tapi pas lembur gak pernah mau bayar uang lembur',
+    // Kehidupan Kosan & Rantau
     'Pasutri muda di kosan diribetin mertua yang tiba-tiba dateng tanpa kabar dan ngobrak-abrik isi lemari pakaian',
-    'Teman sekamar kosan hobi bawa pacar nginep pas hari kerja dan makai barang printilan orang tanpa izin'
+    'Teman sekamar kosan hobi bawa pacar nginep pas hari kerja dan makai barang printilan orang tanpa izin',
+    'Ibu kos yang diam-diam masuk kamar pas penghuni lagi kerja dengan alasan ngecek meteran listrik',
+    'Tetangga kosan yang nyetel musik jedag-jedug kencang jam 12 malam pas besoknya ada ujian atau presentasi',
+    // Relasi & Pertemanan Urban
+    'Diajak makan di restoran mewah sama temen lama taunya pas giliran bayar dia pura-pura dompet ketinggalan',
+    'Teman tongkrongan minjam uang 2 juta janji ganti pas gajian tapi malah asik flexing nonton konser festival',
+    'Teman kantor yang hobi titip makan siang tapi giliran ditagih pura-pura lupa dan gak pernah transfer',
+    'Dilema split bill pacaran di Jakarta: cowok selalu nanggung tapi cewek gak pernah inisiatif bayar parkir atau minum'
   ];
 
   const scenario = curatedScenarios[Math.floor(Math.random() * curatedScenarios.length)];
+
+  const STORY_ANGLES = [
+    {
+      type: 'personal',
+      name: 'CERITA PENGALAMAN PRIBADI KIKI',
+      guidance: 'Kiki menceritakan kejadian nyata/nyesek/lucu yang dialaminya sendiri di kantor, kosan, pergaulan, atau jalanan Jakarta.',
+      hookInstruction: 'Mulai dengan kalimat spontan pengalaman diri sendiri (contoh: "masih gak habis pikir sama kejadian di kantor tadi...", "tadi pagi gue baru aja ngalamin hal paling zonk...", "pelajaran hidup hari ini: jangan pernah...", "asli gue baru aja kena apes pas...", "gue kira drama kantor kayak gini cuma mitos..."). DILARANG sebut kata DM atau anonim.',
+      credit: null,
+      origin: 'kiki_personal'
+    },
+    {
+      type: 'friend',
+      name: 'CERITA REKAN KERJA / TEMAN TONGKRONGAN',
+      guidance: 'Kiki menceritakan kejadian nyata yang dialami temen sekantor, temen sekosan, atau temen tongkrongannya.',
+      hookInstruction: 'Mulai dengan kalimat observasi temen (contoh: "tadi pas makan siang di kantin, temen seruangan gue cerita...", "kemarin denger curhatan temen sekantor yang baru aja...", "temen tongkrongan gue semalem ngomel-ngomel gara-gara...", "kasian bgt liat temen kosan gue hari ini..."). DILARANG sebut kata DM.',
+      credit: '(cerita temen tongkrongan)',
+      origin: 'friend_circle'
+    },
+    {
+      type: 'anonymous',
+      name: 'CURHATAN ANONIM / OBROLAN WARGANET',
+      guidance: 'Kiki membagikan curhatan anonim yang masuk dari followers atau obrolan warganet yang relate.',
+      hookInstruction: 'Mulai dengan variasi pembuka kurasi warganet (contoh: "ada yang curhat di dm, ceritanya bikin geleng-geleng...", "kemarin sempet baca curhatan seseorang yang relate bgt...", "denger dari obrolan sana-sini, ternyata ada yang ngalamin...", "kemarin ada yang spill kejadian di divisinya..."). DILARANG kaku selalu pakai kata yang sama.',
+      credit: '(cerita anonim dari obrolan warganet)',
+      origin: 'community_dm'
+    }
+  ];
+
+  const storyAngle = options.angle ? (STORY_ANGLES.find(a => a.type === options.angle) || STORY_ANGLES[0]) : STORY_ANGLES[Math.floor(Math.random() * STORY_ANGLES.length)];
 
   // Dapatkan produk kontekstual Shopee
   const product = db.getRandomProduct();
@@ -327,7 +376,7 @@ async function generateAnonymousCurhatStory(options = {}) {
   if (product && product.affiliate_url) {
     trackedUrl = appendSubId(product.affiliate_url, {
       sub_id1: 'threads_ceritakiki',
-      sub_id2: 'dm_anonim',
+      sub_id2: storyAngle.type,
       sub_id3: 'thread'
     });
     adCopy = generateContextualAd(product, trackedUrl);
@@ -337,25 +386,28 @@ async function generateAnonymousCurhatStory(options = {}) {
 Kamu adalah Kiki Rachmat (@ceritakikiii), pemilik akun Threads. Bio: "In this economy mau nulis cerita orang-orang aja lah".
 Persona: Anak muda korporat Jakarta Selatan (usia 25-27 thn, kerja di agensi/tech/kantoran Jaksel).
 
-TUGAS KAMU: Tuliskan SATU UTAS THREAD BERSAMBUNG ("Add to thread") SEBANYAK 3 PART/SLIDE berdasarkan curhatan DM anonim dari warganet.
+TUGAS KAMU: Tuliskan SATU UTAS THREAD BERSAMBUNG ("Add to thread") SEBANYAK 3 PART/SLIDE.
 
-SKENARIO CURHATAN:
+SUDUT PANDANG (ANGLE): ${storyAngle.name}
+${storyAngle.guidance}
+
+SKENARIO INTI:
 "${scenario}"
 
 STRUKTUR WAJIB:
-- SLIDE 1 (Hook DM Anonim):
-  WAJIB mulai dengan frasa pembuka alami:
-  "hari ini ada dm cerita anonim nih, jadi ada yang cerita..." (lanjutkan ke inti kejadian yang bikin kaget/nyesek).
+- SLIDE 1 (Opening Hook Menarik):
+  Gaya Pembuka: ${storyAngle.hookInstruction}
   Panjang: 140 - 220 karakter.
 - SLIDE 2 (Eskalasi Kejadian / Percakapan Nyata):
-  Ceritakan kelanjutan kronologi atau dialog nyata yang bikin emosi sesama pekerja/warganet.
+  Ceritakan kelanjutan kronologi atau dialog nyata yang bikin emosi/gregetan sesama pekerja/warganet.
   Panjang: 160 - 260 karakter.
 - SLIDE TERAKHIR (Dilema Warganet):
   Pertanyaan terbuka yang membelah audiens menjadi 2 kubu (Tim A vs Tim B).
   Contoh: "kalian di posisi kayak gini tim langsung speak up atau cari aman dulu? spill coba."
   Panjang: 90 - 160 karakter.
 
-ATURAN KETAT:
+ATURAN KETAT ANTI-REPETISI:
+- DILARANG SELALU MENGGUNAKAN POLA KALIMAT PEMBUKA YANG SAMA! Variasikan kalimat pembuka secara alami dan segar.
 - DILARANG nomor urut part ("1/3", "Part 1").
 - DILARANG label fiksi "[Cerita Fiksi]" dsb.
 - Gaya bahasa manusiawi anak muda korporat Jaksel (lu-gue, bgt, nyesek, boncos, wkwk). Huruf kecil santai.
@@ -365,7 +417,7 @@ Keluarkan HANYA JSON:
   "title": "Judul Utas Curhat (Maksimal 6 kata)",
   "topic": "Ringkasan Topik",
   "story_parts": [
-    "Slide 1 hook: hari ini ada dm cerita anonim nih...",
+    "Slide 1 hook pembuka bervariasi...",
     "Slide 2 eskalasi adegan nyata...",
     "Slide terakhir pertanyaan debat warganet..."
   ]
@@ -381,7 +433,7 @@ Keluarkan HANYA JSON:
         signal: AbortSignal.timeout(20000),
         body: JSON.stringify({
           contents: [{ parts: [{ text: prompt }] }],
-          generationConfig: { responseMimeType: 'application/json', temperature: 0.8 }
+          generationConfig: { responseMimeType: 'application/json', temperature: 0.85 }
         })
       });
       if (res.ok) {
@@ -403,7 +455,7 @@ Keluarkan HANYA JSON:
           model: 'qwen/qwen3.8-27b',
           messages: [{ role: 'user', content: prompt + '\n\nKeluarkan HANYA JSON persis sesuai format.' }],
           response_format: { type: 'json_object' },
-          temperature: 0.8
+          temperature: 0.85
         })
       });
       if (res.ok) {
@@ -421,11 +473,28 @@ Keluarkan HANYA JSON:
     } catch (e) {}
   }
 
-  let parts = Array.isArray(parsed?.story_parts) ? parsed.story_parts : [
-    `hari ini ada dm cerita anonim nih, jadi ada yang cerita temen sekantornya hobi lempar revisian pas udah jam 5 sore. pas ditanya katanya atasan minta buru-buru padahal deadlinenya minggu depan.`,
-    `pas dikonfirmasi ke manajernya, ternyata si anak ini cuma pengen keliatan sibuk pas jam kerja biar dapet pujian inisiatif tinggi. nyesek bgt liatnya.`,
-    `kalian di posisi kayak gini tim langsung konfrontasi di grup kantor atau tim diem aja cari aman? spill dong.`
-  ];
+  let parts = Array.isArray(parsed?.story_parts) ? parsed.story_parts : null;
+  if (!parts || parts.length < 3) {
+    if (storyAngle.type === 'personal') {
+      parts = [
+        `asli gue masih gak habis pikir sama kejadian di kantor tadi siang. kerjaan udah beres sesuai deadline, eh pas sore mendadak di-chat disuruh revisi total tanpa arahan jelas.`,
+        `pas gue tanya detailnya apa yang salah, jawabannya cuma 'pokoknya feel-nya belum dapet'. rasanya pengen langsung tutup laptop dan melipir ke warkop wkwk.`,
+        `kalian kalau dapet revisi 'kurang dapet feel-nya' tim yang pasrah ngerjain ulang atau tim minta kejelasan tertulis? spill dong.`
+      ];
+    } else if (storyAngle.type === 'friend') {
+      parts = [
+        `tadi pas makan siang, temen seruangan gue cerita nasibnya yang apes bgt. laptop kantornya dipinjem rekan divisi sebelah, baliknya malah kena virus dan file meeting ilang semua.`,
+        `yang bikin emosi, yang minjem malah lepas tangan bilang 'dari awal udah lemot kok'. padahal jelas-jelas dia pake buat buka link aneh-aneh.`,
+        `kalian di posisi kayak gini tim langsung lapor ke atasan atau minta ganti rugi sendiri-sendiri? spill coba.`
+      ];
+    } else {
+      parts = [
+        `ada yang curhat di dm, ceritanya bikin geleng-geleng kepala. temen sekosan dia hobi bawa pacar nginep pas hari kerja dan suka makai barang printilan tanpa izin.`,
+        `pas ditegur baik-baik, balesannya malah nyolot bilang 'namanya juga anak kosan bagi-bagi berkah'. nyesek bgt dengernya.`,
+        `kalian di posisi kayak gini tim langsung lapor ibu kos atau tim konfrontasi depan muka? spill coba.`
+      ];
+    }
+  }
 
   // Sisipkan rekomendasi produk kontekstual Shopee sebelum slide terakhir jika ada
   if (adCopy) {
@@ -433,24 +502,26 @@ Keluarkan HANYA JSON:
     parts.splice(lastIdx, 0, adCopy);
   }
 
-  // Credit anonim di paling ujung
-  const finalIdx = parts.length - 1;
-  const anonCredit = '(cerita anonim dari obrolan warganet)';
-  if (!parts[finalIdx].includes(anonCredit)) {
-    parts[finalIdx] = parts[finalIdx].trim() + `\n\n${anonCredit}`;
+  // Tambahkan credit yang sesuai di slide paling ujung (hanya jika ada credit untuk angle tersebut)
+  if (storyAngle.credit) {
+    const finalIdx = parts.length - 1;
+    if (!parts[finalIdx].includes(storyAngle.credit)) {
+      parts[finalIdx] = parts[finalIdx].trim() + `\n\n${storyAngle.credit}`;
+    }
   }
 
   const topicTag = getAutoTopicTag(parsed?.topic || scenario);
 
   return {
-    title: parsed?.title || 'Cerita Anonim Warganet',
+    title: parsed?.title || (storyAngle.type === 'personal' ? 'Cerita Pribadi Kiki' : (storyAngle.type === 'friend' ? 'Cerita Temen Kantor' : 'Curhat Anonim Warganet')),
     topic: parsed?.topic || scenario.slice(0, 50),
     slides: parts,
     product_name: product ? product.name : null,
     product_url: trackedUrl,
     variant: 'B',
-    origin: 'community_dm',
+    origin: storyAngle.origin,
     format_type: 'story_affiliate',
+    story_angle: storyAngle.type,
     topicTag: topicTag,
     topic_tag: topicTag,
     is_single_menfess: false

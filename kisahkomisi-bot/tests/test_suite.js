@@ -442,13 +442,13 @@ async function runTests() {
   assert(!lifeUpdate.slides[0].includes('[Cerita Fiksi]'), 'Life update must not have fiction label');
   console.log('  ✓ Single Life Update (0% Ad):', lifeUpdate.slides[0]);
 
-  const anonStory = await generateAnonymousCurhatStory();
-  assert(anonStory.slides.length >= 3, 'Anonymous story must be at least 3 slides');
-  assert(anonStory.slides[0].toLowerCase().includes('hari ini ada dm cerita anonim nih'), 'Slide 1 must have DM anonim hook');
-  const anonLastSlide = anonStory.slides[anonStory.slides.length - 1];
-  assert(anonLastSlide.includes('(cerita anonim dari obrolan warganet)'), 'Last slide must have anonymous credit');
-  console.log('  ✓ Anonymous Curhat Hook (Slide 1):', anonStory.slides[0]);
-  console.log('  ✓ Anonymous Curhat Ending (Credit di Ujung):', anonLastSlide);
+  const curhatStory = await generateAnonymousCurhatStory();
+  assert(curhatStory.slides.length >= 3, 'Curhat story must be at least 3 slides');
+  assert(curhatStory.slides[0].length >= 30, 'Slide 1 must have valid hook');
+  const curhatLastSlide = curhatStory.slides[curhatStory.slides.length - 1];
+  assert(!curhatLastSlide.includes('[Cerita Fiksi]'), 'Last slide must not have fiction label');
+  console.log('  ✓ Varied Curhat Story Hook (Slide 1) [' + curhatStory.origin + ']:', curhatStory.slides[0]);
+  console.log('  ✓ Varied Curhat Story Ending:', curhatLastSlide);
 
   console.log('\n🎉 === ALL 16 TESTS PASSED SUCCESSFULLY! === 🎉');
 }
