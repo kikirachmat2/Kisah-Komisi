@@ -403,13 +403,12 @@ module.exports = {
 
   getNextQueuedStory: (formatType = null) => {
     if (formatType) {
-      const match = db.prepare(`
+      return db.prepare(`
         SELECT * FROM stories 
         WHERE status = 'queued' AND format_type = ? 
         ORDER BY id ASC 
         LIMIT 1
-      `).get(formatType);
-      if (match) return match;
+      `).get(formatType) || null;
     }
     return db.prepare(`
       SELECT * FROM stories 

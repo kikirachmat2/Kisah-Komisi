@@ -1415,27 +1415,10 @@ cron.schedule('0 8 * * *', () => {
 });
 
 // ==========================================
-// 📦 AUTO-REPLENISH BUFFER STOK (Target 18 Konten / 3 Hari Buffer)
-// Menjaga keseimbangan 50% Shopee Affiliate & 50% Viral Growth Insight
+// 📦 JUST-IN-TIME (JIT) CONTENT PIPELINE
+// Konten diproduksi otomatis 15 menit sebelum setiap slot tayang (Fresh & Real-Time)
+// Cron stockpile dinonaktifkan agar tidak ada stok basi yang menumpuk di database.
 // ==========================================
-cron.schedule('0 */2 * * *', async () => {
-  console.log('[Scheduler] Menjalankan auto-replenish buffer stok berkala (Target 18 konten)...');
-  try {
-    const res = await replenishStockBuffer(18);
-    if (res.added > 0) {
-      await sendAdminAlert(
-        `📦 *[Auto-Stockpile] Stok Berhasil Ditambah!*\n\n` +
-        `Dewan Redaksi AI baru saja menambahkan *${res.added} konten terkurasi* ke antrean.\n` +
-        `Total stok siap tayang sekarang: *${res.currentCount} konten* (Target 18 untuk buffer 3 hari).`
-      );
-    }
-  } catch (err) {
-    console.error('[Scheduler] Gagal auto-replenish:', err.message);
-  }
-}, {
-  scheduled: true,
-  timezone: 'Asia/Jakarta'
-});
 
 // ==========================================
 // 🛡️ AFFILIATE LINK HEALTH PATROL (Tiap Hari jam 04:00 WIB)
@@ -1634,11 +1617,7 @@ bot.catch((err, ctx) => {
 // Start Bot
 bot.launch().then(() => {
   console.log('🚀 Kisah Komisi Autopilot Engine AKTIF (Timezone: Asia/Jakarta)!');
-  // Trigger otomatis di startup: cek & isi buffer stok bila kurang dari 18
-  setTimeout(() => {
-    console.log('[Autopilot] Memeriksa stok awal saat startup...');
-    replenishStockBuffer(18).catch(e => console.warn('[Autopilot] Startup replenish:', e.message));
-  }, 5000);
+  console.log('[Autopilot] Mode Just-in-Time (JIT) aktif: Konten diproduksi fresh 15 menit sebelum slot tayang.');
 }).catch(err => {
   console.error('FATAL bot.launch:', err);
   process.exit(1);

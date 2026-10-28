@@ -372,8 +372,9 @@ STRUKTUR 2 SLIDE:
   * DILARANG KERAS menggunakan frasa "masuk DM", "kiriman DM", atau "spill di DM"!
   * DILARANG penomoran "Part 1" atau "[Cerita Fiksi]".
   * Panjang: 120-180 karakter. Huruf kecil santai.
-- SLIDE 2 (Eskalasi & Dilema Menggantung):
-  * Kelanjutan fakta yang bikin geleng-geleng kepala + celetukan penutup atau pancingan diskusi.
+- SLIDE 2 (Eskalasi & Penutup Tuntas):
+  * Kelanjutan fakta yang bikin geleng-geleng kepala + celetukan penutup atau pancingan diskusi warganet.
+  * DILARANG KERAS MENGGANTUNGKAN KALIMAT DENGAN TITIK-TITIK ("...") DI AKHIR! Kalimat penutup WAJIB tuntas dengan tanda titik atau tanda tanya.
   * Panjang: 140-220 karakter. Huruf kecil santai.
 
 Keluarkan HANYA JSON:

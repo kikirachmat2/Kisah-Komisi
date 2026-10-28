@@ -406,6 +406,7 @@ async function runAutoEngagementScan(userId) {
     return { repliedCount: 0, scannedPosts: 0 };
   }
 
+  let totalRepliedThisRun = 0;
   const selfUsername = (process.env.THREADS_USERNAME || 'kikipunyacerita').toLowerCase();
   const ignoredUsernames = [selfUsername, 'kikipunyacerita', 'ceritakikiii', 'kisahkomisi', 'meta.ai', 'meta', 'threads'];
 

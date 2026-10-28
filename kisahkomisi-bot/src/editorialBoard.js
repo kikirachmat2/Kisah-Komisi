@@ -580,13 +580,9 @@ async function replenishStockBuffer(targetBuffer = 18) {
       (breakdown['serialized_story'] || 0) + 
       (breakdown['financial_breakdown'] || 0);
 
-    // Kumpulan format pilar viral non-affiliate (Rotasi Berimbang)
+    // Kumpulan format 50/50 Seimbang (Life Update & Curhat Multi-Slide)
     const baseViralFormats = [
-      'receh_daily',
-      'random_hobbies',
-      'hot_take',
-      'menfess_spill',
-      'serialized_story'
+      'single_life_update'
     ];
 
     const inMemoryBatch = [];
@@ -596,12 +592,9 @@ async function replenishStockBuffer(targetBuffer = 18) {
         // Jaga keseimbangan 50% affiliate, 50% pilar viral insight
         let chosenFormat;
         if (affiliateCount + (addedCount > 0 ? 1 : 0) <= viralCount) {
-          chosenFormat = 'story_affiliate';
+          chosenFormat = 'anonymous_curhat_story';
         } else {
-          // Batasi ketat financial_breakdown: hanya sertakan jika antrean & batch sekarang belum ada financial_breakdown
-          const hasFinancial = (breakdown['financial_breakdown'] || 0) > 0 || inMemoryBatch.some(b => b.format_type === 'financial_breakdown');
-          const currentPool = hasFinancial ? baseViralFormats : [...baseViralFormats, 'financial_breakdown'];
-          chosenFormat = currentPool[Math.floor(Math.random() * currentPool.length)];
+          chosenFormat = 'single_life_update';
         }
 
         // Seimbangkan 50% pilar viral terkunci & 50% pilar eksplorasi gelombang baru
