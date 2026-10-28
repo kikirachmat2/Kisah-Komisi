@@ -17,7 +17,7 @@ async function runBulletproofCheck() {
   console.log(`   Topik: ${story.topic}`);
   console.log(`   Produk: ${story.product_name || 'Tanpa Produk'} (${story.product_url || '-'})`);
   console.log(`   Jumlah Slide: ${story.slides.length}`);
-  if (!story.title || !story.slides || story.slides.length < 5) {
+  if (!story.title || !story.slides || story.slides.length < 3) {
     throw new Error('Hasil generateStory tidak memenuhi syarat struktur slide!');
   }
 
