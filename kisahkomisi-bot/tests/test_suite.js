@@ -96,7 +96,7 @@ async function runTests() {
   const { isCommentSafe, isAskingAboutBot, generateEngagementReply, sanitizeReply } = require('../src/autoReplyEngine');
   assert(isCommentSafe('Sumpah relate banget cerita ini, nyesek abis!') === true, 'Safe comment allowed');
   assert(isCommentSafe('Mau judi slot gacor hari ini') === false, 'Spam comment rejected');
-  assert(isCommentSafe('Dasar tolol goblok') === false, 'Toxic comment rejected');
+  assert(isCommentSafe('Dasar tolol goblok') === true, 'Raw emotional netizen comment allowed without guardrail');
   assert(isAskingAboutBot('Ini bot ya?') === true, 'Bot query detected');
 
   // Balasan dilarang mengaku AI/fiksi!

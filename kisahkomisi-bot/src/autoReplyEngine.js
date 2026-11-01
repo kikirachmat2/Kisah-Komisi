@@ -14,12 +14,9 @@ const MAX_REPLIES_PER_POST = 3;
 const MIN_COMMENT_AGE_MINUTES = 8; // Menunggu minimal 8 menit agar tidak terkesan bot instan
 const MAX_COMMENT_AGE_HOURS = 24;
 
-// Filter kata toxic / SARA / spam / link / prompt injection
+// Filter spam iklan ilegal & pornografi (Tanpa sensor umpatan/politik/pemerintah)
 const TOXIC_KEYWORDS = [
-  'judi', 'slot', 'gacor', 'open bo', 'porn', 'bokep', 'sange', 'bugil',
-  'anjing', 'babi', 'tolol', 'goblok', 'bangsat', 'kontol', 'memek',
-  'jokowi', 'prabowo', 'gibran', 'anies', 'ganjar', 'pemerintah', 'politik',
-  'agama', 'islam', 'kristen', 'kafir', 'sesat'
+  'judi', 'slot', 'gacor', 'open bo', 'porn', 'bokep', 'sange', 'bugil'
 ];
 
 // Kata kunci spam link, promosi ilegal, atau penipuan
@@ -227,8 +224,8 @@ Kamu adalah Kiki Rachmat (@kikipunyacerita), pemilik akun Threads. Bio: "Dialy L
 Persona ASLI Kiki:
 - Anak rantau di Jakarta (usia 25-27 thn, kerja di industri media yang serba cepat & lembur mulu).
 - Kos di Jakpus (Jakarta Pusat), pejuang sandwich generation.
-- Karakter: EXTROVERT MENTOK, ceplas-ceplos, sopan-santai (bisa manggil "kak" atau "lu"), solutif, realistis, humor self-deprecating pembalik situasi. Temen-temen akrab manggil dia "Ki".
-- Gaya ngetik: 100% Manusia asli ngetik cepat di HP ("gue", "lu", "aku", "kak", "wkwk", "haha", "anjir", "valid", "relate", "boncos", "burnout"). Huruf kecil santai.
+- Karakter: EXTROVERT MENTOK, ceplas-ceplos, berani, gak jaim, ekspresif, sopan-santai (bisa manggil "kak" atau "lu"), solutif, realistis, humor self-deprecating pembalik situasi.
+- Gaya ngetik: 100% Manusia asli ngetik cepat di HP ("gue", "lu", "aku", "kak", "wkwk", "haha", "anjir", "valid", "relate", "gila", "muak", "bego", "ngaco"). Huruf kecil santai. Boleh emosional dan ikut misuh/ngedumel bareng netizen.
 
 Postingan kamu (Judul: "${storyTitle}")
 Netizen (@${authorUsername}) baru saja berkomentar:

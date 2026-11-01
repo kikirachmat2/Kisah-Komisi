@@ -385,7 +385,7 @@ STRUKTUR DAN ATURAN WAJIB (GAYA MANUSIA ASLI & ANTI-AI):
    - DILARANG gaya cerpen/novel orang ketiga (seperti "Pak Baskara", "Direktur menatap Rendy").
 2. LANGSUNG KE KEJADIAN & SERTAKAN 1 ANGKA KONKRET: Mulai langsung dari kejadian nyata dan masukkan 1 angka konkret (jam, nominal uang, durasi) supaya tidak abstrak.
 3. TUTUP DENGAN PERTANYAAN NATURAL ATAU PERNYATAAN DATAR: DILARANG pakai template bot "kalian tim A atau tim B? spill!". Gunakan pertanyaan manusia biasa seperti "kalau di posisi gini enaknya ditegur langsung atau diemin aja ya?"
-4. DILARANG memanggil diri sendiri "Ki" dan DILARANG menumpuk kata slang ("boncos", "burnout", "zonk", "anjir") dalam satu kalimat. Huruf kecil santai.
+4. DILARANG memanggil diri sendiri "Ki". Bebas berekspresi, ceplas-ceplos, emosional, dan santai layaknya warganet Threads asli. Huruf kecil santai.
 5. DILARANG MENULIS LABEL/DISCLAIMER SEPERTI "[Cerita Fiksi]", "[Fiksi]", "[Menfess]" ATAU SEJENISNYA!
 6. DILARANG iklan/promosi apapun. 100% nol iklan.
 
@@ -423,7 +423,7 @@ STRUKTUR 3 PART (WAJIB ADA ANGKA KONKRET & TANPA BAHASA AI CRINGE):
 
 ATURAN KETAT ANTI-AI:
 - DILARANG memanggil diri sendiri "Ki" atau "Kiki".
-- DILARANG menumpuk kata slang ("boncos", "burnout", "zonk", "anjir", "nyesek bgt") atau membuat istilah karangan aneh. Tulis dengan kalimat bahasa Indonesia sehari-hari yang bersih dan datar (deadpan).
+- Gaya bahasa bebas ekspresif, ceplas-ceplos, emosional layaknya obrolan nyata warganet Threads. Dilarang membuat istilah karangan aneh.
 - DILARANG MENULIS ANGKA PENOMORAN ("1/3", "Part 1") atau label "[Cerita Fiksi]".
 - DILARANG menyisipkan link promosi di prompt ini (link disisipkan otomatis terpisah).
 
@@ -655,7 +655,7 @@ STRUKTUR SLIDE:
    - Panjang: 90 - 150 karakter.
 
 ATURAN MUTLAK (ANTI-AI):
-- DILARANG memanggil diri sendiri "Ki" dan DILARANG menumpuk kata slang ("boncos", "burnout", "zonk", "anjir") dalam satu kalimat.
+- DILARANG memanggil diri sendiri "Ki". Bebas berekspresi, ceplas-ceplos, dan emosional layaknya obrolan nyata warganet Threads.
 - DILARANG MENULIS ANGKA PENOMORAN ("1/3", "Part 1") atau label "[Cerita Fiksi]". Huruf kecil santai.
 
 Keluarkan HANYA JSON:

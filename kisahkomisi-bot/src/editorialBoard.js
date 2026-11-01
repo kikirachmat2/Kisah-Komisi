@@ -223,11 +223,11 @@ SLIDES:
 ${slides.map((s, idx) => `[Part ${idx + 1}]: ${s}`).join('\n\n')}
 
 KRITERIA PENILAIAN (Skala 1 - 10):
-1. realism_score: Apakah ini adegan konkret relatable yang dialami orang dewasa/pekerja Indonesia (kosan, teman, keluarga, transportasi, kantor) DAN memuat detail angka konkret (nominal uang/jam/durasi)? TOLAK (skor <6) jika terasa seperti keluhan abstrak tanpa angka, esai opini, atau melodrama sinetron.
-2. human_tone_score: Apakah gaya bahasa 100% natural warganet Threads Indonesia (lu-gue/aku-kamu, datar/deadpan, santai)? TOLAK jika menumpuk kata slang beruntun, memanggil diri sendiri "Ki", atau bau klise AI.
+1. realism_score: Apakah ini adegan/isu konkret relatable yang dialami orang dewasa/pekerja/warganet Indonesia (kantor, kerjaan, kosan, keluarga, isu viral publik, bos, regulasi)? TOLAK (skor <6) HANYA jika terasa seperti esai opini formal kaku, brosur marketing, atau sinetron fiksi lebay. JANGAN tolak hanya karena tidak ada angka nominal matematika atau bernada emosional/kesal.
+2. human_tone_score: Apakah gaya bahasa 100% natural warganet Threads Indonesia (lu-gue/aku-kamu, ceplas-ceplos, santai, berani, ekspresif)? Boleh emosional, gregetan, atau memakai umpatan wajar khas netizen (anjing, goblok, tolol, ngaco, anjir) asal natural dan bukan bot. TOLAK HANYA jika tercium gaya kaku korporat, memanggil diri sendiri "Ki" seperti bot, atau format AI kaku.
 3. format_pacing_score: Apakah alur cerita ringkas dan padat (slide 1 hook menarik tanpa link, slide lanjutan mengalir)?
-4. affiliate_score: Apakah penempatan rekomendasi produk Shopee terasa natural dan kontekstual di dalam thread (bukan hard-selling spam di slide 1)? Jika cerita tanpa link bernilai 9, jika rekomendasi produk halus dan nyambung bernilai 10.
-5. debate_score: Apakah memancing netizen untuk berdebat atau menceritakan pengalamannya di kolom reply tanpa memakai template bot "kalian tim A atau B? spill!"?
+4. affiliate_score: Apakah penempatan rekomendasi produk Shopee (jika ada) terasa natural dan tidak merusak alur? Jika cerita tanpa link bernilai 10, jika ada produk halus bernilai 10.
+5. debate_score: Apakah memancing netizen untuk berdebat, nimbrung, quote, atau curhat di kolom reply tanpa template bot "kalian tim A atau B? spill!"?
 
 Berikan output HANYA berupa JSON valid persis seperti format ini:
 {
@@ -243,7 +243,7 @@ Berikan output HANYA berupa JSON valid persis seperti format ini:
   "curator_note": "Ringkasan penilaian kurator dalam 1-2 kalimat"
 }
 
-Syarat Lolos (approved = true): total_score >= 7.5 dan realism >= 7.0. Jika terdeteksi gaya abstrak tanpa angka konkret, esai, atau sinetron, set approved = false.
+Syarat Lolos (approved = true): total_score >= 6.8 dan human_tone >= 6.5. Berikan kebebasan berekspresi penuh bagi suara manusia yang berani, jujur, dan emosional.
 `;
 
   // 1. Coba QC via Groq (Primary QC LPU ultra-fast)

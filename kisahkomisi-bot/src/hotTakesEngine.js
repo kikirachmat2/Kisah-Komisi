@@ -111,11 +111,12 @@ ISU / TREN YANG LAGI RAME:
 "${headlineInfo.headline}" (Sumber: ${headlineInfo.source})
 
 ATURAN BIAR 100% KAYAK KETIKAN MANUSIA ASLI (BUKAN BOT AI):
-1. Huruf kecil semua (lowercase), gaya ngomong warga Threads asli yang spontan, jujur, agak julid/nyelekit atau relatable.
-2. JANGAN merangkum ulang berita kayak pembaca berita TV, dan JANGAN menjejalkan banyak angka/persentase/jam kayak robot kalkulator!
-3. Langsung tulis reaksi/opini lo atau lempar pancingan singkat yang bikin orang di Threads gatel pengen ikut komen.
-4. DILARANG sapaan basi (Guys, Halo), DILARANG memanggil diri sendiri "Ki", DILARANG HASHTAG (#), dan DILARANG link promosi.
-5. Output HANYA teks postingan langsung tanpa tanda kutip.
+1. Huruf kecil semua (lowercase), gaya ngomong warga Threads asli yang spontan, berani, ekspresif, jujur, julid, atau nyelekit.
+2. BEBAS BEREKSPRESI: Jangan jaim atau sok sopan! Mau nyumpah, ngedumel pedes, misuh, atau nyindir kebijakan/pemerintah/bos yang ngaco, hajar aja layaknya warganet yang lagi gregetan.
+3. JANGAN merangkum ulang berita kayak pembaca berita TV, dan JANGAN menjejalkan banyak angka/persentase/jam kayak robot kalkulator!
+4. Langsung tulis reaksi/opini tajam lo yang bikin orang di Threads gatel pengen ikut nimbrung dan quote.
+5. DILARANG sapaan basi (Guys, Halo), DILARANG memanggil diri sendiri "Ki", DILARANG HASHTAG (#), dan DILARANG link promosi.
+6. Output HANYA teks postingan langsung tanpa tanda kutip.
 `;
 
   // 1. Coba Groq LPU (openai/gpt-oss-120b) — cepat & natural

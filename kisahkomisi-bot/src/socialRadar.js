@@ -83,14 +83,15 @@ KOMENTAR NETIZEN YANG MASUK:
 ${netizenComments.slice(0, 4).map((c, i) => `- @${c.author_username}: "${c.comment_text}"`).join('\n') || '- Belum ada komentar'}
 
 ATURAN KUNCI BIAR VIRAL & GAK KELIHATAN BOT AI:
-1. BEBAS TANPA GUARDRAIL TOPIK: Apapun yang lagi rame (kasus viral, seleb/gosip, kebijakan aneh, timnas/bola, konser, fenomena warga +62, drama hubungan, kerjaan, harga naik), HAJAR AJA! Jangan semuanya dipaksa belok ke gaji/kosan kalau topiknya lagi seru dibahas apa adanya.
-2. JANGAN NULIS KAYAK BOT RANGKUMAN BERITA ATAU KALKULATOR:
+1. BEBAS TANPA GUARDRAIL TOPIK & BAHASA: Apapun yang lagi rame (kebijakan pemerintah, kasus viral, seleb/gosip, sepakbola, konser, drama kerjaan, harga naik, kelakuan absurd), HAJAR AJA!
+2. EKSPRESIF, CEPLAS-CEPLOS & BERANI: Jangan jaim, jangan sok bijak! Boleh ngedumel pedes, emosional, gregetan, sarkas, atau nyindir kelakuan pemerintah/korporat/atasan yang ngaco layaknya warga Threads yang lagi muak. Kalimatnya harus tegas, berani, dan kebaca jelas emosinya.
+3. JANGAN NULIS KAYAK BOT RANGKUMAN BERITA ATAU KALKULATOR:
    - SALAH (Gaya AI Bot): "Harga avtur naik ke Rp12.500/liter membuat gaji pilot turun 50% dari Rp25jt menjadi Rp12,5jt dan 200 orang di-PHK dalam 48 jam." (Terlalu kaku kayak laporan koran!).
    - BENAR (Gaya Manusia Threads): "rame maskapai phk ratusan orang gara-gara avtur bengkak. jujur tahun ini ngeri bgt liat gelombang layoff dimana-mana, tempat kalian masih aman gak sih?"
-3. PILIH FORMAT SESUAI JENIS ISUNYA:
+4. PILIH FORMAT SESUAI JENIS ISUNYA:
    - Jika isu drama/kebijakan/fenomena/hiburan/kasus viral -> pilih "hot_take" (celetukan nyelekit/jujur) atau "menfess_spill" (pancingan debat/cerita warganet) atau "anonymous_curhat_story" (cerita sudut pandang orang sekitar soal isu itu).
    - Jika isu menyangkut biaya hidup/gaji/harga -> boleh pilih "financial_breakdown" (bedah rincian gaji) atau "single_life_update".
-4. GAYA KETIKAN MANUSIA ASLI: Huruf kecil semua (lowercase), bahasa ngobrol santai sehari-hari, tanpa hashtag, tanpa kata slang beruntun yang maksa.
+5. GAYA KETIKAN MANUSIA ASLI: Huruf kecil semua (lowercase), bahasa ngobrol santai sehari-hari, tanpa hashtag, tanpa penomoran kaku.
 
 Keluarkan HANYA JSON array valid:
 [

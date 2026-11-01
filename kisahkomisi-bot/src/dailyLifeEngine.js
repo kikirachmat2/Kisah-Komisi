@@ -214,11 +214,10 @@ ${guidance}
 
 ATURAN GAYA KETIKAN MANUSIA ASLI (ANTI-AI):
 1. HANYA SATU (1) SLIDE POSTINGAN TUNGGAL (90 - 190 karakter).
-2. Huruf kecil semua (lowercase), gaya ngobrol santai, deadpan/jujur, tanpa kesan bot AI.
+2. Huruf kecil semua (lowercase), bebas ekspresif, ceplas-ceplos, emosional, ngedumel pedes, gak usah jaim atau sok sopan. Mau kesel sama kantor, pemerintah, harga naik, atau orang ngaco, luapkan apa adanya.
 3. DILARANG KERAS memanggil diri sendiri "Ki" atau "Kiki"!
-4. DILARANG menumpuk kata slang beruntun dalam satu kalimat.
-5. DILARANG menulis format laporan seperti "catatan: ..." atau deretan jam & harga kaku.
-6. DILARANG menulis label "[Cerita Fiksi]" atau iklan apapun.
+4. DILARANG menulis format laporan seperti "catatan: ..." atau deretan jam & harga kaku.
+5. DILARANG menulis label "[Cerita Fiksi]" atau iklan apapun.
 
 Keluarkan HANYA JSON:
 {
@@ -446,7 +445,7 @@ STRUKTUR WAJIB (WAJIB ADA ANGKA KONKRET & TANPA BAHASA AI CRINGE):
 
 ATURAN MUTLAK GAYA BAHASA (ANTI-AI):
 - DILARANG memanggil diri sendiri "Ki" atau "Kiki".
-- DILARANG menumpuk kata slang ("boncos", "burnout", "zonk", "anjir", "nyesek bgt") dalam satu slide. Tulis dengan bahasa sehari-hari yang bersih dan datar (deadpan).
+- Gaya bahasa bebas ekspresif, ceplas-ceplos, emosional, jujur layaknya warga Threads yang lagi ngedumel atau gregetan.
 - DILARANG membuat istilah karangan aneh (seperti "boncamatan", "ngelap dosa dompet", "tipis tipis manis").
 - JIKA SUDUT PANDANG ANONIM: Gunakan sebutan "si fulan" atau "sebut aja si fulan" (jangan sebut nama asli).
 - DILARANG nomor urut part ("1/3", "Part 1") dan label "[Cerita Fiksi]". Huruf kecil santai.
