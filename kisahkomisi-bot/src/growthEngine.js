@@ -579,6 +579,100 @@ async function evaluateAndLockWinningNiches() {
 }
 
 /**
+ * KPI TARGET: minimal views per postingan (default 1000, bisa diubah lewat app_settings VIEW_TARGET)
+ */
+function getViewTarget() {
+  const raw = Number(db.getSetting('VIEW_TARGET'));
+  return Number.isFinite(raw) && raw > 0 ? raw : 1000;
+}
+
+/**
+ * Hit-rate per format terhadap target views (dipakai Bandit Allocator).
+ * Skor Bayesian (hits+1)/(posts+2) supaya format dengan sampel kecil tidak langsung dicap jelek/bagus.
+ */
+function getFormatHitRates(target = getViewTarget()) {
+  try {
+    const rows = db.db.prepare(`
+      SELECT COALESCE(s.format_type, 'story_affiliate') as format_type,
+             COUNT(s.id) as posts,
+             SUM(CASE WHEN COALESCE(i.views, 0) >= ? THEN 1 ELSE 0 END) as hits,
+             ROUND(AVG(COALESCE(i.views, 0)), 1) as avg_views
+      FROM stories s
+      LEFT JOIN story_insights i ON s.id = i.story_id
+      WHERE s.status = 'published' AND s.threads_media_id IS NOT NULL
+        AND s.published_at <= datetime('now', '-6 hours')
+      GROUP BY COALESCE(s.format_type, 'story_affiliate')
+    `).all(target);
+    const map = {};
+    for (const r of rows) {
+      map[r.format_type] = {
+        posts: r.posts,
+        hits: r.hits || 0,
+        avg_views: r.avg_views,
+        score: ((r.hits || 0) + 1) / (r.posts + 2)
+      };
+    }
+    return map;
+  } catch (e) {
+    return {};
+  }
+}
+
+/**
+ * Bandit Allocator (Thompson-style sederhana): pilih format organik untuk slot non-affiliate.
+ * Exploit format yang paling sering tembus target, tapi tetap eksplor 20% agar tidak terjebak 1 format.
+ */
+function chooseAdaptiveFormat(candidates, fallback) {
+  if (!Array.isArray(candidates) || candidates.length === 0) return fallback;
+  const rates = getFormatHitRates();
+  if (Math.random() < 0.2) {
+    return candidates[Math.floor(Math.random() * candidates.length)];
+  }
+  let best = fallback;
+  let bestScore = -1;
+  for (const f of candidates) {
+    const r = rates[f] || { score: 0.5, posts: 0 };
+    // Noise sebanding ketidakpastian (sampel kecil = noise besar)
+    const noise = (Math.random() - 0.5) * (1 / Math.sqrt((r.posts || 0) + 1)) * 0.3;
+    const s = r.score + noise;
+    if (s > bestScore) {
+      bestScore = s;
+      best = f;
+    }
+  }
+  return best;
+}
+
+/**
+ * Progress KPI 7 hari terakhir: berapa post yang tembus target views.
+ */
+function getKpiProgress(days = 7) {
+  const target = getViewTarget();
+  try {
+    const rows = db.db.prepare(`
+      SELECT s.id, s.title, s.format_type, COALESCE(i.views, 0) as views
+      FROM stories s
+      LEFT JOIN story_insights i ON s.id = i.story_id
+      WHERE s.status = 'published' AND s.threads_media_id IS NOT NULL
+        AND s.published_at >= datetime('now', '-' || ? || ' days')
+      ORDER BY views DESC
+    `).all(days);
+    const hits = rows.filter(r => r.views >= target);
+    return {
+      target,
+      days,
+      total: rows.length,
+      hits: hits.length,
+      hitRate: rows.length > 0 ? Math.round((hits.length / rows.length) * 100) : 0,
+      best: rows[0] || null,
+      worst: rows[rows.length - 1] || null
+    };
+  } catch (e) {
+    return { target, days, total: 0, hits: 0, hitRate: 0, best: null, worst: null };
+  }
+}
+
+/**
  * Format laporan ringkas untuk dikirim ke Telegram admin
  */
 async function generateInsightReportMarkdown() {
@@ -595,6 +689,12 @@ async function generateInsightReportMarkdown() {
   msg += `• Total Penayangan (*Views*): *${latestAccount.views || 0} tayangan*\n`;
   msg += `• Total Interaksi (*Likes*): *${latestAccount.likes || 0} likes*\n`;
   msg += `• Total Diskusi (*Replies*): *${latestAccount.replies || 0} balasan*\n\n`;
+
+  const kpi = getKpiProgress(7);
+  msg += `🎯 *KPI Target ${kpi.target} Views/Post (7 Hari):*\n`;
+  msg += `• Tembus target: *${kpi.hits}/${kpi.total} post* (${kpi.hitRate}%)\n`;
+  if (kpi.best) msg += `• Terbaik: ${kpi.best.views} views (${kpi.best.format_type || 'story'})\n`;
+  msg += `\n`;
 
   if (topStories.length > 0 && topStories[0].views > 0) {
     msg += `🏆 *Top Cerita Paling Banyak Dilihat:*\n`;
@@ -663,5 +763,9 @@ module.exports = {
   evaluateAndLockWinningNiches,
   normalizeNicheTag,
   buildCognitiveTuningContext,
-  getAdaptivePriorityTopics
+  getAdaptivePriorityTopics,
+  getViewTarget,
+  getFormatHitRates,
+  chooseAdaptiveFormat,
+  getKpiProgress
 };

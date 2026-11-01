@@ -492,8 +492,11 @@ function buildFinancialBreakdownText({ incomeJt, location, items, punchline, hea
 
   const safePunchline = sanitizePunchline(punchline);
 
-  // Gunakan header bergaya kurator obrolan sana-sini (lowercase, organik, bukan aku-akuan)
-  const header = headerStyle || `denger dari obrolan sana-sini, ini rincian gaji ${formatRupiahJt(incomeJt)} di ${location}:`;
+  // Header WAJIB pola langsung persis 2 post pemenang (#60: 73rb views, #57: 44rb views): "Gaji 6 juta di Jakarta:"
+  // Data empiris: post format sama tapi header "kurator/obrolan sana-sini" hanya dapat ~194 views.
+  const shortLocation = String(location || 'Jakarta').replace(/\s*\(.*?\)\s*/g, '').trim() || 'Jakarta';
+  const incomeLabel = incomeJt % 1 === 0 ? `${incomeJt} juta` : `${String(incomeJt).replace('.', ',')} juta`;
+  const header = `Gaji ${incomeLabel} di ${shortLocation}:`;
 
   const lines = [
     header,
@@ -634,23 +637,23 @@ async function generateFinancialBreakdown(options = {}) {
   const recentLocations = recentFinancials.slice(0, 3).map(f => (f.location || '').toLowerCase());
 
   // 2. Tentukan nominal gaji yang belum pernah dipakai dalam rolling 14 hari
-  const ALL_INCOMES = [4.8, 5.2, 5.8, 6.5, 7.2, 7.8, 8.5, 9.8, 12.0, 14.5];
+  const ALL_INCOMES = [4.8, 5.2, 5.5, 6.0, 6.5, 7.0, 7.5, 8.5, 9.8, 12.0];
   let availableIncomes = ALL_INCOMES.filter(inc => !usedIncomes.has(inc));
   if (availableIncomes.length === 0) availableIncomes = ALL_INCOMES;
   const targetIncome = availableIncomes[Math.floor(Math.random() * availableIncomes.length)];
 
   // 3. Tentukan lokasi kota/area kerja yang fresh
   const ALL_LOCATIONS = [
-    'Kuningan (Jaksel)',
-    'Setiabudi (Jaksel)',
-    'Tebet (Jaksel)',
-    'Cilandak (Jaksel)',
-    'SCBD / Senopati',
-    'Benhil (Jakpus)',
-    'Palmerah (Jakpus)',
-    'Bintaro (Tangsel)',
-    'BSD (Tangerang)',
-    'Cikarang (Kawasan Industri)'
+    'Jakarta',
+    'Jakarta',
+    'Jakarta Selatan',
+    'Tangerang',
+    'Bekasi',
+    'Depok',
+    'Bogor',
+    'Bandung',
+    'Surabaya',
+    'Kuningan'
   ];
   let availableLocations = ALL_LOCATIONS.filter(loc => !recentLocations.some(rl => rl.includes(loc.split(' ')[0].toLowerCase())));
   if (availableLocations.length === 0) availableLocations = ALL_LOCATIONS;
@@ -684,7 +687,6 @@ TARGET PARAMETER WAJIB:
 - Nominal Gaji: ${targetIncome} juta
 - Lokasi: "${targetLocation}"
 - Nominal yang SUDAH PERNAH DIPAKAI (DILARANG DIPAKAI LAGI): [${Array.from(usedIncomes).join(', ')}]
-- DILARANG menggunakan nominal 6.0 juta (karena baru saja diposting)!
 
 Berikan output HANYA berupa JSON valid persis seperti ini:
 {
@@ -718,9 +720,9 @@ ATURAN KETAT ANTI-DUPLIKASI & GAYA ANAK KORPORAT:
       const parsed = JSON.parse(cleanJson);
       if (parsed && typeof parsed.incomeJt === 'number' && Array.isArray(parsed.items) && parsed.items.length >= 3) {
         let validIncome = Number(Number(parsed.incomeJt).toFixed(1));
-        
-        // Tolak jika AI halusinasi kembali ke 6.0 padahal 6.0 dilarang
-        if (validIncome === 6.0 && targetIncome !== 6.0) {
+
+        // Paksa nominal sesuai target rotasi (cegah AI halusinasi ke nominal lain)
+        if (validIncome !== targetIncome) {
           validIncome = targetIncome;
         }
 
@@ -751,6 +753,23 @@ ATURAN KETAT ANTI-DUPLIKASI & GAYA ANAK KORPORAT:
   // Jika AI gagal / parsing error, gunakan template terverifikasi 100% akurat yang belum pernah dipakai
   if (!budgetData) {
     budgetData = getRandomVerifiedFinancialBudget(usedIncomes);
+  }
+
+  // Normalisasi realisme: sisa harus tipis (5-12% gaji) — sisa besar terasa palsu & tidak memancing debat.
+  // Mencegah AI menyalin angka contoh prompt mentah-mentah (mis. gaji 8.5jt sisa 3.4jt).
+  {
+    const income = budgetData.incomeJt;
+    const total = budgetData.items.reduce((s, it) => s + it.amountJt, 0);
+    const sisaRatio = income > 0 ? (income - total) / income : 0;
+    if (total > 0 && (sisaRatio > 0.15 || sisaRatio < 0)) {
+      const targetTotal = income * (0.88 + Math.random() * 0.07);
+      const factor = targetTotal / total;
+      budgetData.items = budgetData.items.map(it => ({
+        ...it,
+        // bulatkan ke kelipatan 50rb agar terlihat seperti hitungan manusia
+        amountJt: Math.max(0.05, Math.round((it.amountJt * factor) / 0.05) * 0.05)
+      })).map(it => ({ ...it, amountJt: Number(it.amountJt.toFixed(2)) }));
+    }
   }
 
   // Bangun teks dengan kalkulasi matematika eksak via JavaScript

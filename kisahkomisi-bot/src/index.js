@@ -11,7 +11,10 @@ const {
   analyzePerformanceAndStrategize, 
   generateInsightReportMarkdown,
   syncNicheAnalytics,
-  evaluateAndLockWinningNiches
+  evaluateAndLockWinningNiches,
+  chooseAdaptiveFormat,
+  getKpiProgress,
+  getFormatHitRates
 } = require('./growthEngine');
 const { 
   publishStoryToThreads, 
@@ -480,6 +483,33 @@ bot.command(['insight', 'statistik'], async (ctx) => {
   } catch (err) {
     console.error('Error command insight:', err);
     ctx.reply(`❌ Gagal mengambil insight Threads: ${err.message}`);
+  }
+});
+
+// Command: /target [angka] (Cek / ubah KPI minimal views per postingan)
+bot.command('target', (ctx) => {
+  try {
+    const arg = Number(ctx.message.text.replace('/target', '').trim());
+    if (Number.isFinite(arg) && arg > 0) {
+      db.setSetting('VIEW_TARGET', String(Math.round(arg)));
+    }
+    const kpi = getKpiProgress(7);
+    const rates = getFormatHitRates(kpi.target);
+
+    let msg = `🎯 *KPI TARGET: ${kpi.target} VIEWS / POSTINGAN*\n\n`;
+    msg += `📅 *7 Hari Terakhir:* ${kpi.hits}/${kpi.total} post tembus (${kpi.hitRate}%)\n`;
+    if (kpi.best) msg += `🏆 Terbaik: *${kpi.best.views} views* — ${kpi.best.title}\n`;
+    msg += `\n📊 *Hit-Rate per Format (semua waktu):*\n`;
+    Object.entries(rates)
+      .sort((a, b) => b[1].score - a[1].score)
+      .forEach(([fmt, r]) => {
+        msg += `• \`${fmt}\`: ${r.hits}/${r.posts} tembus | avg ${r.avg_views} views\n`;
+      });
+    msg += `\n_Bandit Allocator otomatis memberi slot organik lebih banyak ke format dengan hit-rate tertinggi._\n`;
+    msg += `Ubah target: \`/target 1500\``;
+    safeReplyMarkdown(ctx, msg);
+  } catch (err) {
+    ctx.reply(`❌ Gagal membaca KPI: ${err.message}`);
   }
 });
 
@@ -1110,6 +1140,32 @@ const DAILY_SLOTS = [
   { slotNumber: 6, time: '21:45', vetoTime: '21:30', label: 'SLOT 6 - PEAK REBAHAN (21:45 WIB)', defaultFormat: 'anonymous_curhat_story', targetNicheType: 'explore', hasAffiliate: true }
 ];
 
+// Slot organik yang formatnya dipilih Bandit Allocator berdasarkan hit-rate target views
+const ADAPTIVE_SLOT_CANDIDATES = {
+  1: ['single_life_update', 'menfess_spill', 'hot_take'],
+  4: ['menfess_spill', 'hot_take', 'financial_breakdown', 'single_life_update']
+};
+
+/**
+ * Menentukan format slot sekali per hari (disimpan agar veto-preview & eksekusi konsisten)
+ */
+function resolveSlotFormat(dateStr, slotConf) {
+  const key = `SLOT_FORMAT_${dateStr}_${slotConf.time}`;
+  const saved = db.getSetting(key);
+  if (saved) return saved;
+
+  let fmt = slotConf.defaultFormat || (slotConf.hasAffiliate ? 'anonymous_curhat_story' : 'single_life_update');
+  const candidates = ADAPTIVE_SLOT_CANDIDATES[slotConf.slotNumber];
+  if (candidates && !slotConf.hasAffiliate) {
+    try {
+      fmt = chooseAdaptiveFormat(candidates, fmt);
+    } catch (e) {}
+  }
+  db.setSetting(key, fmt);
+  console.log(`[BanditAllocator] Slot ${slotConf.slotNumber} (${dateStr}) → format "${fmt}"`);
+  return fmt;
+}
+
 // ==========================================
 // ⏳ PREPARE & NOTIFY 15-MINUTE VETO WINDOW
 // Dijalankan 15 menit sebelum setiap slot tayang
@@ -1136,7 +1192,7 @@ async function prepareAndNotifyVetoSlot(slotTime, label, slotNumber = null) {
     }
 
     if (!story) {
-      const targetFormat = slotConf.defaultFormat || (slotConf.hasAffiliate ? 'anonymous_curhat_story' : 'single_life_update');
+      const targetFormat = resolveSlotFormat(dateStr, slotConf);
       story = db.getNextQueuedStory ? db.getNextQueuedStory(targetFormat) : null;
 
       if (!story) {
@@ -1280,7 +1336,7 @@ async function executeScheduledPosting(slotTime, label, slotNumber = null) {
       if (story && story.status !== 'queued') story = null;
     }
 
-    const targetFormat = slotConf.defaultFormat || (slotConf.hasAffiliate ? 'anonymous_curhat_story' : 'single_life_update');
+    const targetFormat = resolveSlotFormat(dateStr, slotConf);
 
     if (!story) {
       story = db.getNextQueuedStory ? db.getNextQueuedStory(targetFormat) : null;
