@@ -695,6 +695,20 @@ module.exports = {
     `).all(limit);
   },
 
+  getRecentPublishedStoriesWithInsights: (limit = 15) => {
+    return db.prepare(`
+      SELECT s.id, s.title, s.topic, s.format_type, s.product_name, s.threads_media_id, s.published_at,
+             COALESCE(i.views, 0) as views,
+             COALESCE(i.likes, 0) as likes,
+             COALESCE(i.replies, 0) as replies
+      FROM stories s
+      LEFT JOIN story_insights i ON s.id = i.story_id
+      WHERE s.status = 'published' AND s.threads_media_id IS NOT NULL
+      ORDER BY s.id DESC
+      LIMIT ?
+    `).all(limit);
+  },
+
   getRecentStoriesForDeduplication: (limit = 40) => {
     const rows = db.prepare(`
       SELECT id, title, topic, format_type, slides_json, status, created_at, published_at

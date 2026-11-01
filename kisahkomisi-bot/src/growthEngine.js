@@ -755,6 +755,85 @@ async function generateInsightReportMarkdown() {
   return msg;
 }
 
+/**
+ * Menghitung kuota & hak tayang affiliate adaptif per hari berdasarkan traksi algoritma & views nyata.
+ * 
+ * Filosofi:
+ * - Baseline (Tier 1: BASELINE): 1 slot affiliate/hari (Slot 5 Malam Santai). 5 slot lainnya 100% organik link-free
+ *   untuk meloloskan akun dari penalti de-ranking link eksternal Meta Threads.
+ * - Naik ke 2 slot/hari (Tier 2: MOMENTUM): Terbuka untuk Slot 3 (Makan Siang) + Slot 5 (Malam Santai) jika
+ *   akun menunjukkan momentum sehat (views postingan baru >= 250, atau ada postingan hari ini >= 75 views, atau replies >= 5).
+ * - Naik ke 3 slot/hari (Tier 3: SURGE): Terbuka untuk Slot 3, 5, dan 6 jika akun sedang VIRAL (ada postingan >= 1.000 views
+ *   sesuai target KPI, atau total daily views akun >= 1.000).
+ */
+function getAdaptiveAffiliateStatus() {
+  try {
+    const manualQuota = db.getSetting('MANUAL_AFFILIATE_QUOTA');
+    if (manualQuota && ['1', '2', '3'].includes(String(manualQuota))) {
+      const q = parseInt(manualQuota, 10);
+      const allowed = q === 3 ? [3, 5, 6] : (q === 2 ? [3, 5] : [5]);
+      return {
+        tier: 'MANUAL_OVERRIDE',
+        quota: q,
+        allowedSlots: allowed,
+        reason: `Ditetapkan manual oleh user: ${q} slot affiliate/hari.`,
+        metrics: {}
+      };
+    }
+
+    const recentStories = db.getRecentPublishedStoriesWithInsights ? db.getRecentPublishedStoriesWithInsights(12) : [];
+    const latestInsight = db.getLatestAccountInsight ? db.getLatestAccountInsight() : null;
+
+    const maxRecentViews = recentStories.length ? Math.max(...recentStories.map(s => Number(s.views || 0))) : 0;
+    const avgRecentViews = recentStories.length ? Math.round(recentStories.reduce((acc, s) => acc + Number(s.views || 0), 0) / recentStories.length) : 0;
+    const maxRecentReplies = recentStories.length ? Math.max(...recentStories.map(s => Number(s.replies || 0))) : 0;
+    const accountDailyViews = latestInsight ? Number(latestInsight.views || 0) : 0;
+
+    const latestPost = recentStories[0] || null;
+    const latestPostViews = latestPost ? Number(latestPost.views || 0) : 0;
+    const latestPostReplies = latestPost ? Number(latestPost.replies || 0) : 0;
+
+    // TIER 3: VIRAL SURGE (3 Slot: Slot 3 Makan Siang, Slot 5 Malam Santai, Slot 6 Peak Rebahan)
+    if (maxRecentViews >= 1000 || accountDailyViews >= 1000) {
+      return {
+        tier: 'SURGE',
+        quota: 3,
+        allowedSlots: [3, 5, 6],
+        reason: `Viral surge aktif! Postingan tembus >= 1.000 views (Max: ${maxRecentViews}, Akun: ${accountDailyViews}). Kuota maksimal 3 slot affiliate dibuka!`,
+        metrics: { maxRecentViews, avgRecentViews, maxRecentReplies, accountDailyViews, latestPostViews }
+      };
+    }
+
+    // TIER 2: MOMENTUM (2 Slot: Slot 3 Makan Siang + Slot 5 Malam Santai)
+    if (maxRecentViews >= 250 || avgRecentViews >= 100 || maxRecentReplies >= 5 || latestPostViews >= 75 || latestPostReplies >= 3 || accountDailyViews >= 200) {
+      return {
+        tier: 'MOMENTUM',
+        quota: 2,
+        allowedSlots: [3, 5],
+        reason: `Traksi momentum sehat! (Max views: ${maxRecentViews}, Post terbaru: ${latestPostViews} views, Replies: ${maxRecentReplies}). Kuota dinaikkan menjadi 2 slot affiliate (Slot 3 & 5).`,
+        metrics: { maxRecentViews, avgRecentViews, maxRecentReplies, accountDailyViews, latestPostViews }
+      };
+    }
+
+    // TIER 1: BASELINE (1 Slot: Slot 5 Malam Santai)
+    return {
+      tier: 'BASELINE',
+      quota: 1,
+      allowedSlots: [5],
+      reason: `Fase pelindung algoritma (Views masih < 250). Mengunci 1 slot affiliate harian di jam malam (Slot 5), 5 slot lainnya 100% organik link-free untuk membuka distribusi For You.`,
+      metrics: { maxRecentViews, avgRecentViews, maxRecentReplies, accountDailyViews, latestPostViews }
+    };
+  } catch (err) {
+    return {
+      tier: 'BASELINE',
+      quota: 1,
+      allowedSlots: [5],
+      reason: `Fallback pengaman: ${err.message}`,
+      metrics: {}
+    };
+  }
+}
+
 module.exports = {
   trackAllInsights,
   analyzePerformanceAndStrategize,
@@ -768,5 +847,6 @@ module.exports = {
   getViewTarget,
   getFormatHitRates,
   chooseAdaptiveFormat,
-  getKpiProgress
+  getKpiProgress,
+  getAdaptiveAffiliateStatus
 };

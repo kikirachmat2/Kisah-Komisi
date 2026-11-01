@@ -516,6 +516,54 @@ bot.command('target', (ctx) => {
   }
 });
 
+// Command: /affiliate & /monetisasi (Status & kuota affiliate adaptif)
+bot.command(['affiliate', 'monetisasi'], (ctx) => {
+  try {
+    const { getAdaptiveAffiliateStatus } = require('./growthEngine');
+    const status = getAdaptiveAffiliateStatus();
+    const manual = db.getSetting('MANUAL_AFFILIATE_QUOTA');
+
+    let msg = `🛍️ *MONETISASI ADAPTIF: ${status.quota} SLOT AFFILIATE / HARI*\n\n`;
+    msg += `🎯 *Mode / Tier Saat Ini*: *${status.tier}* ${manual ? '_(Manual Override)_' : '_(Auto-Adaptive)_'}\n`;
+    msg += `🛒 *Slot Affiliate Aktif*: ${status.allowedSlots.map(s => `Slot ${s}`).join(', ')}\n`;
+    msg += `🌱 *Slot Organik (0% Link)*: ${[1, 2, 3, 4, 5, 6].filter(s => !status.allowedSlots.includes(s)).map(s => `Slot ${s}`).join(', ')}\n\n`;
+
+    msg += `📊 *Kondisi & Indikator Algoritma:*\n`;
+    msg += `• Max Views Post Terbaru: *${status.metrics.maxRecentViews || 0}*\n`;
+    msg += `• Rata-rata Views Terbaru: *${status.metrics.avgRecentViews || 0}*\n`;
+    msg += `• Views Akun Harian: *${status.metrics.accountDailyViews || 0}*\n`;
+    msg += `• Post Terakhir: *${status.metrics.latestPostViews || 0} views*\n\n`;
+
+    msg += `💡 *Logika Adaptasi:*\n_${status.reason}_\n\n`;
+    msg += `🚦 *Ambang Batas Naik Slot Otomatis:*\n`;
+    msg += `• *Tier 1 (1 Slot)*: Baseline pelindung jangkauan (<250 views).\n`;
+    msg += `• *Tier 2 (2 Slot)*: Terbuka otomatis jika ada post >= 250 views atau post pagi >= 75 views.\n`;
+    msg += `• *Tier 3 (3 Slot)*: Terbuka otomatis jika ada post >= 1.000 views (KPI meledak) atau views akun >= 1.000.\n\n`;
+    msg += `⚙️ *Ubah Mode*: \`/setaffiliate auto\` (kembali otomatis), \`/setaffiliate 1\`, \`/setaffiliate 2\`, atau \`/setaffiliate 3\``;
+    safeReplyMarkdown(ctx, msg);
+  } catch (err) {
+    ctx.reply(`❌ Gagal membaca status affiliate: ${err.message}`);
+  }
+});
+
+// Command: /setaffiliate [auto|1|2|3]
+bot.command('setaffiliate', (ctx) => {
+  try {
+    const val = ctx.message.text.replace('/setaffiliate', '').trim().toLowerCase();
+    if (val === 'auto' || val === 'reset') {
+      db.setSetting('MANUAL_AFFILIATE_QUOTA', '');
+      return ctx.reply('✅ Mode affiliate dikembalikan ke AUTO-ADAPTIF (Menyesuaikan views & performa algoritma secara dinamis). Ketik /affiliate untuk cek.');
+    }
+    if (['1', '2', '3'].includes(val)) {
+      db.setSetting('MANUAL_AFFILIATE_QUOTA', val);
+      return ctx.reply(`✅ Kuota affiliate berhasil dikunci manual ke ${val} slot per hari. Ketik /affiliate untuk cek.`);
+    }
+    ctx.reply('⚠️ Format salah. Gunakan:\n/setaffiliate auto (otomatis adaptif)\n/setaffiliate 1 (1 slot/hari)\n/setaffiliate 2 (2 slot/hari)\n/setaffiliate 3 (3 slot/hari)');
+  } catch (err) {
+    ctx.reply(`❌ Gagal mengubah kuota affiliate: ${err.message}`);
+  }
+});
+
 // Command: /autotune & /evolve (Trigger & Inspeksi Otak Self-Tuning Kognitif)
 bot.command(['autotune', 'evolve'], async (ctx) => {
   await ctx.reply('🧠 Menjalankan Cognitive Self-Tuning Engine (Menganalisis Winner vs Flop & Memperbarui Aturan Prompt AI)...');
@@ -1194,15 +1242,25 @@ function resolveSlotFormat(dateStr, slotConf) {
   const saved = db.getSetting(key);
   if (saved) return saved;
 
-  let fmt = slotConf.defaultFormat || (slotConf.hasAffiliate ? 'anonymous_curhat_story' : 'single_life_update');
-  const candidates = ADAPTIVE_SLOT_CANDIDATES[slotConf.slotNumber];
-  if (candidates && !slotConf.hasAffiliate) {
+  const { getAdaptiveAffiliateStatus } = require('./growthEngine');
+  const adaptiveStatus = getAdaptiveAffiliateStatus ? getAdaptiveAffiliateStatus() : { allowedSlots: [5], quota: 1, tier: 'BASELINE' };
+  const isAffiliateActive = adaptiveStatus.allowedSlots.includes(slotConf.slotNumber);
+  slotConf.hasAffiliate = isAffiliateActive;
+
+  let fmt = slotConf.defaultFormat;
+  if (isAffiliateActive) {
+    fmt = slotConf.slotNumber === 5 ? 'story_affiliate' : (slotConf.defaultFormat || 'anonymous_curhat_story');
+  } else {
+    const candidates = ADAPTIVE_SLOT_CANDIDATES[slotConf.slotNumber] || ['single_life_update', 'menfess_spill', 'hot_take'];
     try {
-      fmt = chooseAdaptiveFormat(candidates, fmt);
-    } catch (e) {}
+      fmt = chooseAdaptiveFormat(candidates, slotConf.defaultFormat || 'single_life_update');
+    } catch (e) {
+      fmt = slotConf.defaultFormat || 'single_life_update';
+    }
   }
+
   db.setSetting(key, fmt);
-  console.log(`[BanditAllocator] Slot ${slotConf.slotNumber} (${dateStr}) → format "${fmt}"`);
+  console.log(`[BanditAllocator] Slot ${slotConf.slotNumber} (${dateStr}) → format "${fmt}" [Affiliate: ${isAffiliateActive ? 'YES (' + adaptiveStatus.tier + ')' : 'NO'}]`);
   return fmt;
 }
 
@@ -1220,6 +1278,11 @@ async function prepareAndNotifyVetoSlot(slotTime, label, slotNumber = null) {
       defaultFormat: 'single_life_update',
       targetNicheType: 'locked'
     };
+
+    const { getAdaptiveAffiliateStatus } = require('./growthEngine');
+    const adaptiveStatus = getAdaptiveAffiliateStatus ? getAdaptiveAffiliateStatus() : { allowedSlots: [5], quota: 1, tier: 'BASELINE' };
+    const isAffiliateActive = adaptiveStatus.allowedSlots.includes(slotConf.slotNumber);
+    slotConf.hasAffiliate = isAffiliateActive;
 
     let story = null;
     let storyId = null;
@@ -1242,8 +1305,8 @@ async function prepareAndNotifyVetoSlot(slotTime, label, slotNumber = null) {
           targetNicheType: slotConf.targetNicheType || 'locked',
           variant: 'B',
           origin: 'fiction',
-          hasAffiliate: slotConf.hasAffiliate,
-          withProduct: slotConf.hasAffiliate
+          hasAffiliate: isAffiliateActive,
+          withProduct: isAffiliateActive
         });
         storyId = db.addStoryToQueue({
           title: curated.title,
@@ -1278,7 +1341,7 @@ async function prepareAndNotifyVetoSlot(slotTime, label, slotNumber = null) {
 
     let formatBadge = '📖 Cerita Relate + Shopee Affiliate';
     if (formatType === 'single_life_update') formatBadge = '☕ Life Update Kiki (Real-Time Persona, 0% Iklan)';
-    else if (formatType === 'anonymous_curhat_story') formatBadge = '📩 Cerita DM Anonim Warganet (Add to thread + Shopee)';
+    else if (formatType === 'anonymous_curhat_story') formatBadge = isAffiliateActive ? '📩 Cerita DM Anonim Warganet (Add to thread + Shopee)' : '📩 Cerita DM Anonim Warganet (0% Iklan)';
     else if (formatType === 'hot_take') formatBadge = '🔥 Hot Take (1-Liner Sarcasm & Relatable Truth)';
     else if (formatType === 'menfess_spill') formatBadge = '🗣️ Menfess Spill (Crowdsourcing Reply Magnet)';
     else if (formatType === 'financial_breakdown') formatBadge = '💸 Financial Breakdown (In This Economy)';
@@ -1287,12 +1350,15 @@ async function prepareAndNotifyVetoSlot(slotTime, label, slotNumber = null) {
       `⏳ *[15-MIN VETO WINDOW]* Draf Siap Tayang Jam *${slotTime} WIB*!\n\n` +
       `⏰ *Slot*: ${label}\n` +
       `🏷️ *Format*: *${formatBadge}*\n` +
+      `🎯 *Monetisasi*: *Tier ${adaptiveStatus.tier}* (${adaptiveStatus.quota} slot affiliate/hari)\n` +
+      `📌 *Status Slot Ini*: ${isAffiliateActive ? '🛍️ Rekomendasi Shopee Aktif' : '🌱 100% Organik Murni (Nol Link)'}\n` +
       `🔖 *Topic Tag*: \`#${story.topic_tag || 'threads'}\`\n` +
       `📖 *Judul*: ${story.title}\n\n` +
       `*Pratinjau Hook / Post Utama:*\n` +
       `_"${firstSlide}"_\n\n` +
       (slides.length > 1 ? `_Total ${slides.length} bagian thread._\n\n` : '') +
       (story.product_name ? `🛍️ *Rekomendasi Shopee*: ${story.product_name}\n🔗 *Link*: \`${story.product_url || '-'}\`\n\n` : '✨ *Murni Insight Organik* (0% Link Iklan - Memaksimalkan Reach & Repost)\n\n') +
+      `💡 *Catatan Adaptif*: _${adaptiveStatus.reason}_\n\n` +
       `⚠️ *Opsi Kontrol Owner:*\n` +
       `Bot akan otomatis menerbitkan post ini sekitar jam *${slotTime} WIB* (dengan random human jitter 10-30 menit).\n` +
       `Ketik \`/veto\` untuk membatalkan tayang dalam 15 menit ke depan.`
@@ -1370,6 +1436,11 @@ async function executeScheduledPosting(slotTime, label, slotNumber = null) {
       hasAffiliate: false,
       defaultFormat: 'single_life_update'
     };
+
+    const { getAdaptiveAffiliateStatus } = require('./growthEngine');
+    const adaptiveStatus = getAdaptiveAffiliateStatus ? getAdaptiveAffiliateStatus() : { allowedSlots: [5], quota: 1, tier: 'BASELINE' };
+    const isAffiliateActive = adaptiveStatus.allowedSlots.includes(slotConf.slotNumber);
+    slotConf.hasAffiliate = isAffiliateActive;
 
     let story = null;
     const preparedId = db.getSetting(`PREPARED_STORY_${dateStr}_${slotTime}`);

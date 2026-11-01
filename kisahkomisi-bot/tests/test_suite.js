@@ -468,7 +468,38 @@ async function runTests() {
   console.log('  ✓ Synthesized New Topics Persisted:', adaptiveTopics.generatedTopics.length, 'topics');
   console.log('  ✓ Cognitive Tuning Context Block Ready (' + cogContext.length + ' chars)');
 
-  console.log('\n🎉 === ALL 17 TESTS PASSED SUCCESSFULLY! === 🎉');
+  // TEST 18: Adaptive Dynamic Affiliate Scaling (Auto Tier 1 / Tier 2 / Tier 3)
+  console.log('\n[Test 18] Testing Adaptive Dynamic Affiliate Scaling (Auto-Scale Slots)...');
+  const { getAdaptiveAffiliateStatus } = require('../src/growthEngine');
+  
+  // 1. Auto default check
+  db.setSetting('MANUAL_AFFILIATE_QUOTA', '');
+  const autoStatus = getAdaptiveAffiliateStatus();
+  assert(autoStatus && autoStatus.tier, 'Must have tier');
+  assert([1, 2, 3].includes(autoStatus.quota), 'Quota must be 1, 2, or 3');
+  assert(autoStatus.allowedSlots.includes(5), 'Slot 5 (Malam Santai) is always an affiliate anchor');
+  console.log('  ✓ Auto-Adaptive Affiliate Status:', {
+    tier: autoStatus.tier,
+    quota: autoStatus.quota,
+    allowedSlots: autoStatus.allowedSlots,
+    reason: autoStatus.reason
+  });
+
+  // 2. Manual override testing (User / Operator Control)
+  db.setSetting('MANUAL_AFFILIATE_QUOTA', '2');
+  const override2 = getAdaptiveAffiliateStatus();
+  assert.strictEqual(override2.quota, 2, 'Manual quota 2 works');
+  assert.deepStrictEqual(override2.allowedSlots, [3, 5], 'Slots 3 & 5 unlocked');
+
+  db.setSetting('MANUAL_AFFILIATE_QUOTA', '3');
+  const override3 = getAdaptiveAffiliateStatus();
+  assert.strictEqual(override3.quota, 3, 'Manual quota 3 works');
+  assert.deepStrictEqual(override3.allowedSlots, [3, 5, 6], 'Slots 3, 5 & 6 unlocked');
+
+  db.setSetting('MANUAL_AFFILIATE_QUOTA', '');
+  console.log('  ✓ Manual Override & Auto Reset: Verified');
+
+  console.log('\n🎉 === ALL 18 TESTS PASSED SUCCESSFULLY! === 🎉');
 }
 
 runTests().catch(err => {
