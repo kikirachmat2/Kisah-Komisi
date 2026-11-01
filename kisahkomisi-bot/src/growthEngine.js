@@ -251,7 +251,8 @@ ${TOPICS.map(t => `  - ${t}`).join('\n')}
 TUGAS KOGNITIF KAMU:
 1. Bandingkan secara tajam: Kenapa Postingan Pemenang bisa tembus ribuan/puluhan ribu views sedangkan Postingan Flop cuma <15 views? (Perhatikan keberadaan angka rupiah konkret, rincian biaya, dilema realistis vs keluhan abstrak/bahasa AI).
 2. Rumuskan TEPAT 3 aturan instruksi prompt konkret ("dynamic_prompt_rules") yang akan disuntikkan langsung ke otak penulis AI di siklus berikutnya supaya setiap postingan baru punya DNA yang sama dengan Postingan Pemenang dan bebas dari penyakit Postingan Flop.
-3. Ciptakan 5 TOPIK BARU SPESIFIK ("generated_new_topics") yang belum pernah dibahas, wajib memuat situasi konkret & angka/dilema nyata pekerja/anak kos/pasutri/finansial di Indonesia (terinspirasi dari post pemenang & komentar netizen).
+   PENTING: Aturan harus berlaku untuk semua jenis konten (baik cerita maupun single post) — wajibkan angka konkret (rupiah/jam/durasi), gaya bahasa deadpan manusia asli (tanpa menumpuk slang, tanpa emotikon spam, tanpa memanggil diri sendiri Ki), dan dilarang mengulang kalimat yang sama persis.
+3. Ciptakan 5 TOPIK BARU SPESIFIK ("generated_new_topics") yang belum pernah dibahas, wajib memuat situasi konkret & angka/dilema nyata pekerja/anak kos/pasutri/finansial di Indonesia (terinspirasi dari post pemenang & komentar netizen). Tulis sebagai kalimat skenario topik (contoh: "Dilema Reimburse Kantor 1.8 Juta Belum Cair 3 Minggu Padahal Saldo Tinggal 200 Ribu"), BUKAN bullet point.
 4. Pilih 3-5 "recommended_priority_topics" dari Daftar Bank Topik Statis di atas.
 5. Urutkan 3 format terbaik di "winning_formats" berdasarkan data performa di atas.
 
