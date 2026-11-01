@@ -138,9 +138,9 @@ function buildCognitiveTuningContext() {
 
     if (dynamicRules.length === 0) {
       dynamicRules = [
-        'Wajib cantumkan angka konkret di kalimat pertama/kedua (nominal uang Rp/jt/rb, jam kejadian, atau durasi waktu) agar pembaca berhenti scroll dan ikut menghitung.',
-        'Gunakan gaya observasi datar (deadpan) tentang realita biaya hidup, gaji, kosan, atau kelakuan orang kantor tanpa menumpuk kata slang atau tanda seru berlebihan.',
-        'Jangan gunakan kalimat tanya template survei di akhir ("kalian tim A atau tim B? spill!"); tutup dengan celetukan sinis-realistis atau kebingungan manusia biasa.'
+        'Tulis 100% seperti ketikan manusia asli warga Threads Indonesia: huruf kecil semua (lowercase), kalimat mengalir santai, bukan gaya rangkuman berita atau laporan AI.',
+        'Khusus format rincian gaji (financial_breakdown) wajib skimmable ("Gaji X juta di Kota:"); sedangkan untuk format opini/curhat biasa, JANGAN menjejalkan banyak angka/jam kaku seperti kalkulator.',
+        'Jangan gunakan penutup template survei bot ("kalian tim A atau tim B? spill!"); tutup dengan celetukan nyelekit, jujur, atau pertanyaan kasual tongkrongan.'
       ];
     }
 
@@ -249,10 +249,10 @@ ${recentComments.map((c, idx) => `- @${c.author_username}: "${String(c.comment_t
 ${TOPICS.map(t => `  - ${t}`).join('\n')}
 
 TUGAS KOGNITIF KAMU:
-1. Bandingkan secara tajam: Kenapa Postingan Pemenang bisa tembus ribuan/puluhan ribu views sedangkan Postingan Flop cuma <15 views? (Perhatikan keberadaan angka rupiah konkret, rincian biaya, dilema realistis vs keluhan abstrak/bahasa AI).
-2. Rumuskan TEPAT 3 aturan instruksi prompt konkret ("dynamic_prompt_rules") yang akan disuntikkan langsung ke otak penulis AI di siklus berikutnya supaya setiap postingan baru punya DNA yang sama dengan Postingan Pemenang dan bebas dari penyakit Postingan Flop.
-   PENTING: Aturan harus berlaku untuk semua jenis konten (baik cerita maupun single post) — wajibkan angka konkret (rupiah/jam/durasi), gaya bahasa deadpan manusia asli (tanpa menumpuk slang, tanpa emotikon spam, tanpa memanggil diri sendiri Ki), dan dilarang mengulang kalimat yang sama persis.
-3. Ciptakan 5 TOPIK BARU SPESIFIK ("generated_new_topics") yang belum pernah dibahas, wajib memuat situasi konkret & angka/dilema nyata pekerja/anak kos/pasutri/finansial di Indonesia (terinspirasi dari post pemenang & komentar netizen). Tulis sebagai kalimat skenario topik (contoh: "Dilema Reimburse Kantor 1.8 Juta Belum Cair 3 Minggu Padahal Saldo Tinggal 200 Ribu"), BUKAN bullet point.
+1. Bandingkan secara tajam: Kenapa Postingan Pemenang bisa tembus ribuan/puluhan ribu views sedangkan Postingan Flop cuma <15 views? (Perhatikan gaya ketikan manusia asli, hook yang memicu debat warganet, rincian gaji skimmable vs tulisan kaku khas AI yang merangkum berita atau menjejalkan angka kalkulator di kalimat biasa).
+2. Rumuskan TEPAT 3 aturan instruksi prompt konkret ("dynamic_prompt_rules") yang akan disuntikkan langsung ke otak penulis AI di siklus berikutnya supaya setiap postingan baru punya DNA yang sama dengan Postingan Pemenang dan 100% bebas dari kesan Bot AI.
+   PENTING: Jangan menyuruh AI menjejalkan jam/durasi/rupiah kaku di setiap kalimat biasa (karena itu bikin kalimat kayak laporan kalkulator AI!). Wajibkan ketikan lowercase santai warga Threads, punchline nyelekit/jujur, dan khusus financial_breakdown gunakan list bersih.
+3. Ciptakan 5 TOPIK BARU SPESIFIK ("generated_new_topics") yang lagi rame / relatable banget buat memancing perdebatan warga Threads Indonesia (bebas topik apa saja tanpa guardrail: isu viral, dunia kerja, finansial, drama hubungan, fenomena sosial).
 4. Pilih 3-5 "recommended_priority_topics" dari Daftar Bank Topik Statis di atas.
 5. Urutkan 3 format terbaik di "winning_formats" berdasarkan data performa di atas.
 
@@ -382,17 +382,17 @@ Keluarkan HANYA JSON valid persis sesuai struktur ini:
         'Postingan dengan rincian angka rupiah skimmable mendorong audiens berhenti scroll dan berdebat di kolom reply.',
         'Kalimat pembuka yang abstrak atau penuh kata slang beruntun langsung dilewati algoritma For You.'
       ],
-      actionable_strategy: 'Suntikkan wajib 1-2 angka konkret (rupiah/jam/persentase) di setiap slide pertama dan prioritaskan topik bedah realita finansial & dunia kerja.',
+      actionable_strategy: 'Tunggangi semua isu viral real-time tanpa filter, gunakan ketikan lowercase natural warga Threads, dan maksimalkan format dengan hit-rate tertinggi.',
       dynamic_prompt_rules: [
-        'Wajib cantumkan angka konkret di kalimat pertama/kedua (nominal uang Rp/jt/rb, jam kejadian, atau durasi waktu) agar pembaca ikut menghitung.',
-        'Tulis dengan nada observasi datar (deadpan) khas pekerja Jakarta tanpa menumpuk kata slang dan tanpa memanggil diri sendiri Ki.',
-        'Hindari penutup template "kalian tim A atau B? spill!"; gunakan pertanyaan dilema realistis atau celetukan jujur.'
+        'Tulis 100% seperti ketikan manusia asli warga Threads Indonesia: huruf kecil semua (lowercase), mengalir santai, jangan merangkum berita atau menjejalkan banyak angka kaku seperti robot.',
+        'Tulis dengan nada jujur/nyelekit khas tongkrongan Jakarta tanpa menumpuk kata slang dan tanpa memanggil diri sendiri Ki.',
+        'Hindari penutup template "kalian tim A atau B? spill!"; gunakan pertanyaan debat natural atau celetukan jujur.'
       ],
       generated_new_topics: [
         'Simulasi Gaji 6.8 Juta Anak Perantauan di Jakarta: Potongan Kosan 1.7 Juta, KRL, Kirim Ortu, Sisa Tabungan Cuma 400 Ribu',
-        'Dilema Reimburse Kantor 1.5 Juta Belum Cair 3 Minggu Padahal Saldo Rekening Pribadi Sisa 250 Ribu Menjelang Tanggal Tua',
-        'Teman Kantor Pinjam Uang 500 Ribu Buat Nombok Paylater Bilangnya Ganti Tanggal 25 Tapi Malah Pamer Beli Sepatu Lari Baru',
-        'Realita Biaya Nikah Sederhana vs Tuntutan Keluarga Besar yang Minta Katering 500 Porsi Tanpa Mau Ikut Patungan',
+        'Dilema Reimburse Kantor Belum Cair Berminggu-minggu Padahal Saldo Rekening Pribadi Udah Kritis Menjelang Tanggal Tua',
+        'Teman Kantor Pinjam Duit Buat Nombok Paylater Bilangnya Ganti Tanggal 25 Tapi Malah Pamer Beli Barang Baru di Story',
+        'Realita Biaya Nikah Sederhana vs Tuntutan Keluarga Besar yang Minta Resepsi Mewah Tanpa Mau Ikut Patungan',
         'Atasan Minta Standby Revisi Hari Sabtu Tanpa Hitungan Lembur Padahal Kontrak Kerja Jelas Senin-Jumat'
       ],
       winning_formats: [
@@ -418,11 +418,11 @@ Keluarkan HANYA JSON valid persis sesuai struktur ini:
     console.log('[GrowthEngine] 🧠 Dynamic Prompt Directives diperbarui otomatis:', cleanRules);
   }
 
-  // 2. Simpan Generated New Topics (Topik baru hasil sintesis empiris dari pemenang & komentar netizen)
+  // 2. Simpan Generated New Topics (Tanpa filter/guardrail topik)
   if (Array.isArray(strategyData.generated_new_topics) && strategyData.generated_new_topics.length > 0) {
     const cleanGenTopics = strategyData.generated_new_topics
       .map(t => String(t).trim())
-      .filter(t => t.length >= 15 && !/demo|politik|dpr|presiden|partai/i.test(t))
+      .filter(t => t.length >= 15)
       .slice(0, 8);
     if (cleanGenTopics.length > 0) {
       db.setSetting('DYNAMIC_GENERATED_TOPICS', JSON.stringify(cleanGenTopics));

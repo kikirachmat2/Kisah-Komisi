@@ -28,8 +28,7 @@ function isValidBump(text) {
  * untuk menyundul kembali thread yang mulai melandai di feed For You
  */
 async function generateBumpUpdate(story) {
-  // Selama eksperimen, Thread Bumper dinonaktifkan 100%
-  if (process.env.EXPERIMENT_PAUSE_EXTRAS !== 'false') {
+  if (process.env.EXPERIMENT_PAUSE_EXTRAS === 'true') {
     return null;
   }
 
@@ -85,9 +84,8 @@ ATURAN KETAT INTEGRITAS:
         },
         signal: AbortSignal.timeout(10000),
         body: JSON.stringify({
-          model: 'qwen/qwen3.8-27b',
+          model: 'openai/gpt-oss-120b',
           messages: [{ role: 'user', content: prompt }],
-          max_tokens: 300,
           temperature: 0.75
         })
       });

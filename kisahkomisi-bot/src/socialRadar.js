@@ -7,24 +7,18 @@ const GROQ_API_KEY = process.env.GROQ_API_KEY;
 const OPENROUTER_API_KEY = process.env.OPENROUTER_API_KEY;
 const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
 
-// Blacklist isu terlarang Meta TOS & kriminalitas berat
-const UNSAFE_KEYWORDS = [
-  'tewas', 'meninggal', 'pembunuhan', 'jenazah', 'bunuh diri',
-  'perkosa', 'pelecehan', 'cabul', 'teroris', 'bom', 'sara',
-  'khilafah', 'penistaan', 'erotis', 'bokep', 'judi', 'slot'
-];
-
-// Kata kunci kurasi finansial, kerjaan, dan realita hidup urban Indonesia
-const VIRAL_RELEVANCE_REGEX = /gaji|bsu|uang|biaya|kerja|kantor|harga|beras|kos|ojol|krl|pajak|ppn|phk|karyawan|cuti|reimburse|inflasi|pangan|listrik|cicilan|tabungan|fresh grad|loker|rekrutmen|tagihan|sewa|warteg/i;
-
 /**
- * Mengambil headline terkini dari feed berita finansial & tren Indonesia
+ * Mengambil semua headline & tren yang lagi rame di Indonesia TANPA filter/guardrail pembatas topik.
+ * Menggabungkan Google Trends ID, Berita Utama, Pop/Hiburan, Ekonomi, dan Nasional secara seimbang.
  */
 async function fetchLiveTrendHeadlines() {
   const sources = [
-    { name: 'Detik Finance', url: 'https://finance.detik.com/rss' },
-    { name: 'Google Trends ID', url: 'https://trends.google.com/trending/rss?geo=ID' },
-    { name: 'Antara News', url: 'https://www.antaranews.com/rss/terkini.xml' }
+    { name: 'Google Trends ID', url: 'https://trends.google.com/trending/rss?geo=ID', maxPerSource: 4 },
+    { name: 'Detik News', url: 'https://news.detik.com/rss', maxPerSource: 3 },
+    { name: 'Detik Hot', url: 'https://hot.detik.com/rss', maxPerSource: 3 },
+    { name: 'Detik Finance', url: 'https://finance.detik.com/rss', maxPerSource: 3 },
+    { name: 'CNN Indonesia', url: 'https://www.cnnindonesia.com/nasional/rss', maxPerSource: 3 },
+    { name: 'Antara News', url: 'https://www.antaranews.com/rss/terkini.xml', maxPerSource: 2 }
   ];
 
   const headers = {
@@ -32,47 +26,46 @@ async function fetchLiveTrendHeadlines() {
   };
 
   const collectedHeadlines = [];
+  const seenTitles = new Set();
 
-  for (const src of sources) {
-    try {
-      const res = await fetch(src.url, { headers, signal: AbortSignal.timeout(7000) });
-      if (!res.ok) continue;
+  const results = await Promise.allSettled(
+    sources.map(async (src) => {
+      const res = await fetch(src.url, { headers, signal: AbortSignal.timeout(6000) });
+      if (!res.ok) return { src, items: [] };
       const xml = await res.text();
-
       const items = xml.match(/<item>[\s\S]*?<\/item>/g) || [];
-      for (const it of items) {
-        const titleMatch = it.match(/<title><!\[CDATA\[(.*?)\]\]><\/title>/i) || it.match(/<title>(.*?)<\/title>/i);
-        if (titleMatch && titleMatch[1]) {
-          const rawTitle = titleMatch[1].replace(/&amp;/g, '&').replace(/<!\[CDATA\[|\]\]>/g, '').trim();
-          const lower = rawTitle.toLowerCase();
+      return { src, items };
+    })
+  );
 
-          // Abaikan judul pendek atau nama media
-          if (rawTitle.length < 12 || lower.includes('detik') || lower.includes('antara') || lower.includes('google trends')) continue;
+  for (const r of results) {
+    if (r.status !== 'fulfilled') continue;
+    const { src, items } = r.value;
+    let countForSource = 0;
 
-          // Cek keamanan
-          if (UNSAFE_KEYWORDS.some(k => lower.includes(k))) continue;
+    for (const it of items) {
+      if (countForSource >= (src.maxPerSource || 3)) break;
+      const titleMatch = it.match(/<title><!\[CDATA\[(.*?)\]\]><\/title>/i) || it.match(/<title>(.*?)<\/title>/i);
+      if (titleMatch && titleMatch[1]) {
+        const rawTitle = titleMatch[1].replace(/&amp;/g, '&').replace(/&quot;/g, '"').replace(/<!\[CDATA\[|\]\]>/g, '').trim();
+        const lower = rawTitle.toLowerCase();
 
-          // Utamakan yang menyentuh finansial, kerjaan, atau biaya hidup
-          if (VIRAL_RELEVANCE_REGEX.test(rawTitle)) {
-            collectedHeadlines.push({ title: rawTitle, source: src.name, priority: true });
-          } else if (collectedHeadlines.length < 15) {
-            collectedHeadlines.push({ title: rawTitle, source: src.name, priority: false });
-          }
-        }
+        if (rawTitle.length < 4 || lower === 'daily search trends' || lower.includes('rss feed')) continue;
+        if (seenTitles.has(lower)) continue;
+        seenTitles.add(lower);
+
+        collectedHeadlines.push({ title: rawTitle, source: src.name });
+        countForSource++;
       }
-    } catch (e) {
-      console.warn(`[SocialRadar] Gagal mengambil feed ${src.name}:`, e.message);
     }
   }
 
-  // Sort: prioritas finansial & kerjaan di atas
-  collectedHeadlines.sort((a, b) => (b.priority ? 1 : 0) - (a.priority ? 1 : 0));
-  return collectedHeadlines.slice(0, 8);
+  return collectedHeadlines.slice(0, 14);
 }
 
 /**
- * Mengubah headline berita riil & keluhan netizen menjadi Skenario Gelombang Viral Threads (Wave-Chaser)
- * Menggunakan Groq 120B (ultra-fast reasoning).
+ * Mengubah SEMUA tren/isu/berita yang lagi rame menjadi Skenario Gelombang Viral Threads (Wave-Chaser)
+ * Tanpa guardrail topik — apapun yang rame langsung dihajar dengan gaya manusia asli (bukan bot berita).
  */
 async function synthesizeViralWaves(rawHeadlines = [], netizenComments = []) {
   if (rawHeadlines.length === 0 && netizenComments.length === 0) {
@@ -80,34 +73,34 @@ async function synthesizeViralWaves(rawHeadlines = [], netizenComments = []) {
   }
 
   const prompt = `
-Kamu adalah Algorithmic Wave-Chaser & Chief Social Strategist untuk akun Threads Indonesia @kikipunyacerita.
-Tugasmu adalah MENGINTAI apa yang sedang ramai diperbincangkan warganet Indonesia hari ini, lalu mengubahnya menjadi 3 s/d 4 SKENARIO KONTEN THREADS YANG SIAP MELEDAKKAN ALGORITMA FOR YOU (FYP).
+Kamu adalah warga aktif Threads Indonesia (@kikipunyacerita, anak muda Jakarta umur 26 thn, luwes, up-to-date sama semua drama sosmed, berita viral, bola, gosip, kebijakan pemerintah, sampe urusan kerjaan/dompet).
+Tugasmu: Pilih 4 s/d 5 ISU PALING RAME & SEKSI dari daftar tren hari ini, lalu ubah menjadi bahan postingan Threads yang BIKIN ORANG GATEL PENGEN KOMEN / DEBAT / QUOTE.
 
-BERITA / ISU REAL-TIME TERKINI:
-${rawHeadlines.slice(0, 6).map((h, i) => `${i + 1}. [${h.source}] ${h.title}`).join('\n') || '- Belum ada berita baru'}
+DAFTAR TREN & BERITA REAL-TIME HARI INI:
+${rawHeadlines.map((h, i) => `${i + 1}. [${h.source}] ${h.title}`).join('\n') || '- Belum ada berita baru'}
 
-KOMENTAR ASLI NETIZEN YANG MASUK DI AKUN:
+KOMENTAR NETIZEN YANG MASUK:
 ${netizenComments.slice(0, 4).map((c, i) => `- @${c.author_username}: "${c.comment_text}"`).join('\n') || '- Belum ada komentar'}
 
-PRINSIP VIRAL THREADS (DATA EMPIRIS POST 73RB VIEWS):
-1. Algoritma Threads sangat menyukai KONTROVERSI ANGKANYA: Jangan tulis keluhan abstrak! Sertakan nominal rupiah konkret (cth: "Rp4.800.000", "Rp1.600.000", "900 ribu"), jam kejadian ("07:15 WIB"), atau rincian biaya hidup.
-2. Belokkan isu nasional/kebijakan ke DOMPET KELAS MENENGAH & PEKERJA BIASA: Hubungkan kenaikan harga, PHK, subsidi, atau aturan kantor ke nasib anak kos, komuter KRL, fresh graduate, atau generasi sandwich.
-3. Gaya: Deadpan, datar, sinis-realistis, tanpa kata slang beruntun ("boncamatan", "ngelap dosa dompet" DILARANG), tanpa memanggil diri sendiri "Ki".
-4. Format:
-   - financial_breakdown: Rincian hitungan biaya hidup / sisa gaji pas-pasan
-   - hot_take: 1-liner observasi tajam tanpa basa-basi
-   - menfess_spill: Pancingan debat agar netizen bercerita di komentar
-   - anonymous_curhat_story: Utas curhat relatable 3 part
+ATURAN KUNCI BIAR VIRAL & GAK KELIHATAN BOT AI:
+1. BEBAS TANPA GUARDRAIL TOPIK: Apapun yang lagi rame (kasus viral, seleb/gosip, kebijakan aneh, timnas/bola, konser, fenomena warga +62, drama hubungan, kerjaan, harga naik), HAJAR AJA! Jangan semuanya dipaksa belok ke gaji/kosan kalau topiknya lagi seru dibahas apa adanya.
+2. JANGAN NULIS KAYAK BOT RANGKUMAN BERITA ATAU KALKULATOR:
+   - SALAH (Gaya AI Bot): "Harga avtur naik ke Rp12.500/liter membuat gaji pilot turun 50% dari Rp25jt menjadi Rp12,5jt dan 200 orang di-PHK dalam 48 jam." (Terlalu kaku kayak laporan koran!).
+   - BENAR (Gaya Manusia Threads): "rame maskapai phk ratusan orang gara-gara avtur bengkak. jujur tahun ini ngeri bgt liat gelombang layoff dimana-mana, tempat kalian masih aman gak sih?"
+3. PILIH FORMAT SESUAI JENIS ISUNYA:
+   - Jika isu drama/kebijakan/fenomena/hiburan/kasus viral -> pilih "hot_take" (celetukan nyelekit/jujur) atau "menfess_spill" (pancingan debat/cerita warganet) atau "anonymous_curhat_story" (cerita sudut pandang orang sekitar soal isu itu).
+   - Jika isu menyangkut biaya hidup/gaji/harga -> boleh pilih "financial_breakdown" (bedah rincian gaji) atau "single_life_update".
+4. GAYA KETIKAN MANUSIA ASLI: Huruf kecil semua (lowercase), bahasa ngobrol santai sehari-hari, tanpa hashtag, tanpa kata slang beruntun yang maksa.
 
 Keluarkan HANYA JSON array valid:
 [
   {
-    "title": "Judul Tren Singkat (Maksimal 6 kata)",
-    "headline": "Isu Nyata yang Ditunggangi",
-    "topic": "Skenario konkret lengkap dengan angka rupiah/jam dan dilema nyata",
-    "topic_tag": "finansial|duniakerja|anakkos|krl|rumahtangga",
-    "suggested_format": "financial_breakdown|hot_take|menfess_spill|anonymous_curhat_story",
-    "suggested_hook": "Kalimat pembuka hook kuat langsung ke inti angka/kejadian"
+    "title": "Judul Singkat Isu (Maksimal 6 kata)",
+    "headline": "Headline asli yang ditunggangi",
+    "topic": "Sudut pandang obrolan / keresahan manusiawi soal isu ini (jangan kaku seperti berita)",
+    "topic_tag": "radar_viral|curhat|duniakerja|finansial|rumahtangga|anakkos",
+    "suggested_format": "hot_take|menfess_spill|single_life_update|anonymous_curhat_story|financial_breakdown",
+    "suggested_hook": "1 kalimat pembuka ketikan manusia asli (huruf kecil semua, nyelekit/relatable, tanpa kesan AI)"
   }
 ]
 `;

@@ -136,26 +136,35 @@ async function generateDailyLifeUpdate(options = {}) {
   const context = getCurrentLifeContext();
   let callbackCandidate = null;
   
-  // 35% peluang melakukan callback jika ada postingan viral sebelumnya
-  if (Math.random() < 0.35) {
+  // 30% peluang melakukan callback jika ada postingan viral sebelumnya
+  if (Math.random() < 0.30) {
     callbackCandidate = getViralCallbackCandidate();
   }
 
-  // Nonaktifkan CURRENT_NEWS_REACTION (demo/politik) karena garing & terasa seperti bot buzzer.
-  // Fokus 100% pada VIRAL_CALLBACK atau TEMPORAL_LIFE_UPDATE (realita kerja, kosan, dompet, komuter) dengan detail angka/situasi nyata.
+  let activeWave = options.viralWave || null;
+  if (!activeWave && !callbackCandidate && Math.random() < 0.65) {
+    try {
+      const { getActiveViralWaves } = require('./socialRadar');
+      const waves = getActiveViralWaves ? getActiveViralWaves() : [];
+      if (waves.length > 0) {
+        activeWave = waves[Math.floor(Math.random() * waves.length)];
+      }
+    } catch (e) {}
+  }
+
   let mode = 'DAILY_LIFE';
   let guidance = '';
 
-  if (options.viralWave) {
+  if (activeWave) {
     mode = 'LIVE_TREND_WAVE';
     guidance = `
-MODE: OBSERVASI REALITA TERHADAP GELOMBANG VIRAL HARI INI
-Headline Berita/Isu: "${options.viralWave.headline || options.viralWave.title}"
-Skenario Nyata: "${options.viralWave.topic}"
-${options.viralWave.suggested_hook ? `Sudut Pandang: "${options.viralWave.suggested_hook}"` : ''}
+MODE: NYAMBER ISU / TREN YANG LAGI RAME HARI INI
+Isu/Tren Rame: "${activeWave.headline || activeWave.title}"
+Konteks Obrolan: "${activeWave.topic}"
+${activeWave.suggested_hook ? `Referensi Hook: "${activeWave.suggested_hook}"` : ''}
 
-TUGAS KAMU: Tuliskan SATU observasi jujur / curhat spontan (1 slide) sebagai pekerja Jakarta yang terdampak langsung oleh isu di atas.
-WAJIB sertakan 1 detail konkret (jam kejadian, nominal uang/ongkos/tagihan, atau obrolan nyata). Nada deadpan/pasrah tanpa sok bijak.
+TUGAS KAMU: Tuliskan SATU postingan pendek (1 slide) nyamber isu di atas dengan gaya warga Threads asli (jujur, agak nyelekit/relatable, ngalir santai).
+JANGAN merangkum ulang berita kayak pembaca berita TV, dan JANGAN menjejalkan banyak angka/jam seperti kalkulator!
 `;
   } else if (callbackCandidate) {
     mode = 'VIRAL_CALLBACK';
@@ -178,14 +187,14 @@ ATURAN WAJIB CALLBACK:
   } else {
     mode = 'TEMPORAL_LIFE_UPDATE';
     guidance = `
-MODE: REALITA HIDUP & PENGELUARAN HARI INI (${context.dateFormatted})
+MODE: REALITA HIDUP HARI INI (${context.dateFormatted})
 Konteks Hari Ini:
 - Hari & Suasana: ${context.dayVibe}
 - Siklus Dompet: ${context.payrollPhase} (${context.payrollVibe})
 ${context.nationalEvent ? `- Hari Besar: ${context.nationalEvent}` : ''}
 
-TUGAS KAMU: Tuliskan SATU observasi / kejadian pendek (1 slide) tentang realita kerja, kosan, perjalanan KRL/ojol, atau pengeluaran receh hari ini di Jakarta.
-WAJIB sertakan 1 detail konkret (misal: jam, nominal uang/harga makanan/ongkos, atau ucapan singkat rekan kerja/abang ojol) supaya terasa 100% nyata, bukan kalimat abstrak.
+TUGAS KAMU: Tuliskan SATU celetukan / kejadian pendek (1 slide) tentang realita hari ini di Jakarta.
+PENTING: Tulis mengalir seperti orang ngedumel santai di Threads. JANGAN menulis seperti laporan absensi/kalkulator (dilarang menulis rentetan "Jam 08:45 naik KRL Rp3.500 nunggu 15 menit sampai jam 09:30 catatan: minus Rp23.500"!).
 `;
   }
 
@@ -198,25 +207,24 @@ WAJIB sertakan 1 detail konkret (misal: jam, nominal uang/harga makanan/ongkos, 
   } catch (e) {}
 
   const prompt = `
-Kamu adalah Kiki Rachmat (@kikipunyacerita), pekerja media di Jakarta (usia 26 thn, ngekos di Jakpus, sandwich generation).
+Kamu adalah Kiki Rachmat (@kikipunyacerita), anak muda Jakarta umur 26 thn yang aktif di Threads.
 Hari ini adalah: ${context.dateFormatted}.
 ${cognitiveContext}
 ${guidance}
 
-ATURAN GAYA BAHASA MANUSIA ASLI (ANTI-AI & ANTI-CRINGE):
-1. HANYA SATU (1) SLIDE POSTINGAN TUNGGAL (110 - 210 karakter).
-2. Tulis dengan gaya DRY HUMOR / DEADPAN (datar, jujur, apa adanya, tanpa lebay).
-3. DILARANG KERAS memanggil diri sendiri "Ki" atau "Kiki"! Kamu yang nulis, jangan menyapa dirimu sendiri.
-4. DILARANG KERAS menumpuk kata slang dalam satu kalimat (maksimal boleh pakai 1 kata santai seperti "gue", "bgt", atau "wkwk", jangan digabung beruntun dengan "anjir", "boncos", "burnout", "zonk").
-5. DILARANG menggunakan kalimat tanya survei/bot di akhir seperti "siapa yang sama?", "kalian gimana?", atau "spill dong!". Tutup dengan kalimat pernyataan/celetukan datar yang ngena.
-6. DILARANG pakai tanda seru (!) berlebihan. Cukup titik (.) di akhir kalimat.
-7. DILARANG menulis label "[Cerita Fiksi]" atau iklan apapun.
+ATURAN GAYA KETIKAN MANUSIA ASLI (ANTI-AI):
+1. HANYA SATU (1) SLIDE POSTINGAN TUNGGAL (90 - 190 karakter).
+2. Huruf kecil semua (lowercase), gaya ngobrol santai, deadpan/jujur, tanpa kesan bot AI.
+3. DILARANG KERAS memanggil diri sendiri "Ki" atau "Kiki"!
+4. DILARANG menumpuk kata slang beruntun dalam satu kalimat.
+5. DILARANG menulis format laporan seperti "catatan: ..." atau deretan jam & harga kaku.
+6. DILARANG menulis label "[Cerita Fiksi]" atau iklan apapun.
 
 Keluarkan HANYA JSON:
 {
   "title": "Judul Singkat Update (Maksimal 5 kata)",
   "topic": "Ringkasan Topik",
-  "slide_text": "Teks postingan tunggal 110-210 karakter..."
+  "slide_text": "teks postingan tunggal huruf kecil semua (90-190 karakter)..."
 }
 `;
 
@@ -283,6 +291,13 @@ Keluarkan HANYA JSON:
       slideText = `in this economy energi buat kerja hari ini sisa tipis bgt. baru nyampe meja kantor udah pengen langsung logout laptop wkwk.`;
     }
   }
+
+  // Bersihkan kesan kaku AI (paksa lowercase & hapus format catatan kaku)
+  slideText = String(slideText)
+    .replace(/,?\s*catatan\s*:.*$/i, '.')
+    .replace(/^["']|["']$/g, '')
+    .trim()
+    .toLowerCase();
 
   // Tandai callback telah digunakan jika ada
   if (callbackCandidate) {

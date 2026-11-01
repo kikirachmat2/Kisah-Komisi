@@ -191,28 +191,28 @@ async function generateHotTake(options = {}) {
   } catch (e) {}
 
   const waveContext = viralWave ? `
-KONTEKS GELOMBANG ISU VIRAL TERKINI:
-Headline Berita/Tren: "${viralWave.headline || viralWave.title}"
-Skenario Relatable: "${viralWave.topic}"
-${viralWave.suggested_hook ? `Pancingan Angle: "${viralWave.suggested_hook}"` : ''}
-Tunggangi sentimen isu ini dengan nada kritis-deadpan khas pekerja urban.
+ISU / TREN YANG LAGI RAME DI THREADS:
+Headline: "${viralWave.headline || viralWave.title}"
+Sudut Pandang: "${viralWave.topic}"
+${viralWave.suggested_hook ? `Referensi Hook: "${viralWave.suggested_hook}"` : ''}
+Samber langsung isu ini dengan gaya warga Threads asli (jangan merangkum berita kayak koran/AI!).
 ` : '';
 
   const prompt = `
-Kamu adalah Kiki Rachmat (@kikipunyacerita), pekerja media di Jakarta (usia 26 thn, ngekos di Jakpus, sandwich generation).
+Kamu adalah Kiki Rachmat (@kikipunyacerita), anak muda Jakarta umur 26 thn yang aktif di Threads.
 ${cognitiveContext}
 ${waveContext}
-Gaya ngetik: Human typing sejati warganet Threads Indonesia. Huruf kecil santai, kalimat padat (1-2 kalimat, 90-175 karakter), datar (deadpan), sinis-realistis, self-deprecating.
+Gaya ngetik: Ketikan manusia asli warga Threads Indonesia. Huruf kecil semua (lowercase), kalimat pendek mengalir (1-2 kalimat, 80-170 karakter), jujur, nyelekit, deadpan.
 
-TEMA REALITAS:
+TOPIK / ISU:
 "${theme}"
 
-ATURAN KETAT (ANTI-AI & ANTI-CRINGE):
-1. DILARANG sapaan basi (Guys, Halo, Selamat Pagi) dan DILARANG memanggil diri sendiri "Ki" atau "Kiki".
+ATURAN BIAR GAK KELIHATAN BOT AI:
+1. DILARANG sapaan basi (Guys, Halo) dan DILARANG memanggil diri sendiri "Ki" atau "Kiki".
 2. DILARANG HASHTAG (#) apapun.
-3. WAJIB masukkan 1 detail atau angka konkret (jam, nominal uang, durasi) supaya observasinya ngena dan nyata.
+3. JANGAN merangkum berita kayak pembaca berita TV, dan JANGAN menjejalkan banyak angka/persentase/jam kayak robot kalkulator!
 4. DILARANG menumpuk kata slang beruntun dalam satu kalimat.
-5. Output HANYA teks postingan langsung tanpa tanda kutip. Huruf kecil santai.
+5. Output HANYA teks postingan langsung tanpa tanda kutip, huruf kecil semua (lowercase).
 `;
 
   let text = await callAiWithFallback(prompt, 0.8);
@@ -220,8 +220,8 @@ ATURAN KETAT (ANTI-AI & ANTI-CRINGE):
     text = `orang yang hobi bales chat kerjaan pas weekend itu bukan loyal, tapi gak punya kehidupan pribadi di luar kantor. in this economy kewarasan emang ada harganya.`;
   }
 
-  // Bersihkan kutip, markdown asterisks, hashtag, dan batasi panjang
-  text = text.replace(/^["']|["']$/g, '').replace(/[*_~`]/g, '').replace(/#\w+/g, '').trim();
+  // Bersihkan kutip, markdown asterisks, hashtag, paksa lowercase natural
+  text = text.replace(/^["']|["']$/g, '').replace(/[*_~`]/g, '').replace(/#\w+/g, '').trim().toLowerCase();
   if (text.length > 480) text = text.substring(0, 475) + '...';
 
   return {
@@ -252,27 +252,27 @@ async function generateMenfessSpill(options = {}) {
   } catch (e) {}
 
   const waveContext = viralWave ? `
-KONTEKS GELOMBANG ISU VIRAL TERKINI:
-Headline Berita/Tren: "${viralWave.headline || viralWave.title}"
-Skenario Masalah: "${viralWave.topic}"
-Pancing warganet untuk menceritakan pengalaman mereka seputar isu ini di kolom komentar.
+ISU / TREN YANG LAGI RAME DI THREADS:
+Headline: "${viralWave.headline || viralWave.title}"
+Konteks: "${viralWave.topic}"
+Lempar pancingan diskusi/debat santai soal isu ini supaya warganet ramai-ramai cerita di kolom komentar.
 ` : '';
 
   const prompt = `
-Kamu adalah Kiki Rachmat (@kikipunyacerita), pekerja media di Jakarta (usia 26 thn, ngekos di Jakpus, sandwich generation).
+Kamu adalah Kiki Rachmat (@kikipunyacerita), anak muda Jakarta umur 26 thn yang aktif di Threads.
 ${cognitiveContext}
 ${waveContext}
-Tuliskan SATU (1) POSTINGAN CROWDSOURCING / DISKUSI PENDEK (panjang 110-185 karakter) untuk memancing warganet Threads berbagi pengalaman atau berhitung bareng.
+Tuliskan SATU (1) POSTINGAN PANCINGAN DISKUSI PENDEK (panjang 90-175 karakter) untuk memancing warganet Threads berdebat atau berbagi cerita di reply.
 
 TOPIK PANCINGAN:
 "${theme}"
 
-ATURAN KETAT:
-1. DILARANG sapaan basi (Guys, Halo, Selamat Pagi) dan DILARANG memanggil diri sendiri "Ki" atau "Kiki".
+ATURAN BIAR GAK KELIHATAN BOT AI:
+1. DILARANG sapaan basi (Guys, Halo) dan DILARANG memanggil diri sendiri "Ki" atau "Kiki".
 2. DILARANG HASHTAG (#) apapun.
-3. Harus 100% realitas urban Indonesia (kantor Jabodetabek, kosan, KRL, warteg, ojol, gaji/pengeluaran). Sertakan 1 patokan angka konkret (nominal uang/jam/durasi) agar orang terpancing membandingkan.
-4. DILARANG MENGGUNAKAN FRASA "masuk DM", "kiriman DM", atau "kalian tim A atau tim B? spill!". Gunakan pertanyaan manusia biasa yang memancing cerita di reply.
-5. Output HANYA teks postingan langsung tanpa tanda kutip. Huruf kecil santai.
+3. Tulis mengalir seperti orang nanya ke tongkrongan di Threads. JANGAN menjejalkan banyak angka kaku seperti soal matematika.
+4. DILARANG MENGGUNAKAN FRASA "masuk DM", "kiriman DM", atau "kalian tim A atau tim B? spill!". Gunakan pertanyaan manusia biasa yang memancing cerita/debat di reply.
+5. Output HANYA teks postingan langsung tanpa tanda kutip, huruf kecil semua (lowercase).
 `;
 
   let text = await callAiWithFallback(prompt, 0.8);
@@ -280,8 +280,8 @@ ATURAN KETAT:
     text = `spill kelakuan paling gak masuk akal dari mantan temen sekamar kosan lu yang bikin lu langsung mikir 'gue harus pindah minggu ini juga'. pengen tau se-absurd apa.`;
   }
 
-  // Bersihkan kutip, markdown asterisks, hashtag, dan batasi panjang
-  text = text.replace(/^["']|["']$/g, '').replace(/[*_~`]/g, '').replace(/#\w+/g, '').trim();
+  // Bersihkan kutip, markdown asterisks, hashtag, paksa lowercase natural
+  text = text.replace(/^["']|["']$/g, '').replace(/[*_~`]/g, '').replace(/#\w+/g, '').trim().toLowerCase();
   if (text.length > 480) text = text.substring(0, 475) + '...';
 
   return {

@@ -411,14 +411,14 @@ async function produceCuratedStory(options = null) {
     storyOpts.topicTag = targetNiche;
     try { db.recordNichePostUsage(targetNiche); } catch (e) {}
 
-    // 2. Prioritas Tertinggi: Algorithmic Wave-Chaser (Tunggangi Isu Tren Real-time Indonesia)
+    // 2. Prioritas Tertinggi: Algorithmic Wave-Chaser (Tunggangi Isu Tren Real-time Indonesia Tanpa Guardrail)
     let pickedWave = null;
     try {
       const activeWaves = getActiveViralWaves ? getActiveViralWaves() : [];
       const freshWaves = (activeWaves || []).filter(
         w => !recentTopics.some(rt => rt.toLowerCase().includes((w.headline || w.title || '').toLowerCase().slice(0, 18)))
       );
-      if (freshWaves.length > 0 && (targetNiche === 'radar_viral' || Math.random() < 0.65)) {
+      if (freshWaves.length > 0 && (targetNiche === 'radar_viral' || Math.random() < 0.85)) {
         pickedWave = freshWaves[Math.floor(Math.random() * freshWaves.length)];
         storyOpts.viralWave = pickedWave;
         storyOpts.topic = pickedWave.topic;
@@ -434,11 +434,6 @@ async function produceCuratedStory(options = null) {
       }
     } catch (e) {
       console.warn('[EditorialBoard] Gagal cek gelombang viral:', e.message);
-    }
-
-    if (targetNiche === 'radar_viral' || targetNiche === 'isusosial' || targetNiche === 'isu_sosial') {
-      targetNiche = Math.random() < 0.6 ? 'finansial' : 'duniakerja';
-      storyOpts.topicTag = targetNiche;
     }
 
     if (!storyOpts.topic) {

@@ -7,14 +7,7 @@ const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
 const GROQ_API_KEY = process.env.GROQ_API_KEY;
 const OPENROUTER_API_KEY = process.env.OPENROUTER_API_KEY;
 
-// Blacklist ketat untuk berita/isu terlarang
-const UNSAFE_NEWS_KEYWORDS = [
-  'tewas', 'meninggal', 'pembunuhan', 'jenazah', 'korban jiwa', 'bunuh diri',
-  'perkosa', 'pelecehan', 'cabul', 'teroris', 'bom', 'gempa', 'banjir bandang',
-  'longsor', 'erupsi', 'tsunami', 'sara', 'penistaan', 'khilafah'
-];
-
-// Topik cadangan (Evergreen Gen Z / Sandwich Gen Reality) jika RSS gagal atau offline
+// Topik cadangan jika RSS offline
 const EVERGREEN_TOPICS = [
   'Biaya hidup & inflasi harga makanan sehari-hari dibanding gaji yang stagnan',
   'Syarat loker zaman sekarang yang minta fresh graduate pengalaman 5 tahun',
@@ -28,48 +21,66 @@ const EVERGREEN_TOPICS = [
 ];
 
 /**
- * Fetch dan filter headline berita terkini dari RSS Finansial, Kerja & Google Trends
+ * Fetch headline/tren viral terkini tanpa guardrail pembatas topik.
+ * Prioritaskan gelombang aktif dari SocialRadar, lalu RSS Google Trends ID, Detik News/Hot/Finance.
  */
 async function fetchTrendingHeadline() {
+  try {
+    const { getActiveViralWaves } = require('./socialRadar');
+    const waves = getActiveViralWaves ? getActiveViralWaves() : [];
+    if (Array.isArray(waves) && waves.length > 0 && waves[0].source !== 'Evergreen Retention Radar') {
+      const picked = waves[Math.floor(Math.random() * waves.length)];
+      return {
+        source: picked.source || 'Threads Live Wave',
+        headline: `${picked.headline || picked.title} — ${picked.topic || ''}`.trim()
+      };
+    }
+  } catch (e) {}
+
   const sources = [
+    { url: 'https://trends.google.com/trending/rss?geo=ID', name: 'Google Trends ID' },
+    { url: 'https://news.detik.com/rss', name: 'Detik News' },
+    { url: 'https://hot.detik.com/rss', name: 'Detik Hot' },
     { url: 'https://finance.detik.com/rss', name: 'Detik Finance' },
     { url: 'https://www.cnbcindonesia.com/market/rss', name: 'CNBC Indonesia' },
-    { url: 'https://trends.google.com/trending/rss?geo=ID', name: 'Google Trends ID' },
     { url: 'https://www.antaranews.com/rss/terkini.xml', name: 'Antara News' }
   ];
 
-  const preferredKeyword = /gaji|uang|biaya|kerja|kantor|harga|kos|ojol|krl|pajak|ppn|phk|reimburse|inflasi|makan|kopi|utang|pinjol|tabungan|rekening|lifestyle|karyawan|cuti/i;
+  const headers = {
+    'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
+  };
 
   for (const src of sources) {
     try {
-      const res = await fetch(src.url, { signal: AbortSignal.timeout(8000) });
+      const res = await fetch(src.url, { headers, signal: AbortSignal.timeout(8000) });
       if (!res.ok) continue;
       const xml = await res.text();
 
-      const titles = (xml.match(/<title>([^<]+)<\/title>/g) || [])
-        .map(t => t.replace(/<\/?title>/g, '').replace(/<!\[CDATA\[|\]\]>/g, '').trim())
-        .filter(t => t.length > 10 && !t.toLowerCase().includes('antara') && !t.toLowerCase().includes('google trends') && !t.toLowerCase().includes('detik') && !t.toLowerCase().includes('cnbc'));
-
-      // 1. Utamakan headline yang menyentuh finansial / kerjaan / biaya hidup
-      const prioritized = titles.filter(t => preferredKeyword.test(t));
-      const pool = prioritized.length > 0 ? prioritized : titles;
-
-      for (const title of pool) {
-        const lower = title.toLowerCase();
-        const isUnsafe = UNSAFE_NEWS_KEYWORDS.some(kw => lower.includes(kw));
-        if (!isUnsafe) {
-          return {
-            source: src.name,
-            headline: title
-          };
+      const items = xml.match(/<item>[\s\S]*?<\/item>/g) || [];
+      const titles = [];
+      for (const it of items) {
+        const m = it.match(/<title><!\[CDATA\[(.*?)\]\]><\/title>/i) || it.match(/<title>(.*?)<\/title>/i);
+        if (m && m[1]) {
+          const t = m[1].replace(/&amp;/g, '&').replace(/<!\[CDATA\[|\]\]>/g, '').trim();
+          const lower = t.toLowerCase();
+          if (t.length >= 4 && lower !== 'daily search trends' && !lower.includes('rss')) {
+            titles.push(t);
+          }
         }
+      }
+
+      if (titles.length > 0) {
+        const chosen = titles[Math.floor(Math.random() * Math.min(titles.length, 5))];
+        return {
+          source: src.name,
+          headline: chosen
+        };
       }
     } catch (e) {
       console.warn(`[HotTakes] Gagal mengambil RSS dari ${src.name}:`, e.message);
     }
   }
 
-  // Fallback ke tema realitas sosial evergreen
   const randomEvergreen = EVERGREEN_TOPICS[Math.floor(Math.random() * EVERGREEN_TOPICS.length)];
   return {
     source: 'Evergreen Social Observation',
@@ -80,47 +91,62 @@ async function fetchTrendingHeadline() {
 function isValidHotTake(text) {
   if (!text || typeof text !== 'string') return false;
   const clean = text.replace(/^["']|["']$/g, '').trim();
-  // Wajib minimal 60 karakter dan minimal 8 kata
-  if (clean.length < 60) return false;
+  if (clean.length < 35) return false;
   const words = clean.split(/\s+/).filter(Boolean);
-  if (words.length < 8) return false;
-  // Dilarang keras postingan satu kata atau label kategori
+  if (words.length < 6) return false;
   if (/^(kesehatan|politik|ekonomi|hiburan|olahraga|hukum|nasional|internasional|berita|ragam)\.?$/i.test(clean)) return false;
-  // Dilarang kata fiksi, AI, atau memanggil diri sendiri Ki
   if (/fiksi|fiktif|buatan ai|as an ai|\bki\b/i.test(clean)) return false;
   return true;
 }
 
 /**
- * Generate 1 Hot Take pendek dengan persona pekerja media Jakarta (@kikipunyacerita)
+ * Generate 1 Hot Take pendek dengan gaya ketikan manusia asli warga Threads (@kikipunyacerita)
  */
 async function generateHotTakePost(headlineInfo, slotType = 'PAGI') {
-  let cognitiveContext = '';
-  try {
-    const { buildCognitiveTuningContext } = require('./growthEngine');
-    if (buildCognitiveTuningContext) cognitiveContext = buildCognitiveTuningContext();
-  } catch (e) {}
-
   const prompt = `
-Kamu adalah Kiki Rachmat (@kikipunyacerita), pekerja media di Jakarta (usia 26 thn, ngekos di Jakpus, sandwich generation).
-${cognitiveContext}
-Tugas: Tuliskan SATU (1) POSTINGAN PENDEK DEADPAN (2-3 kalimat lengkap, 110 - 200 karakter) yang mengomentari isu/berita ini dari kacamata dompet dan realita kerjaan.
+Kamu adalah Kiki Rachmat (@kikipunyacerita), anak muda Jakarta umur 26 thn yang aktif banget di Threads.
+Tugas: Tulis SATU (1) postingan Threads pendek (1-2 kalimat santai, 80 - 180 karakter) buat nyamber isu/berita yang lagi rame ini.
 
-ISU / BERITA / FENOMENA HARI INI:
+ISU / TREN YANG LAGI RAME:
 "${headlineInfo.headline}" (Sumber: ${headlineInfo.source})
-Waktu Posting: Slot ${slotType}
 
-ATURAN KETAT (ANTI-AI & DEADPAN):
-1. DILARANG memanggil diri sendiri "Ki" atau "Kiki"!
-2. DILARANG sapaan basi (Guys, Halo) dan DILARANG HASHTAG (#) apapun.
-3. BELOKKAN isu ke realitas sehari-hari: dompet rakyat biasa, mahalnya hidup, gaji stagnan, potongan slip gaji, atau lelahnya cari nafkah.
-4. Sertakan 1 angka konkret (rupiah/jam/durasi) agar observasinya punya bobot nyata.
-5. Gaya bahasa: Huruf kecil santai, deadpan (datar), sinis-realistis, tanpa menumpuk kata slang beruntun.
-6. DILARANG menyisipkan link promosi atau produk apapun.
-7. Output HANYA teks postingan langsung tanpa tanda kutip.
+ATURAN BIAR 100% KAYAK KETIKAN MANUSIA ASLI (BUKAN BOT AI):
+1. Huruf kecil semua (lowercase), gaya ngomong warga Threads asli yang spontan, jujur, agak julid/nyelekit atau relatable.
+2. JANGAN merangkum ulang berita kayak pembaca berita TV, dan JANGAN menjejalkan banyak angka/persentase/jam kayak robot kalkulator!
+3. Langsung tulis reaksi/opini lo atau lempar pancingan singkat yang bikin orang di Threads gatel pengen ikut komen.
+4. DILARANG sapaan basi (Guys, Halo), DILARANG memanggil diri sendiri "Ki", DILARANG HASHTAG (#), dan DILARANG link promosi.
+5. Output HANYA teks postingan langsung tanpa tanda kutip.
 `;
 
-  // 1. Coba Gemini 2.5 Flash
+  // 1. Coba Groq LPU (openai/gpt-oss-120b) — cepat & natural
+  if (GROQ_API_KEY) {
+    try {
+      const res = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${GROQ_API_KEY}`
+        },
+        signal: AbortSignal.timeout(12000),
+        body: JSON.stringify({
+          model: 'openai/gpt-oss-120b',
+          messages: [{ role: 'user', content: prompt }],
+          temperature: 0.8
+        })
+      });
+      if (res.ok) {
+        const data = await res.json();
+        const text = data.choices?.[0]?.message?.content?.trim();
+        const clean = text ? text.replace(/^["']|["']$/g, '').replace(/[*_~`]/g, '').replace(/#\w+/g, '').trim().toLowerCase() : '';
+        if (isValidHotTake(clean)) return clean;
+        console.warn(`[HotTakes] Hasil Groq tidak lolos validasi ("${clean}")`);
+      }
+    } catch (e) {
+      console.warn('[HotTakes] Groq fallback error:', e.message);
+    }
+  }
+
+  // 2. Fallback ke Gemini 2.5 Flash
   if (GEMINI_API_KEY) {
     try {
       const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${GEMINI_API_KEY}`, {
@@ -131,7 +157,7 @@ ATURAN KETAT (ANTI-AI & DEADPAN):
           contents: [{ parts: [{ text: prompt }] }],
           generationConfig: {
             maxOutputTokens: 600,
-            temperature: 0.75,
+            temperature: 0.8,
             thinkingConfig: { thinkingBudget: 0 }
           }
         })
@@ -139,42 +165,10 @@ ATURAN KETAT (ANTI-AI & DEADPAN):
       if (res.ok) {
         const data = await res.json();
         const text = data.candidates?.[0]?.content?.parts?.[0]?.text?.trim();
-        const clean = text ? text.replace(/^["']|["']$/g, '').trim() : '';
+        const clean = text ? text.replace(/^["']|["']$/g, '').replace(/[*_~`]/g, '').replace(/#\w+/g, '').trim().toLowerCase() : '';
         if (isValidHotTake(clean)) return clean;
-        console.warn(`[HotTakes] Hasil Gemini tidak lolos validasi ("${clean}"), mencoba Groq...`);
       }
-    } catch (e) {
-      console.warn('[HotTakes] Gemini rate limit/error, mencoba Groq...');
-    }
-  }
-
-  // 2. Fallback ke Groq LPU (openai/gpt-oss-120b)
-  if (GROQ_API_KEY) {
-    try {
-      const res = await fetch('https://api.groq.com/openai/v1/chat/completions', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${GROQ_API_KEY}`
-        },
-        signal: AbortSignal.timeout(10000),
-        body: JSON.stringify({
-          model: 'openai/gpt-oss-120b',
-          messages: [{ role: 'user', content: prompt }],
-          max_tokens: 250,
-          temperature: 0.75
-        })
-      });
-      if (res.ok) {
-        const data = await res.json();
-        const text = data.choices?.[0]?.message?.content?.trim();
-        const clean = text ? text.replace(/^["']|["']$/g, '').trim() : '';
-        if (isValidHotTake(clean)) return clean;
-        console.warn(`[HotTakes] Hasil Groq tidak lolos validasi ("${clean}")`);
-      }
-    } catch (e) {
-      console.warn('[HotTakes] Groq fallback error:', e.message);
-    }
+    } catch (e) {}
   }
 
   // 3. Fallback ke OpenRouter (Free tier)
@@ -190,14 +184,13 @@ ATURAN KETAT (ANTI-AI & DEADPAN):
         body: JSON.stringify({
           model: 'openrouter/free',
           messages: [{ role: 'user', content: prompt }],
-          max_tokens: 300,
           temperature: 0.8
         })
       });
       if (res.ok) {
         const data = await res.json();
         const text = data.choices?.[0]?.message?.content?.trim();
-        const clean = text ? text.replace(/^["']|["']$/g, '').trim() : '';
+        const clean = text ? text.replace(/^["']|["']$/g, '').replace(/[*_~`]/g, '').replace(/#\w+/g, '').trim().toLowerCase() : '';
         if (isValidHotTake(clean)) return clean;
         console.warn(`[HotTakes] Hasil OpenRouter tidak lolos validasi ("${clean}")`);
       }
@@ -208,9 +201,9 @@ ATURAN KETAT (ANTI-AI & DEADPAN):
 
   // Fallback kurasi tinggi yang pasti valid & manusiawi
   const fallbackList = [
-    `In this economy, denger berita kayak gini cuma bikin elus dada. Gaji bulanan cuma numpang lewat beberapa jam buat bayar cicilan, sisanya bertahan hidup pake doa dan kopi saset.`,
-    `Mau sok-sokan cuek sama keadaan tapi pas buka m-banking langsung sadar diri. Hidup makin mahal, tuntutan makin banyak, tapi saldo tabungan jalan di tempat.`,
-    `Realitas pekerja zaman sekarang: berangkat gelap pulang gelap, tenaga diperas, tapi giliran nuntut hak malah disuruh bersyukur sama manajemen.`
+    `tiap buka timeline hari ini isinya bikin elus dada semua. antara mau ikutan komen julid atau fokus nyari duit aja biar waras.`,
+    `mau sok-sokan cuek sama keadaan tapi pas buka m-banking langsung sadar diri. hidup makin mahal tapi drama di timeline gak pernah libur.`,
+    `realitas pekerja zaman sekarang: berangkat gelap pulang gelap, pas buka hp isinya berita yang makin bikin pusing kepala.`
   ];
   return fallbackList[Math.floor(Math.random() * fallbackList.length)];
 }

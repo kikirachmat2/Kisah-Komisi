@@ -1701,8 +1701,7 @@ cron.schedule('10 6,9,11,14,17,19,21 * * *', async () => {
 // 3. Malam: 23:00 WIB (jam netizen begadang)
 // ==========================================
 async function runScheduledThreadBump(slotLabel) {
-  if (process.env.EXPERIMENT_PAUSE_EXTRAS !== 'false') {
-    // Dijeda selama eksperimen 14 hari agar tidak mengaburkan metrik A/B
+  if (process.env.EXPERIMENT_PAUSE_EXTRAS === 'true') {
     return;
   }
   const userId = process.env.THREADS_USER_ID;
@@ -1747,8 +1746,7 @@ cron.schedule('0 23 * * *', () => runScheduledThreadBump('MALAM (23:00 WIB)'), {
 // 2. Sore: 15:30 WIB (Keresahan finansial / In This Economy)
 // ==========================================
 async function runScheduledHotTake(slotLabel) {
-  if (process.env.EXPERIMENT_PAUSE_EXTRAS !== 'false') {
-    // Dijeda selama eksperimen 14 hari agar tidak mengaburkan metrik A/B
+  if (process.env.EXPERIMENT_PAUSE_EXTRAS === 'true') {
     return;
   }
   const userId = process.env.THREADS_USER_ID;
