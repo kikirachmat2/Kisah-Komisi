@@ -28,13 +28,17 @@ const EVERGREEN_TOPICS = [
 ];
 
 /**
- * Fetch dan filter headline berita terkini dari RSS Antara News & Google Trends
+ * Fetch dan filter headline berita terkini dari RSS Finansial, Kerja & Google Trends
  */
 async function fetchTrendingHeadline() {
   const sources = [
-    { url: 'https://www.antaranews.com/rss/terkini.xml', name: 'Antara News' },
-    { url: 'https://trends.google.com/trending/rss?geo=ID', name: 'Google Trends ID' }
+    { url: 'https://finance.detik.com/rss', name: 'Detik Finance' },
+    { url: 'https://www.cnbcindonesia.com/market/rss', name: 'CNBC Indonesia' },
+    { url: 'https://trends.google.com/trending/rss?geo=ID', name: 'Google Trends ID' },
+    { url: 'https://www.antaranews.com/rss/terkini.xml', name: 'Antara News' }
   ];
+
+  const preferredKeyword = /gaji|uang|biaya|kerja|kantor|harga|kos|ojol|krl|pajak|ppn|phk|reimburse|inflasi|makan|kopi|utang|pinjol|tabungan|rekening|lifestyle|karyawan|cuti/i;
 
   for (const src of sources) {
     try {
@@ -44,9 +48,13 @@ async function fetchTrendingHeadline() {
 
       const titles = (xml.match(/<title>([^<]+)<\/title>/g) || [])
         .map(t => t.replace(/<\/?title>/g, '').replace(/<!\[CDATA\[|\]\]>/g, '').trim())
-        .filter(t => t.length > 10 && !t.toLowerCase().includes('antara') && !t.toLowerCase().includes('google trends'));
+        .filter(t => t.length > 10 && !t.toLowerCase().includes('antara') && !t.toLowerCase().includes('google trends') && !t.toLowerCase().includes('detik') && !t.toLowerCase().includes('cnbc'));
 
-      for (const title of titles) {
+      // 1. Utamakan headline yang menyentuh finansial / kerjaan / biaya hidup
+      const prioritized = titles.filter(t => preferredKeyword.test(t));
+      const pool = prioritized.length > 0 ? prioritized : titles;
+
+      for (const title of pool) {
         const lower = title.toLowerCase();
         const isUnsafe = UNSAFE_NEWS_KEYWORDS.some(kw => lower.includes(kw));
         if (!isUnsafe) {
@@ -78,34 +86,38 @@ function isValidHotTake(text) {
   if (words.length < 8) return false;
   // Dilarang keras postingan satu kata atau label kategori
   if (/^(kesehatan|politik|ekonomi|hiburan|olahraga|hukum|nasional|internasional|berita|ragam)\.?$/i.test(clean)) return false;
-  // Dilarang kata fiksi atau AI
-  if (/fiksi|fiktif|buatan ai|as an ai/i.test(clean)) return false;
+  // Dilarang kata fiksi, AI, atau memanggil diri sendiri Ki
+  if (/fiksi|fiktif|buatan ai|as an ai|\bki\b/i.test(clean)) return false;
   return true;
 }
 
 /**
- * Generate 1 Hot Take pendek dengan persona Gen Z Kiki Rachmat (@kikipunyacerita)
+ * Generate 1 Hot Take pendek dengan persona pekerja media Jakarta (@kikipunyacerita)
  */
 async function generateHotTakePost(headlineInfo, slotType = 'PAGI') {
+  let cognitiveContext = '';
+  try {
+    const { buildCognitiveTuningContext } = require('./growthEngine');
+    if (buildCognitiveTuningContext) cognitiveContext = buildCognitiveTuningContext();
+  } catch (e) {}
+
   const prompt = `
-Kamu adalah Kiki Rachmat (@kikipunyacerita). Panggilan akrab: Kiki / "Ki".
-Bio akun Threads kamu: "Dialy Life Update | In this economy mau nulis cerita orang-orang aja lah | dm aja yak yg mau share cerita anonimnya".
-Kamu adalah representasi anak muda / Gen Z / pekerja kelas menengah Indonesia yang lelah, realistis, sinis terhadap keadaan hidup, tapi membungkus keresahan dengan humor tongkrongan yang cerdas dan sangat relate (The Exhausted Gen Z Voice of Reason).
+Kamu adalah Kiki Rachmat (@kikipunyacerita), pekerja media di Jakarta (usia 26 thn, ngekos di Jakpus, sandwich generation).
+${cognitiveContext}
+Tugas: Tuliskan SATU (1) POSTINGAN PENDEK DEADPAN (2-3 kalimat lengkap, 110 - 200 karakter) yang mengomentari isu/berita ini dari kacamata dompet dan realita kerjaan.
 
 ISU / BERITA / FENOMENA HARI INI:
 "${headlineInfo.headline}" (Sumber: ${headlineInfo.source})
 Waktu Posting: Slot ${slotType}
 
-TUGAS:
-Tuliskan SATU (1) POSTINGAN PENDEK MANDIRI (2-3 kalimat lengkap, panjang 100 - 200 karakter) untuk mengomentari fenomena/isu tersebut.
-
-PRINSIP "THE MICRO-IMPACT LENS" (SANGAT KETAT):
-1. JANGAN sebut nama politisi, menteri, atau partai politik tertentu (menghindari sensor algoritma Meta & UU ITE).
-2. BELOKKAN isu/kemarahan warganet ke realitas sehari-hari: dompet rakyat biasa, mahalnya hidup ("In this economy..."), gaji stagnan, cicilan, kelakuan kantor, atau lelahnya cari nafkah.
-3. Gaya bahasa: Gaul santai Indonesia, self-deprecating (menertawakan nasib sendiri), tajam, bikin audiens langsung pengen me-repost/quote.
-4. DILARANG KERAS hanya membalas satu kata, judul berita, atau label kategori (seperti "Kesehatan" atau "Ekonomi"). WAJIB kalimat lengkap bercerita/mengeluh dengan opini personal.
-5. DILARANG menyisipkan link promosi atau produk apapun.
-6. Output HANYA teks postingan langsung tanpa tanda kutip.
+ATURAN KETAT (ANTI-AI & DEADPAN):
+1. DILARANG memanggil diri sendiri "Ki" atau "Kiki"!
+2. DILARANG sapaan basi (Guys, Halo) dan DILARANG HASHTAG (#) apapun.
+3. BELOKKAN isu ke realitas sehari-hari: dompet rakyat biasa, mahalnya hidup, gaji stagnan, potongan slip gaji, atau lelahnya cari nafkah.
+4. Sertakan 1 angka konkret (rupiah/jam/durasi) agar observasinya punya bobot nyata.
+5. Gaya bahasa: Huruf kecil santai, deadpan (datar), sinis-realistis, tanpa menumpuk kata slang beruntun.
+6. DILARANG menyisipkan link promosi atau produk apapun.
+7. Output HANYA teks postingan langsung tanpa tanda kutip.
 `;
 
   // 1. Coba Gemini 2.5 Flash
@@ -119,7 +131,7 @@ PRINSIP "THE MICRO-IMPACT LENS" (SANGAT KETAT):
           contents: [{ parts: [{ text: prompt }] }],
           generationConfig: {
             maxOutputTokens: 600,
-            temperature: 0.8,
+            temperature: 0.75,
             thinkingConfig: { thinkingBudget: 0 }
           }
         })
@@ -136,7 +148,7 @@ PRINSIP "THE MICRO-IMPACT LENS" (SANGAT KETAT):
     }
   }
 
-  // 2. Fallback ke Groq LPU
+  // 2. Fallback ke Groq LPU (openai/gpt-oss-120b)
   if (GROQ_API_KEY) {
     try {
       const res = await fetch('https://api.groq.com/openai/v1/chat/completions', {
@@ -147,10 +159,10 @@ PRINSIP "THE MICRO-IMPACT LENS" (SANGAT KETAT):
         },
         signal: AbortSignal.timeout(10000),
         body: JSON.stringify({
-          model: 'qwen/qwen3.8-27b',
+          model: 'openai/gpt-oss-120b',
           messages: [{ role: 'user', content: prompt }],
           max_tokens: 250,
-          temperature: 0.8
+          temperature: 0.75
         })
       });
       if (res.ok) {

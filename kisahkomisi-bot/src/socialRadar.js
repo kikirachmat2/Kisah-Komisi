@@ -38,30 +38,27 @@ async function scanThreadsViralTrends(forceFresh = false) {
 
   const prompt = `
 Kamu adalah Social Radar Specialist untuk audiens Threads Indonesia (@kikipunyacerita).
-Lakukan pencarian Google real-time untuk topik hangat, isu politik/kebijakan publik, demo, keluhan, curhatan, atau drama viral yang SEDANG RAMAI dibahas warganet Indonesia hari ini / minggu ini.
+Lakukan pencarian Google real-time untuk topik hangat, isu biaya hidup, dunia kerja, gaji, kosan, komuter, atau pengeluaran harian yang SEDANG RAMAI diperdebatkan atau dikeluhkan warganet Indonesia hari ini / minggu ini.
 
 Kategori yang sangat potensial memicu keterlibatan (engagement wave):
-1. Isu sosial & politik warganet (demo mahasiswa/buruh, kebijakan absurd, pajak/PPN, aturan kerja/tapera, fenomena "indonesia cemas/gelap")
-2. Dunia kerja & korporat (kantor toxic, lembur, gaji, bos narsis, drama resign)
-3. Kehidupan anak kos / kontrakan (biaya hidup, token listrik, teman kos)
-4. Relasi & asmara (kencan zonk, split bill, red flag)
-5. KRL & transportasi publik (macet jalanan, demo bundaran HI, commuter Sudirman)
-
-SUDUT PANDANG KIKI:
-Bukan buzzer politik kaku, melainkan anak muda korporat Jaksel yang adaptif, ceplas-ceplos, dan empatik.
-Contoh saat ada demo: "denger denger ada demo yaa, semangat kawan kawan mahasiswa, biar kuterjang macet ini asal aspirasi tersampaikan dengan baik, stay safe kawan kawan".
+1. Finansial & Realita Gaji: Gaji fresh grad/UMR vs biaya kosan/makan, potongan BPJS/PPh 21, sandwich generation kirim ortu, dana darurat, cicilan paylater/motor.
+2. Dunia Kerja & Korporat: Lembur tak dibayar, reimburse kantor nunggak, manajer nolak cuti, diskriminasi gaji senior vs orang baru, drama resign, meeting tanpa arah.
+3. Kehidupan Anak Kos & Kontrakan: Token listrik jebol, biaya sewa naik, kelakuan teman sekamar, split bill dapur, air galon/laundry.
+4. Komuter & Transportasi Publik: Drama KRL Manggarai jam 7 pagi, ojol vs jalan kaki, tarif parkir liar tanpa karcis, macet rute protokol.
+5. Asmara & Relasi Urban: Split bill pas kencan pertama, patungan kado nikahan teman kantor, pasangan perhitungan serupiah.
 
 ATURAN KETAT:
-- HANYA hindari konten pornografi, SARA ekstrem, atau glorifikasi kekerasan berat/pembunuhan.
-- Isu politik berani, kritik sosial, atau polemik publik SANGAT DIPERBOLEHKAN karena merupakan wave keterlibatan terbaik.
+- DILARANG isu politik partai, demo jalanan, pilkada/pemilu, atau orasi aktivis (data membuktikan topik politik/demo mendapat engagement terendah).
+- HANYA topik yang menyentuh DOMPET, KERJAAN, dan KESEHARIAN orang biasa.
+- WAJIB sertakan minimal 1 angka konkret (nominal rupiah, jam, atau durasi) di bagian penjelasan topic.
 - Keluarkan TEPAT 3 sampai 5 topik dalam format JSON persis seperti ini:
 
 [
   {
-    "title": "Judul Singkat Menarik",
-    "topic": "Penjelasan detail situasi/konflik 1-2 kalimat konkret",
-    "topic_tag": "duniakerja|anakkos|krl|rumahtangga|finansial|curhat",
-    "vibe": "kantor|kosan|politik|sosial|transportasi"
+    "title": "Judul Singkat Menarik (Maksimal 6 kata)",
+    "topic": "Penjelasan detail situasi/konflik 1-2 kalimat konkret dengan angka rupiah/jam nyata",
+    "topic_tag": "finansial|duniakerja|anakkos|krl|rumahtangga|relasi",
+    "vibe": "finansial|kantor|kosan|transportasi|relasi"
   }
 ]
 
