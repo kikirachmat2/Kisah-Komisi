@@ -1,6 +1,7 @@
 const db = require('./database');
 const { generateStory, TOPICS } = require('./aiStory');
 const { buildCognitiveTuningContext, getAdaptivePriorityTopics } = require('./growthEngine');
+const { getActiveViralWaves, scanThreadsViralTrends } = require('./socialRadar');
 
 const GROQ_API_KEY = process.env.GROQ_API_KEY;
 const OPENROUTER_API_KEY = process.env.OPENROUTER_API_KEY;
@@ -410,9 +411,32 @@ async function produceCuratedStory(options = null) {
     storyOpts.topicTag = targetNiche;
     try { db.recordNichePostUsage(targetNiche); } catch (e) {}
 
-    // 2. Hubungkan topik dengan niche yang dipilih
+    // 2. Prioritas Tertinggi: Algorithmic Wave-Chaser (Tunggangi Isu Tren Real-time Indonesia)
+    let pickedWave = null;
+    try {
+      const activeWaves = getActiveViralWaves ? getActiveViralWaves() : [];
+      const freshWaves = (activeWaves || []).filter(
+        w => !recentTopics.some(rt => rt.toLowerCase().includes((w.headline || w.title || '').toLowerCase().slice(0, 18)))
+      );
+      if (freshWaves.length > 0 && (targetNiche === 'radar_viral' || Math.random() < 0.65)) {
+        pickedWave = freshWaves[Math.floor(Math.random() * freshWaves.length)];
+        storyOpts.viralWave = pickedWave;
+        storyOpts.topic = pickedWave.topic;
+        storyOpts.theme = pickedWave.topic;
+        if (pickedWave.topic_tag) {
+          targetNiche = pickedWave.topic_tag;
+          storyOpts.topicTag = targetNiche;
+        }
+        if (!storyOpts.formatType && pickedWave.suggested_format) {
+          storyOpts.formatType = pickedWave.suggested_format;
+        }
+        console.log(`[EditorialBoard] 🌊 MENUNGGANGI GELOMBANG VIRAL REAL-TIME: "${pickedWave.title}" (${pickedWave.headline || ''})`);
+      }
+    } catch (e) {
+      console.warn('[EditorialBoard] Gagal cek gelombang viral:', e.message);
+    }
+
     if (targetNiche === 'radar_viral' || targetNiche === 'isusosial' || targetNiche === 'isu_sosial') {
-      // Redirect radar_viral ke finansial atau duniakerja karena berita/demo terbukti 0 engagement
       targetNiche = Math.random() < 0.6 ? 'finansial' : 'duniakerja';
       storyOpts.topicTag = targetNiche;
     }

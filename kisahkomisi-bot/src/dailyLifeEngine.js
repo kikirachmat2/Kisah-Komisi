@@ -146,7 +146,18 @@ async function generateDailyLifeUpdate(options = {}) {
   let mode = 'DAILY_LIFE';
   let guidance = '';
 
-  if (callbackCandidate) {
+  if (options.viralWave) {
+    mode = 'LIVE_TREND_WAVE';
+    guidance = `
+MODE: OBSERVASI REALITA TERHADAP GELOMBANG VIRAL HARI INI
+Headline Berita/Isu: "${options.viralWave.headline || options.viralWave.title}"
+Skenario Nyata: "${options.viralWave.topic}"
+${options.viralWave.suggested_hook ? `Sudut Pandang: "${options.viralWave.suggested_hook}"` : ''}
+
+TUGAS KAMU: Tuliskan SATU observasi jujur / curhat spontan (1 slide) sebagai pekerja Jakarta yang terdampak langsung oleh isu di atas.
+WAJIB sertakan 1 detail konkret (jam kejadian, nominal uang/ongkos/tagihan, atau obrolan nyata). Nada deadpan/pasrah tanpa sok bijak.
+`;
+  } else if (callbackCandidate) {
     mode = 'VIRAL_CALLBACK';
     guidance = `
 MODE: CALLBACK POSTINGAN LAMA YANG VIRAL (UPDATE ORGANIK)

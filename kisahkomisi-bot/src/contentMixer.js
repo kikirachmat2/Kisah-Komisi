@@ -180,8 +180,9 @@ async function callAiWithFallback(prompt, temperature = 0.7) {
  * Generate 1 Hot Take Sarkasme Realitas (Format 1-Liner untuk Repost & Quotes)
  */
 async function generateHotTake(options = {}) {
-  const theme = options.theme || options.topic || HOT_TAKE_THEMES[Math.floor(Math.random() * HOT_TAKE_THEMES.length)];
-  const topicTag = options.topicTag || getAutoTopicTag(theme);
+  const viralWave = options.viralWave;
+  const theme = viralWave?.suggested_hook || viralWave?.topic || options.theme || options.topic || HOT_TAKE_THEMES[Math.floor(Math.random() * HOT_TAKE_THEMES.length)];
+  const topicTag = options.topicTag || viralWave?.topic_tag || getAutoTopicTag(theme);
 
   let cognitiveContext = '';
   try {
@@ -189,9 +190,18 @@ async function generateHotTake(options = {}) {
     if (buildCognitiveTuningContext) cognitiveContext = buildCognitiveTuningContext();
   } catch (e) {}
 
+  const waveContext = viralWave ? `
+KONTEKS GELOMBANG ISU VIRAL TERKINI:
+Headline Berita/Tren: "${viralWave.headline || viralWave.title}"
+Skenario Relatable: "${viralWave.topic}"
+${viralWave.suggested_hook ? `Pancingan Angle: "${viralWave.suggested_hook}"` : ''}
+Tunggangi sentimen isu ini dengan nada kritis-deadpan khas pekerja urban.
+` : '';
+
   const prompt = `
 Kamu adalah Kiki Rachmat (@kikipunyacerita), pekerja media di Jakarta (usia 26 thn, ngekos di Jakpus, sandwich generation).
 ${cognitiveContext}
+${waveContext}
 Gaya ngetik: Human typing sejati warganet Threads Indonesia. Huruf kecil santai, kalimat padat (1-2 kalimat, 90-175 karakter), datar (deadpan), sinis-realistis, self-deprecating.
 
 TEMA REALITAS:
@@ -231,8 +241,9 @@ ATURAN KETAT (ANTI-AI & ANTI-CRINGE):
  * Generate 1 Menfess Spill (Crowdsourcing Reply Magnet - Obrolan Komunitas)
  */
 async function generateMenfessSpill(options = {}) {
-  const theme = options.theme || options.topic || MENFESS_SPILL_THEMES[Math.floor(Math.random() * MENFESS_SPILL_THEMES.length)];
-  const topicTag = options.topicTag || getAutoTopicTag(theme);
+  const viralWave = options.viralWave;
+  const theme = viralWave?.suggested_hook || viralWave?.topic || options.theme || options.topic || MENFESS_SPILL_THEMES[Math.floor(Math.random() * MENFESS_SPILL_THEMES.length)];
+  const topicTag = options.topicTag || viralWave?.topic_tag || getAutoTopicTag(theme);
 
   let cognitiveContext = '';
   try {
@@ -240,9 +251,17 @@ async function generateMenfessSpill(options = {}) {
     if (buildCognitiveTuningContext) cognitiveContext = buildCognitiveTuningContext();
   } catch (e) {}
 
+  const waveContext = viralWave ? `
+KONTEKS GELOMBANG ISU VIRAL TERKINI:
+Headline Berita/Tren: "${viralWave.headline || viralWave.title}"
+Skenario Masalah: "${viralWave.topic}"
+Pancing warganet untuk menceritakan pengalaman mereka seputar isu ini di kolom komentar.
+` : '';
+
   const prompt = `
 Kamu adalah Kiki Rachmat (@kikipunyacerita), pekerja media di Jakarta (usia 26 thn, ngekos di Jakpus, sandwich generation).
 ${cognitiveContext}
+${waveContext}
 Tuliskan SATU (1) POSTINGAN CROWDSOURCING / DISKUSI PENDEK (panjang 110-185 karakter) untuk memancing warganet Threads berbagi pengalaman atau berhitung bareng.
 
 TOPIK PANCINGAN:
@@ -670,7 +689,8 @@ async function generateFinancialBreakdown(options = {}) {
   ];
   const chosenArchetype = ARCHETYPES[Math.floor(Math.random() * ARCHETYPES.length)];
 
-  const theme = options.theme || options.topic || `Realitas gaji ${targetIncome}jt di ${targetLocation} (${chosenArchetype.role})`;
+  const viralWave = options.viralWave;
+  const theme = viralWave?.topic || options.theme || options.topic || `Realitas gaji ${targetIncome}jt di ${targetLocation} (${chosenArchetype.role})`;
 
   let cognitiveContext = '';
   try {
@@ -678,9 +698,16 @@ async function generateFinancialBreakdown(options = {}) {
     if (buildCognitiveTuningContext) cognitiveContext = buildCognitiveTuningContext();
   } catch (e) {}
 
+  const waveContext = viralWave ? `
+KONTEKS EKONOMI / GELOMBANG VIRAL TERKINI:
+"${viralWave.headline || viralWave.title}": ${viralWave.topic}
+WAJIB: Selipkan 1 pos pengeluaran atau punchline yang mencerminkan realitas isu ini (misal kenaikan beras/listrik/tagihan/ongkos).
+` : '';
+
   const prompt = `
 Kamu adalah Kiki Rachmat (@kikipunyacerita), pekerja media di Jakarta (usia 26 thn, ngekos di Jakpus, sandwich generation).
 ${cognitiveContext}
+${waveContext}
 Tugas: Buat rincian data pengeluaran bulanan yang realistis dan relatable untuk ${chosenArchetype.role} (${chosenArchetype.focus}).
 
 TARGET PARAMETER WAJIB:

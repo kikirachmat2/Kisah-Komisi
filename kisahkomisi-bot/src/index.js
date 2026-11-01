@@ -190,6 +190,9 @@ function renderHelpMenu(name = 'Kawan') {
     `• *3 Slot Insight Organik*: Hot Take, Menfess Spill, Financial Breakdown (0% link, dongkrak jangkauan & repost)\n` +
     `• *3 Slot Shopee Affiliate*: Cerita kontekstual, anchoring under 50rb, 2-kubu closing bait\n\n` +
     `🤖 *Kontrol Otomatisasi Threads:*\n` +
+    `• \`/radar\` : Intai gelombang viral terkini (Detik Finance, Trends ID, Comments)\n` +
+    `• \`/target\` : Cek & atur KPI target minimal views/post (saat ini 1000 views)\n` +
+    `• \`/autotune\` : Evaluasi performa winner vs flop & perbarui instruksi AI otomatis\n` +
     `• \`/insight\` : Cek analitik penayangan & evaluasi tren terkini\n` +
     `• \`/veto\` : Batalkan penerbitan draf dalam 15-menit veto window\n` +
     `• \`/bikin_cerita\` : AI buat 1 cerita menfess viral (Lolos Kurasi QC)\n` +
@@ -552,6 +555,40 @@ bot.command(['autotune', 'evolve'], async (ctx) => {
   } catch (err) {
     console.error('Error command autotune:', err);
     ctx.reply(`❌ Gagal menjalankan autotune: ${err.message}`);
+  }
+});
+
+// Command: /radar & /ombak (Algorithmic Wave-Chaser Radar Real-time)
+bot.command(['radar', 'ombak'], async (ctx) => {
+  const text = (ctx.message?.text || '').toLowerCase();
+  const isForce = text.includes('fresh') || text.includes('sync') || text.includes('update') || text.includes('scan');
+  await ctx.reply(isForce ? '🌊 Mengintai radar isu real-time Indonesia (Detik Finance, Google Trends ID, Comments)...' : '🌊 Membaca gelombang tren Threads Indonesia terkini...');
+  try {
+    const { scanThreadsViralTrends, getActiveViralWaves } = require('./socialRadar');
+    const waves = isForce ? await scanThreadsViralTrends(true) : getActiveViralWaves();
+
+    if (!waves || waves.length === 0) {
+      return ctx.reply('⚠️ Belum ada gelombang tren yang terdeteksi. Gunakan `/radar fresh` untuk force scan.');
+    }
+
+    let msg = `🌊 *ALGORITHMIC WAVE-CHASER RADAR*\n`;
+    msg += `_Menunggangi isu & drama yang sedang naik daun di Threads Indonesia:_\n\n`;
+
+    waves.forEach((w, i) => {
+      msg += `*${i + 1}. ${w.title}*\n`;
+      if (w.headline) msg += `📰 _Headline_: ${w.headline}\n`;
+      msg += `📌 _Skenario_: ${w.topic}\n`;
+      if (w.suggested_hook) msg += `🪝 _Hook_: \`${w.suggested_hook}\`\n`;
+      msg += `🎯 _Format_: \`${w.suggested_format || 'financial_breakdown'}\` | _Niche_: \`#${w.topic_tag || 'finansial'}\`\n\n`;
+    });
+
+    msg += `_💡 Semua slot konten berikutnya otomatis mengutamakan gelombang ini._\n`;
+    msg += `_Ketik \`/radar fresh\` untuk memindai ulang berita detik ini._`;
+
+    safeReplyMarkdown(ctx, msg);
+  } catch (err) {
+    console.error('Error command radar:', err);
+    ctx.reply(`❌ Gagal membaca radar tren: ${err.message}`);
   }
 });
 
@@ -1632,6 +1669,24 @@ cron.schedule('30 3 * * *', () => {
   db.runMaintenance();
   if (global.gc) {
     global.gc();
+  }
+}, {
+  scheduled: true,
+  timezone: 'Asia/Jakarta'
+});
+
+// ==========================================
+// 🌊 ALGORITHMIC WAVE-CHASER RADAR (Tiap 2 Jam Sekali)
+// Memindai headline isu ekonomi/kerja/urban di Detik Finance, Trends ID, & obrolan netizen
+// Menjaga agar antrean topik selalu hangat sebelum slot tayang 07:15, 11:45, 13:15, 17:30, 19:30, 21:45
+// ==========================================
+cron.schedule('10 6,9,11,14,17,19,21 * * *', async () => {
+  console.log('[WaveChaser] 🌊 Memindai isu tren real-time Indonesia untuk konten Threads...');
+  try {
+    const { scanThreadsViralTrends } = require('./socialRadar');
+    await scanThreadsViralTrends(true);
+  } catch (err) {
+    console.warn('[WaveChaser] Gagal memindai isu viral berkala:', err.message);
   }
 }, {
   scheduled: true,
