@@ -685,10 +685,11 @@ Berikan output HANYA berupa JSON valid persis seperti ini:
 }
 
 ATURAN KETAT ANTI-DUPLIKASI & GAYA ANAK KORPORAT:
-1. Total pengeluaran items HARUS lebih kecil dari ${targetIncome} (sisakan 400rb - 1.2jt untuk sisa tabungan).
-2. DILARANG menghitung sisa sendiri dalam JSON, sistem kode yang akan menghitung sisa secara eksak.
-3. DILARANG PUNCHLINE KLISE BASI seperti: "ngajak nongkrong di senopati... mending pura-pura pingsan/tipes" atau "kopi 40rb vs ongkir 8rb". Buat celetukan segar tentang nasib kerjaan, reimburse kantor, potongan pajak, atau tabungan tipis.
-4. Output HANYA JSON murni tanpa markdown, tanpa teks pengantar.
+1. Maksimal buat 5 s/d 6 item pengeluaran utama saja agar ringkas, mudah di-scan mata, dan tidak terpotong batas karakter Threads!
+2. Total pengeluaran items HARUS lebih kecil dari ${targetIncome} (sisakan 400rb - 1.2jt untuk sisa tabungan).
+3. DILARANG menghitung sisa sendiri dalam JSON, sistem kode yang akan menghitung sisa secara eksak.
+4. DILARANG PUNCHLINE KLISE BASI seperti: "ngajak nongkrong di senopati... mending pura-pura pingsan/tipes" atau "kopi 40rb vs ongkir 8rb". Buat celetukan segar tentang nasib kerjaan, reimburse kantor, potongan pajak, atau tabungan tipis.
+5. Output HANYA JSON murni tanpa markdown, tanpa teks pengantar.
 `;
 
   let budgetData = null;
@@ -709,7 +710,7 @@ ATURAN KETAT ANTI-DUPLIKASI & GAYA ANAK KORPORAT:
         let validItems = parsed.items.map(it => ({
           label: String(it.label || 'Kebutuhan lain').replace(/^[•\-\*]\s*/, '').trim(),
           amountJt: Number(Number(it.amountJt).toFixed(2))
-        })).filter(it => it.amountJt > 0);
+        })).filter(it => it.amountJt > 0).slice(0, 6);
 
         const totalExpense = validItems.reduce((acc, it) => acc + it.amountJt, 0);
 
@@ -795,20 +796,20 @@ async function generateMixedPost(formatType, options = {}) {
 function getFormatForSlotNumber(slotNumber) {
   switch (Number(slotNumber)) {
     case 1:
-      // Slot 1 (07:15 Pagi Komuter): Life update pagi, KRL, cuaca, atau callback kemarin
+      // Slot 1 (07:15 Pagi Komuter): Life update pagi, KRL, cuaca, atau callback
       return FORMAT_TYPES.SINGLE_LIFE_UPDATE;
     case 2:
-      // Slot 2 (10:00 Coffee Break): Life update, respon isu/berita hari ini, demo, meeting kantor
-      return FORMAT_TYPES.SINGLE_LIFE_UPDATE;
+      // Slot 2 (10:00 Coffee Break): Mesin Viral #1 - Bedah Gaji & Finansial Angka Konkret
+      return FORMAT_TYPES.FINANCIAL_BREAKDOWN;
     case 3:
       // Slot 3 (12:30 Makan Siang): Curhat DM Anonim + Shopee Affiliate #1
       return FORMAT_TYPES.ANONYMOUS_CURHAT_STORY;
     case 4:
-      // Slot 4 (16:30 Sore Pulang): Life update sore, macet jalanan, revisi mendadak, atau callback
-      return FORMAT_TYPES.SINGLE_LIFE_UPDATE;
+      // Slot 4 (16:30 Sore Pulang): Menfess Spill / Hot Take tajam organik
+      return Math.random() > 0.5 ? FORMAT_TYPES.MENFESS_SPILL : FORMAT_TYPES.HOT_TAKE;
     case 5:
-      // Slot 5 (19:30 Malam Santai): Cerita berseri tongkrongan / relasi + Shopee Affiliate #2
-      return Math.random() > 0.5 ? FORMAT_TYPES.ANONYMOUS_CURHAT_STORY : FORMAT_TYPES.STORY_AFFILIATE;
+      // Slot 5 (19:30 Malam Santai): Story Affiliate dengan angka konkret #2
+      return FORMAT_TYPES.STORY_AFFILIATE;
     case 6:
       // Slot 6 (21:45 Peak Rebahan): Curhat mendalam warganet anonim + Shopee Affiliate #3
       return FORMAT_TYPES.ANONYMOUS_CURHAT_STORY;

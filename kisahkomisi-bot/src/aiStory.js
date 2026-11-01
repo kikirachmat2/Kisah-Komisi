@@ -158,13 +158,12 @@ function generateContextualAd(product, trackedUrl) {
   const name = cleanProductName(product.name);
   const fullName = `${cat} ${name}`.toLowerCase();
 
-  // 1. Deteksi Barang Cewek/Wanita (Kiki cowok: pacar gue pake / kado cewek lu / jujur butuh duit)
+  // 1. Deteksi Barang Cewek/Wanita
   const isFemaleProduct = /eyelash|bulumata|daster|bra|hijab|wanita|cewe|cewek|lipstick|lip balm|softlens|dress|rok|tunik|kutek|scrunchie/i.test(fullName);
   if (isFemaleProduct) {
     const femaleTemplates = [
-      `Btw pacar gue pake ini katanya bagus bgt, checkout lewat sini ya itung-itung bantu nambah bayar kosan budak korporat wkwk: ${trackedUrl}.`,
-      `Btw ini bagus bgt buat cewek lu atau kado pacar. beli lewat sini ya gue lagi jujur butuh duit wkwk: ${trackedUrl}.`,
-      `Btw racun printilan cewek yang kata pacar gue awet bgt dipake seharian: ${trackedUrl}. checkout lewat sini yak butuh recehan buat survive akhir bulan wkwk.`
+      `selingan dikit, kemarin cewek gue beli ${name} ini dan ternyata kepake banget buat harian: ${trackedUrl}`,
+      `btw kalau ada yang lagi nyari ${name} murah tapi awet, kemarin nemu di toko ini: ${trackedUrl}`
     ];
     return femaleTemplates[Math.floor(Math.random() * femaleTemplates.length)];
   }
@@ -172,8 +171,8 @@ function generateContextualAd(product, trackedUrl) {
   // 2. Kategori: Botol Minum / Tumbler / Gaya Hidup
   if (cat.includes('botol') || cat.includes('tumbler') || name.toLowerCase().includes('tumbler') || name.toLowerCase().includes('termos')) {
     const templates = [
-      `Btw di tengah pusingnya lembur kerja dan drama kantor, investasi receh under 50rb yang bikin gue tetep waras itu tumbler air es di meja: ${trackedUrl}. checkout sini yak nambah bayar kosan wkwk.`,
-      `Btw buat yang seharian di ruangan AC dan gampang lemes, tumbler fungsional harga ramah kantong ini lifesaver banget nemenin ngantor: ${trackedUrl}. beli lewat sini ya gue lagi butuh duit wkwk.`
+      `selingan bentar, daripada beli minum kemasan terus di luar, gue sekarang bawa tumbler ${name} ini tiap ngantor: ${trackedUrl}`,
+      `btw buat yang nyari botol minum tahan dingin seharian di meja kerja, gue pake yang ini: ${trackedUrl}`
     ];
     return templates[Math.floor(Math.random() * templates.length)];
   }
@@ -181,8 +180,8 @@ function generateContextualAd(product, trackedUrl) {
   // 3. Kategori: Elektronik & Gadget (Charger, Kabel, Kipas)
   if (cat.includes('elektronik') || cat.includes('gadget') || name.toLowerCase().includes('charger') || name.toLowerCase().includes('kabel') || name.toLowerCase().includes('kipas')) {
     const templates = [
-      `Btw buat yang seharian mobile atau sering lembur, kepala charger fast charging under 50rb kayak gini lifesaver banget di tas kerja: ${trackedUrl}. checkout sini ya itung-itung amal buat budak korporat wkwk.`,
-      `Btw daripada pusing kabel kusut pas dikejar deadline kantor, barang printilan receh tapi fungsional ini kepake banget di meja: ${trackedUrl}. beli lewat sini yak gue lagi butuh duit wkwk.`
+      `selingan dikit, kemarin gue beli ${name} ini buat cadangan di tas kerja biar gak ribet pinjem temen kantor: ${trackedUrl}`,
+      `btw buat yang sering kehabisan baterai pas di jalan, kepala charger/kabel ini lumayan bandel harganya receh: ${trackedUrl}`
     ];
     return templates[Math.floor(Math.random() * templates.length)];
   }
@@ -190,8 +189,8 @@ function generateContextualAd(product, trackedUrl) {
   // 4. Kategori: Skincare & Grooming / Perawatan Diri
   if (cat.includes('skincare') || cat.includes('grooming') || cat.includes('perawatan') || name.toLowerCase().includes('wash') || name.toLowerCase().includes('deodorant') || name.toLowerCase().includes('serum')) {
     const templates = [
-      `Btw seharian dihajar stres kerjaan sama polusi jalanan komuter, self-care receh gak sampe seharga kopi kekinian tapi muka langsung seger lagi: ${trackedUrl}. checkout sini yak bantu nambah bayar kosan wkwk.`,
-      `Btw di tengah capeknya tuntutan kerja, ngerawat diri sendiri itu bentuk self-respect paling realistis. Buat daily wash under 40rb yang ga ribet pas ngantor: ${trackedUrl}. beli lewat sini ya gue lagi jujur butuh duit wkwk.`
+      `selingan dikit, abis seharian kena debu jalanan Jakarta, cuci muka pake ${name} ini lumayan bikin seger lagi: ${trackedUrl}`,
+      `btw buat perawatan harian yang murah meriah di kosan, gue sekarang rutin stok ini: ${trackedUrl}`
     ];
     return templates[Math.floor(Math.random() * templates.length)];
   }
@@ -199,8 +198,8 @@ function generateContextualAd(product, trackedUrl) {
   // 5. Kategori: Parfum & Wewangian
   if (cat.includes('parfum') || cat.includes('wewangian')) {
     const templates = [
-      `Btw salah satu booster mood kerja paling ampuh pas lagi pusing itu aroma calming. Parfum daily wangi seger under 50rb yang awet buat ngantor: ${trackedUrl}. checkout lewat sini ya itung-itung sedekah buat budak korporat wkwk.`,
-      `Btw di tengah hecticnya meeting, wangi yang seger tuh ngaruh banget ke rasa percaya diri. Yang ini harganya ramah kantong tapi wanginya mewah: ${trackedUrl}. beli lewat sini yak gue lagi butuh duit wkwk.`
+      `selingan bentar, buat parfum harian ngantor yang wanginya kalem dan gak bikin pusing di KRL, gue pake ini: ${trackedUrl}`,
+      `btw kemarin iseng checkout parfum murah ini buat taruh di tas kerja, taunya wanginya tahan lama: ${trackedUrl}`
     ];
     return templates[Math.floor(Math.random() * templates.length)];
   }
@@ -208,23 +207,23 @@ function generateContextualAd(product, trackedUrl) {
   // 6. Kategori: Camilan & Minuman
   if (cat.includes('camilan') || cat.includes('makanan') || cat.includes('teh') || cat.includes('lemon')) {
     const templates = [
-      `Btw buat nemenin fokus di depan laptop atau ngusir ngantuk pas jam rawan siang di kantor, cemilan renyah under 25rb ini lumayan bikin melek: ${trackedUrl}. beli lewat sini ya lagi butuh duit wkwk.`,
-      `Btw pas lagi mumet ngerjain revisian malam hari, asupan seger-seger harga receh kayak gini lifesaver banget di meja: ${trackedUrl}. checkout sini ya bantu nambah bayar kosan wkwk.`
+      `selingan dikit, stok cemilan murah di meja kerja biar gak jajan kopi mahal terus tiap sore: ${trackedUrl}`,
+      `btw buat temen ngemil pas lagi lembur depan laptop, kemarin gue checkout ini lumayan banyak isinya: ${trackedUrl}`
     ];
     return templates[Math.floor(Math.random() * templates.length)];
   }
 
-  // 7. Kategori: Rumah Tangga & Kosan (Tissue, Gantungan, Keset, dll.)
+  // 7. Kategori: Rumah Tangga & Kosan
   if (cat.includes('kosan') || cat.includes('rumah')) {
     const templates = [
-      `Btw buat anak kos atau kontrakan, barang printilan fungsional under 30rb kayak gini simple tapi kepake banget biar kamar gak berantakan: ${trackedUrl}. checkout sini ya itung-itung amal wkwk.`,
-      `Btw salah satu investasi kecil under 50rb buat kenyamanan tempat istirahat setelah seharian cape kerja di luar: ${trackedUrl}. beli lewat sini yak butuh duit wkwk.`
+      `selingan bentar, printilan kosan murah yang kemarin gue beli biar kamar gak berantakan: ${trackedUrl}`,
+      `btw buat anak kos yang butuh barang praktis harga receh, kemarin gue nemu ini: ${trackedUrl}`
     ];
     return templates[Math.floor(Math.random() * templates.length)];
   }
 
-  // Fallback netral & manusiawi
-  return `Btw buat yang lagi cari rekomendasi barang fungsional harga ramah dompet buat nemenin rutinitas harian biar lebih praktis: ${trackedUrl}. checkout lewat sini ya gue lagi jujur butuh duit wkwk.`;
+  // Fallback kasual & bersih
+  return `selingan dikit, kemarin gue checkout ${name} ini dan lumayan kepake buat harian di kosan/kantor: ${trackedUrl}`;
 }
 
 /**
@@ -361,77 +360,73 @@ async function generateStory(options = {}) {
   let prompt = '';
 
   if (isFormatA) {
-    // FORMAT A: Single Post Curhat Ringkas + Pertanyaan Pengalaman Terbuka (≤260 karakter teks asli, 0% label fiksi)
+    // FORMAT A: Single Post Curhat Ringkas + Pertanyaan Natural (≤240 karakter teks asli, 0% label fiksi)
     prompt = `
-Kamu adalah Kiki Rachmat (@kikipunyacerita), pemilik akun Threads. Panggilan: "Ki". Bio: "Dialy Life Update | In this economy mau nulis cerita orang-orang aja lah | dm aja yak yg mau share cerita anonimnya".
-Persona: Anak muda korporat Jakarta Selatan (usia 25-27 thn, kerja di agensi/tech/kantoran Jaksel, commute KRL/MRT, ngekos). Karakter: EXTROVERT MENTOK, gaul, santai.
+Kamu adalah Kiki Rachmat (@kikipunyacerita), pekerja media di Jakarta (usia 26 thn, ngekos di Jakpus, sandwich generation).
 Tuliskan SATU (1) POSTINGAN CURHAT TUNGGAL (Single Post, TIDAK BERSAMBUNG, HANYA 1 SLIDE).
-Panjang teks cerita: 150 - 240 karakter.
+Panjang teks cerita: 130 - 220 karakter.
 
 TOPIK/KERESAHAN NYATA:
 ${topic}
 
-STRUKTUR DAN ATURAN WAJIB (HUMAN TYPING ANAK KORPORAT JAKSEL):
+STRUKTUR DAN ATURAN WAJIB (GAYA MANUSIA ASLI & ANTI-AI):
 1. SUDUT PANDANG:
-   - Jika opini pribadi: Sudut pandang orang pertama ("gue di kantor...", "tiap senin pagi di stasiun...", "temen kosan gue...").
-   - Jika menceritakan pengalaman orang lain: WAJIB gunakan framing alami obrolan ("denger dari obrolan sana-sini...", "kemarin pas lagi nongkrong denger cerita...", "lagi di pantry denger obrolan...").
+   - Jika opini pribadi: Gunakan sudut pandang orang pertama ("gue di kantor...", "tiap senin pagi di stasiun...", "temen kosan gue...").
+   - Jika menceritakan pengalaman orang lain: Gunakan framing obrolan alami ("denger dari obrolan sana-sini...", "kemarin pas lagi nongkrong denger cerita...", "lagi di pantry denger obrolan...").
    - DILARANG KERAS MENGGUNAKAN FRASA "masuk DM", "kiriman DM", ATAU "spill di DM"!
-   - DILARANG gaya cerpen/novel orang ketiga (DILARANG nama-nama sinetron seperti "Pak Baskara", "Direktur menatap Rendy").
-2. LANGSUNG TO THE POINT: Mulai langsung dari kejadian nyata yang bikin emosi/kaget/geleng-geleng kepala.
-3. AKHIRI DENGAN PERTANYAAN DILEMA 2-KUBU (THREAD WAR BAIT): Pertanyaan penutup yang membelah audiens menjadi 2 kubu (Tim A vs Tim B). Contoh: "kalian di posisi gue tim langsung speak up atau tim tahan dulu cari aman? coba jelasin."
-4. Gaya bahasa warganet santai anak korporat (lu-gue, bgt, parah, nyesek, boncos, burnout, wkwk, haha). Huruf kecil santai.
-5. DILARANG MENULIS LABEL/DISCLAIMER SEPERTI "[Cerita Fiksi]", "[Fiksi]", "[Menfess]" ATAU SEJENISNYA! Tulis langsung teksnya.
+   - DILARANG gaya cerpen/novel orang ketiga (seperti "Pak Baskara", "Direktur menatap Rendy").
+2. LANGSUNG KE KEJADIAN & SERTAKAN 1 ANGKA KONKRET: Mulai langsung dari kejadian nyata dan masukkan 1 angka konkret (jam, nominal uang, durasi) supaya tidak abstrak.
+3. TUTUP DENGAN PERTANYAAN NATURAL ATAU PERNYATAAN DATAR: DILARANG pakai template bot "kalian tim A atau tim B? spill!". Gunakan pertanyaan manusia biasa seperti "kalau di posisi gini enaknya ditegur langsung atau diemin aja ya?"
+4. DILARANG memanggil diri sendiri "Ki" dan DILARANG menumpuk kata slang ("boncos", "burnout", "zonk", "anjir") dalam satu kalimat. Huruf kecil santai.
+5. DILARANG MENULIS LABEL/DISCLAIMER SEPERTI "[Cerita Fiksi]", "[Fiksi]", "[Menfess]" ATAU SEJENISNYA!
 6. DILARANG iklan/promosi apapun. 100% nol iklan.
 
 Keluarkan HANYA JSON:
 {
-  "title": "Judul Menfess Singkat (Maksimal 6 kata)",
+  "title": "Judul Menfess Singkat (Maksimal 5 kata)",
   "topic": "${topic}",
   "story_parts": [
-    "Teks curhat adegan konkret sudut pandang orang pertama + pertanyaan dilema 2-kubu warganet (150-240 karakter)..."
+    "Teks curhat adegan konkret + penutup natural (130-220 karakter)..."
   ]
 }
 `;
   } else {
     // FORMAT B: Micro-Thread Tepat 3 Part (Persis 3 slide)
-    // Part 1: Hook momen menggantung orang pertama (120-180 chars)
-    // Part 2: Eskalasi kejadian / percakapan nyata (160-260 chars)
-    // Part 3: Pertanyaan dilema 2-kubu warganet (100-180 chars)
     prompt = `
-Kamu adalah Kiki Rachmat (@kikipunyacerita), pemilik akun Threads. Panggilan: "Ki". Bio: "Dialy Life Update | In this economy mau nulis cerita orang-orang aja lah | dm aja yak yg mau share cerita anonimnya".
-Persona: Anak muda korporat Jakarta Selatan (usia 25-27 thn, kerja di agensi/tech/kantoran Jaksel, commute KRL/MRT, ngekos). Karakter: EXTROVERT MENTOK, gaul, santai.
+Kamu adalah Kiki Rachmat (@kikipunyacerita), pekerja media di Jakarta (usia 26 thn, ngekos di Jakpus, sandwich generation).
 Tuliskan SATU UTAS MICRO-THREAD TEPAT 3 PART (PERSIS 3 SLIDE).
 
 TOPIK/KERESAHAN NYATA:
 ${topic}
 
-STRUKTUR 3 PART:
-1. PART 1 (Hook Kejadian Menggantung):
-   - Sudut pandang: Jika opini sendiri ("gue", "atasan gue"), jika cerita orang lain gunakan framing obrolan ("denger dari obrolan sana-sini...", "kemarin pas nongkrong denger cerita...").
+STRUKTUR 3 PART (WAJIB ADA ANGKA KONKRET & TANPA BAHASA AI CRINGE):
+1. PART 1 (Hook Kejadian Konkret):
+   - Sudut pandang: Jika pengalaman sendiri ("gue", "atasan gue"), jika cerita orang lain gunakan framing obrolan ("denger dari obrolan sana-sini...", "kemarin pas nongkrong denger cerita...").
    - DILARANG KERAS MENGGUNAKAN FRASA "masuk DM", "kiriman DM", ATAU "spill di DM"!
    - DILARANG gaya sinetron orang ketiga (seperti "Pak Baskara mendadak diam" atau "Rendy tertegun").
-   - Panjang: 120 - 180 karakter. Huruf kecil santai.
-2. PART 2 (Eskalasi Kejadian / Percakapan Nyata):
-   - Kelanjutan kejadian atau dialog yang bikin emosi/geregetan warganet sesama pekerja.
-   - Panjang: 160 - 260 karakter.
-3. PART 3 (Pertanyaan Dilema 2-Kubu / Thread War Bait):
-   - Pertanyaan yang membelah audiens menjadi 2 kubu realistis (Tim A vs Tim B).
-   - Panjang: 100 - 180 karakter. Contoh: "kalian tim 'langsung tolak mentah-mentah' atau tim 'iyain aja demi cari aman'? coba spill alasannya."
+   - Panjang: 120 - 190 karakter. Huruf kecil santai.
+2. PART 2 (Detail Kronologi & Angka Konkret):
+   - Kelanjutan kejadian atau dialog singkat apa adanya. WAJIB masukkan 1 detail angka konkret (nominal uang/tagihan/gaji, jam kejadian, atau durasi waktu) agar terasa nyata.
+   - Panjang: 150 - 240 karakter.
+3. PART 3 (Penutup Natural Warganet - BUKAN Template Survey Bot):
+   - Tutup dengan pertanyaan kasual layaknya minta pendapat teman (contoh: "kalau kalian di posisi itu mending langsung ngomong jujur atau cari aman aja?", "wajar gak sih kalau langsung ditolak mentah-mentah?").
+   - DILARANG KERAS memakai kalimat template bot "kalian tim X atau tim Y? coba spill!" atau kata "spill!" di akhir kalimat.
+   - Panjang: 90 - 160 karakter.
 
-ATURAN KETAT:
-- DILARANG MENULIS ANGKA PENOMORAN (seperti "1/3", "Part 1", dll).
-- DILARANG MENULIS LABEL SEPERTI "[Cerita Fiksi]", "[Fiksi]", ATAU DISCLAIMER APAPUN! Buat 100% seperti curhat manusia asli.
-- DILARANG menyisipkan link promosi atau barang di prompt ini (link disisipkan otomatis secara terpisah di Slide 3).
-- Gunakan bahasa manusia alami warganet Threads Indonesia anak muda korporat (lu-gue, bgt, nyesek, boncos, wkwk).
+ATURAN KETAT ANTI-AI:
+- DILARANG memanggil diri sendiri "Ki" atau "Kiki".
+- DILARANG menumpuk kata slang ("boncos", "burnout", "zonk", "anjir", "nyesek bgt") atau membuat istilah karangan aneh. Tulis dengan kalimat bahasa Indonesia sehari-hari yang bersih dan datar (deadpan).
+- DILARANG MENULIS ANGKA PENOMORAN ("1/3", "Part 1") atau label "[Cerita Fiksi]".
+- DILARANG menyisipkan link promosi di prompt ini (link disisipkan otomatis terpisah).
 
 Keluarkan HANYA JSON:
 {
-  "title": "Judul Utas (Maksimal 6-8 kata)",
+  "title": "Judul Utas (Maksimal 5-6 kata)",
   "topic": "${topic}",
   "story_parts": [
-    "Part 1 hook menggantung sudut pandang orang pertama (120-180 chars)...",
-    "Part 2 eskalasi adegan nyata (160-260 chars)...",
-    "Part 3 pertanyaan dilema 2-kubu warganet (100-180 chars)..."
+    "Part 1 hook kejadian konkret (120-190 chars)...",
+    "Part 2 kronologi nyata dengan angka konkret (150-240 chars)...",
+    "Part 3 pertanyaan penutup natural tanpa kata spill (90-160 chars)..."
   ]
 }
 `;
@@ -452,7 +447,7 @@ Keluarkan HANYA JSON:
             contents: [{ parts: [{ text: prompt }] }],
             generationConfig: {
               responseMimeType: 'application/json',
-              temperature: 0.8
+              temperature: 0.75
             }
           })
         });
@@ -470,9 +465,9 @@ Keluarkan HANYA JSON:
 
   let rawText = data?.candidates?.[0]?.content?.parts?.[0]?.text;
 
-  // Fallback ke Groq LPU jika Gemini limit
+  // Fallback ke Groq LPU jika Gemini limit (Prioritaskan openai/gpt-oss-120b agar bahasa Indonesia bersih dan tidak halusinasi kata)
   if (!rawText && process.env.GROQ_API_KEY) {
-    const groqModels = ['qwen/qwen3.8-27b', 'openai/gpt-oss-120b'];
+    const groqModels = ['openai/gpt-oss-120b', 'qwen/qwen3.8-27b'];
     for (const gModel of groqModels) {
       try {
         console.log(`[AI] Menggunakan Groq LPU (${gModel}) sebagai generator cerita...`);
@@ -487,7 +482,7 @@ Keluarkan HANYA JSON:
             model: gModel,
             messages: [{ role: 'user', content: prompt + '\n\nKeluarkan HANYA JSON persis sesuai format.' }],
             response_format: { type: 'json_object' },
-            temperature: 0.75
+            temperature: 0.7
           })
         });
         if (groqRes.ok) {
@@ -628,8 +623,7 @@ async function processAnonymousStory(rawSubmission, options = {}) {
   }
 
   const prompt = `
-Kamu adalah Kiki Rachmat (@kikipunyacerita), pemilik akun Threads. Panggilan: "Ki". Bio: "Dialy Life Update | In this economy mau nulis cerita orang-orang aja lah | dm aja yak yg mau share cerita anonimnya".
-Persona: Anak muda korporat Jakarta Selatan (usia 25-27 thn, kerja di agensi/tech/kantoran Jaksel). Karakter: EXTROVERT MENTOK. JANGAN sebut nama asli orang (gunakan "si fulan").
+Kamu adalah Kiki Rachmat (@kikipunyacerita), pekerja media di Jakarta (usia 26 thn, ngekos di Jakpus, sandwich generation). JANGAN sebut nama asli orang (gunakan "si fulan").
 
 Ada kiriman curhatan/cerita nyata warganet berikut ini:
 """
@@ -637,34 +631,33 @@ ${cleanRaw}
 """
 
 TUGAS:
-Olah dan susun ulang cerita mentah di atas menjadi SATU UTAS POSTINGAN BERSAMBUNG ("Add to thread") SEBANYAK 3 PART/SLIDE yang rapi, runtut, dan emosional bagi sesama pejuang hidup.
+Olah dan susun ulang cerita mentah di atas menjadi SATU UTAS POSTINGAN BERSAMBUNG ("Add to thread") SEBANYAK 3 PART/SLIDE yang rapi, runtut, dan apa adanya.
 
 STRUKTUR SLIDE:
-1. SLIDE 1 (Hook Utama):
-   - Gunakan framing alami obrolan warganet ("denger dari obrolan sana-sini...", "dapet cerita dari temen...", "kemarin denger cerita...") atau langsung masuk ke kejadian mengagetkan.
+1. SLIDE 1 (Hook Kejadian Konkret):
+   - Gunakan framing obrolan alami ("denger dari obrolan sana-sini...", "dapet cerita dari temen...", "kemarin denger cerita...") atau langsung masuk ke kejadian.
    - DILARANG menggunakan kata "masuk DM", "kiriman DM", atau "spill di DM"!
-   - Panjang: 120 - 200 karakter. Huruf kecil santai.
-2. SLIDE 2 (Eskalasi Kejadian / Percakapan Nyata):
-   - Ceritakan inti kronologi, konflik, atau ucapan yang bikin nyesek/geregetan tanpa bertele-tele.
-   - Panjang: 160 - 260 karakter.
-3. SLIDE 3 (Pertanyaan Debat Warganet):
-   - Pertanyaan terbuka yang membelah audiens menjadi 2 kubu (Tim A vs Tim B) untuk memancing komentar warganet.
-   - Contoh: "kalian di posisi kayak gini tim langsung speak up atau tahan dulu cari aman? spill coba."
-   - Panjang: 90 - 160 karakter.
+   - Panjang: 120 - 190 karakter. Huruf kecil santai.
+2. SLIDE 2 (Detail Kronologi & Angka Konkret):
+   - Ceritakan inti kronologi, konflik, dan pertahankan angka konkret (nominal uang, durasi, jam) tanpa lebay.
+   - Panjang: 150 - 240 karakter.
+3. SLIDE 3 (Pertanyaan Penutup Natural):
+   - Tutup dengan pertanyaan kasual layaknya manusia biasa minta saran teman (contoh: "kalau di posisi si fulan, mending langsung resign hari itu juga atau bertahan dulu ya?").
+   - DILARANG KERAS memakai kalimat template bot "kalian tim A atau tim B? spill!" atau kata "spill!" di ujung kalimat.
+   - Panjang: 90 - 150 karakter.
 
-ATURAN MUTLAK:
-- DILARANG MENULIS ANGKA PENOMORAN (seperti "1/3", "Part 1", dll).
-- DILARANG MENULIS LABEL SEPERTI "[Cerita Fiksi]", "[Fiksi]", "[Menfess]" ATAU DISCLAIMER APAPUN!
-- Gaya bahasa manusiawi anak muda korporat Jaksel (lu-gue, bgt, nyesek, boncos, wkwk, haha). Huruf kecil santai.
+ATURAN MUTLAK (ANTI-AI):
+- DILARANG memanggil diri sendiri "Ki" dan DILARANG menumpuk kata slang ("boncos", "burnout", "zonk", "anjir") dalam satu kalimat.
+- DILARANG MENULIS ANGKA PENOMORAN ("1/3", "Part 1") atau label "[Cerita Fiksi]". Huruf kecil santai.
 
 Keluarkan HANYA JSON:
 {
-  "title": "Judul Utas Singkat (Maksimal 6 kata)",
-  "topic": "Ringkasan Topik (Maksimal 10 kata)",
+  "title": "Judul Utas Singkat (Maksimal 5 kata)",
+  "topic": "Ringkasan Topik (Maksimal 8 kata)",
   "story_parts": [
-    "Slide 1 hook menggantung (120-200 chars)...",
-    "Slide 2 eskalasi adegan nyata (160-260 chars)...",
-    "Slide 3 pertanyaan debat warganet (90-160 chars)..."
+    "Slide 1 hook kejadian konkret (120-190 chars)...",
+    "Slide 2 eskalasi kronologi nyata (150-240 chars)...",
+    "Slide 3 pertanyaan penutup natural tanpa kata spill (90-150 chars)..."
   ]
 }
 `;
@@ -684,7 +677,7 @@ Keluarkan HANYA JSON:
           signal: AbortSignal.timeout(20000),
           body: JSON.stringify({
             contents: [{ parts: [{ text: prompt }] }],
-            generationConfig: { responseMimeType: 'application/json', temperature: 0.75 }
+            generationConfig: { responseMimeType: 'application/json', temperature: 0.7 }
           })
         });
         if (res.ok) {
@@ -698,7 +691,7 @@ Keluarkan HANYA JSON:
     }
   }
 
-  // 2. Coba Groq
+  // 2. Coba Groq (Prioritaskan openai/gpt-oss-120b)
   if (!rawText && process.env.GROQ_API_KEY) {
     try {
       const groqRes = await fetch('https://api.groq.com/openai/v1/chat/completions', {
@@ -709,10 +702,10 @@ Keluarkan HANYA JSON:
         },
         signal: AbortSignal.timeout(20000),
         body: JSON.stringify({
-          model: 'qwen/qwen3.8-27b',
+          model: 'openai/gpt-oss-120b',
           messages: [{ role: 'user', content: prompt + '\n\nKeluarkan HANYA JSON persis sesuai format.' }],
           response_format: { type: 'json_object' },
-          temperature: 0.75
+          temperature: 0.7
         })
       });
       if (groqRes.ok) {

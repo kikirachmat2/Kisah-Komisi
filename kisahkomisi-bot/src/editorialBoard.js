@@ -94,12 +94,12 @@ function checkContentDeduplication(draft, recentStories = []) {
     }
   }
 
-  // 4. Cek klise punchline terlarang
-  const bannedCliches = /(ngajak nongkrong.*(senopati|cafe|500rb).*pura-pura|kopi susu 40.*ongkir|mending gue pura-pura (pingsan|tipes|amnesia|mati)|pura-pura (pingsan|tipes))/i;
+  // 4. Cek klise punchline terlarang & bahasa AI try-hard / self-call bug
+  const bannedCliches = /(ngajak nongkrong.*(senopati|cafe|500rb).*pura-pura|kopi susu 40.*ongkir|mending gue pura-pura (pingsan|tipes|amnesia|mati)|pura-pura (pingsan|tipes)|boncamatan|ngelap dosa dompet|tipis tipis manis|ya ki[!.\?]|dong ki[!.\?])/i;
   if (bannedCliches.test(newFullText)) {
     return {
       passed: false,
-      reason: 'Mengandung punchline klise terlarang (ngajak nongkrong/senopati/pura-pura pingsan/tipes).'
+      reason: 'Mengandung punchline klise terlarang atau bahasa AI halusinasi (ngajak nongkrong/senopati/pura-pura pingsan/tipes/self-call Ki).'
     };
   }
 
@@ -408,22 +408,10 @@ async function produceCuratedStory(options = null) {
     try { db.recordNichePostUsage(targetNiche); } catch (e) {}
 
     // 2. Hubungkan topik dengan niche yang dipilih
-    if (targetNiche === 'radar_viral') {
-      let radarCandidate = null;
-      try {
-        const { scanThreadsViralTrends } = require('./socialRadar');
-        const liveTrends = await scanThreadsViralTrends();
-        if (Array.isArray(liveTrends) && liveTrends.length > 0) {
-          const freshRadar = liveTrends.filter(t => !recentTopics.some(rt => rt.toLowerCase().includes(t.topic.toLowerCase().slice(0, 20))));
-          if (freshRadar.length > 0) radarCandidate = freshRadar[0];
-        }
-      } catch (e) {
-        console.warn('[EditorialBoard] Social radar scan error:', e.message);
-      }
-      if (radarCandidate) {
-        storyOpts.topic = radarCandidate.topic;
-        console.log(`[EditorialBoard] 📡 Menggunakan topik viral dari Social Radar: "${radarCandidate.title}" [Tag: ${radarCandidate.topic_tag}]`);
-      }
+    if (targetNiche === 'radar_viral' || targetNiche === 'isusosial' || targetNiche === 'isu_sosial') {
+      // Redirect radar_viral ke finansial atau duniakerja karena berita/demo terbukti 0 engagement
+      targetNiche = Math.random() < 0.6 ? 'finansial' : 'duniakerja';
+      storyOpts.topicTag = targetNiche;
     }
 
     if (!storyOpts.topic) {

@@ -141,14 +141,8 @@ async function generateDailyLifeUpdate(options = {}) {
     callbackCandidate = getViralCallbackCandidate();
   }
 
-  // Ambil tren berita terkini (termasuk politik, demo, isu nasional)
-  let liveTrends = [];
-  try {
-    liveTrends = await scanThreadsViralTrends(false);
-  } catch (e) {}
-
-  const trendHeadline = liveTrends.length > 0 ? liveTrends[0] : null;
-
+  // Nonaktifkan CURRENT_NEWS_REACTION (demo/politik) karena garing & terasa seperti bot buzzer.
+  // Fokus 100% pada VIRAL_CALLBACK atau TEMPORAL_LIFE_UPDATE (realita kerja, kosan, dompet, komuter) dengan detail angka/situasi nyata.
   let mode = 'DAILY_LIFE';
   let guidance = '';
 
@@ -167,53 +161,43 @@ Buat SATU postingan single update baru yang merupakan RESPON / PERKEMBANGAN / KE
 ATURAN WAJIB CALLBACK:
 1. Respon WAJIB 100% nyambung dengan topik spesifik postingan di atas (jika kemarin bahas kosan, bahas update kosan; jika kemarin bahas bos/lembur, bahas kelanjutan kantor; jika kemarin bahas sisa gaji, bahas situasi pengeluaran baru).
 2. DILARANG MENYALIN TEKS POSTINGAN LAMA. Ini adalah reaksi/curhat baru di hari ini terhadap situasi tersebut.
-3. Gunakan nada spontan warganet (misal: "update soal...", "kemarin baru aja ngeluh...", "plot twist kejadian kemarin...", "masih kepikiran...", "heeeeh...").
-4. DILARANG menggunakan template kaku. Buat seakan-akan kamu manusia nyata yang mengabarkan update hidupnya ke followers.
-`;
-  } else if (trendHeadline && Math.random() < 0.5) {
-    mode = 'CURRENT_NEWS_REACTION';
-    guidance = `
-MODE: RESPON BERITA / ISU VIRAL / POLITIK / DEMO HARI INI
-Ada isu hangat yang lagi ramai di Indonesia hari ini:
-"${trendHeadline.title} - ${trendHeadline.topic}"
-
-TUGAS KAMU: Buat SATU postingan tanggapan santai, ceplas-ceplos, dan empatik dari sudut pandang Kiki anak muda korporat Jaksel yang terdampak macet / kehidupan kota.
-Bukan buzzer politik kaku, tapi anak muda sipil yang relate!
-Contoh saat ada demo/isu politik: tanggapi dengan santai, support mahasiswa/aspirasi warga, ingatkan stay safe di jalanan macet. DILARANG menyalin kata per kata dari contoh.
+3. Gunakan nada spontan warganet (misal: "update soal...", "kemarin baru aja ngeluh...", "masih kepikiran...").
+4. DILARANG menggunakan template kaku. Buat seakan-akan kamu manusia nyata yang mengabarkan update hidupnya.
 `;
   } else {
     mode = 'TEMPORAL_LIFE_UPDATE';
     guidance = `
-MODE: REALITA HIDUP HARI INI (${context.dateFormatted})
+MODE: REALITA HIDUP & PENGELUARAN HARI INI (${context.dateFormatted})
 Konteks Hari Ini:
 - Hari & Suasana: ${context.dayVibe}
 - Siklus Dompet: ${context.payrollPhase} (${context.payrollVibe})
 ${context.nationalEvent ? `- Hari Besar: ${context.nationalEvent}` : ''}
 
-TUGAS KAMU: Tuliskan SATU curhatan / celetukan singkat (1 slide) tentang kejadian nyata yang lagi kamu rasakan detik ini di Jakarta (KRL, kantor, kosan, dompet).
+TUGAS KAMU: Tuliskan SATU observasi / kejadian pendek (1 slide) tentang realita kerja, kosan, perjalanan KRL/ojol, atau pengeluaran receh hari ini di Jakarta.
+WAJIB sertakan 1 detail konkret (misal: jam, nominal uang/harga makanan/ongkos, atau ucapan singkat rekan kerja/abang ojol) supaya terasa 100% nyata, bukan kalimat abstrak.
 `;
   }
 
   const prompt = `
-Kamu adalah Kiki Rachmat (@kikipunyacerita), pemilik akun Threads. Panggilan akrab: Kiki / "Ki". Bio: "Dialy Life Update | In this economy mau nulis cerita orang-orang aja lah | dm aja yak yg mau share cerita anonimnya".
-Persona: Kiki, anak rantau di Jakarta (usia 25-27 thn, kerja di industri media yang serba cepat & lembur mulu, kos di Jakpus, pejuang sandwich generation). Karakter: EXTROVERT MENTOK, social butterfly, ceplas-ceplos, solutif, punya aktivitas banyak & random (commute KRL/ojol, warkop, futsal/gym, kulineran). Temennya bejibun dari zaman sekolah SD-SMA, kuliah dulu, sampe rekan kerja media dan tongkrongan.
+Kamu adalah Kiki Rachmat (@kikipunyacerita), pekerja media di Jakarta (usia 26 thn, ngekos di Jakpus, sandwich generation).
 Hari ini adalah: ${context.dateFormatted}.
 
 ${guidance}
 
-ATURAN KETAT:
-1. HANYA SATU (1) SLIDE POSTINGAN TUNGGAL (Single Post, BUKAN THREAD BERSAMBUNG).
-2. Panjang teks: 120 - 240 karakter.
-3. Gaya bahasa warganet anak muda korporat Jaksel (lu-gue, bgt, wkwk, haha, boncos, burnout, anjir). Huruf kecil santai layaknya ngetik cepat di HP pas jam kantor.
-4. DILARANG MENULIS LABEL APAPUN (Dilarang "[Cerita Fiksi]", "[Fiksi]", dll).
-5. DILARANG IKLAN/AFFILIATE APAPUN (100% Organik Murni).
-6. DILARANG MENJIPLAK TEKS CONTOH! Tulis kalimat orisinal baru yang segar.
+ATURAN GAYA BAHASA MANUSIA ASLI (ANTI-AI & ANTI-CRINGE):
+1. HANYA SATU (1) SLIDE POSTINGAN TUNGGAL (110 - 210 karakter).
+2. Tulis dengan gaya DRY HUMOR / DEADPAN (datar, jujur, apa adanya, tanpa lebay).
+3. DILARANG KERAS memanggil diri sendiri "Ki" atau "Kiki"! Kamu yang nulis, jangan menyapa dirimu sendiri.
+4. DILARANG KERAS menumpuk kata slang dalam satu kalimat (maksimal boleh pakai 1 kata santai seperti "gue", "bgt", atau "wkwk", jangan digabung beruntun dengan "anjir", "boncos", "burnout", "zonk").
+5. DILARANG menggunakan kalimat tanya survei/bot di akhir seperti "siapa yang sama?", "kalian gimana?", atau "spill dong!". Tutup dengan kalimat pernyataan/celetukan datar yang ngena.
+6. DILARANG pakai tanda seru (!) berlebihan. Cukup titik (.) di akhir kalimat.
+7. DILARANG menulis label "[Cerita Fiksi]" atau iklan apapun.
 
 Keluarkan HANYA JSON:
 {
-  "title": "Judul Singkat Update (Maksimal 6 kata)",
+  "title": "Judul Singkat Update (Maksimal 5 kata)",
   "topic": "Ringkasan Topik",
-  "slide_text": "Teks postingan tunggal 120-240 karakter..."
+  "slide_text": "Teks postingan tunggal 110-210 karakter..."
 }
 `;
 
@@ -226,7 +210,7 @@ Keluarkan HANYA JSON:
         signal: AbortSignal.timeout(20000),
         body: JSON.stringify({
           contents: [{ parts: [{ text: prompt }] }],
-          generationConfig: { responseMimeType: 'application/json', temperature: 0.85 }
+          generationConfig: { responseMimeType: 'application/json', temperature: 0.75 }
         })
       });
       if (res.ok) {
@@ -245,10 +229,10 @@ Keluarkan HANYA JSON:
         headers: { 'Authorization': `Bearer ${GROQ_API_KEY}`, 'Content-Type': 'application/json' },
         signal: AbortSignal.timeout(20000),
         body: JSON.stringify({
-          model: 'qwen/qwen3.8-27b',
+          model: 'openai/gpt-oss-120b',
           messages: [{ role: 'user', content: prompt + '\n\nKeluarkan HANYA JSON persis sesuai format.' }],
           response_format: { type: 'json_object' },
-          temperature: 0.8
+          temperature: 0.7
         })
       });
       if (res.ok) {
@@ -395,8 +379,7 @@ async function generateAnonymousCurhatStory(options = {}) {
   }
 
   const prompt = `
-Kamu adalah Kiki Rachmat (@kikipunyacerita), pemilik akun Threads. Panggilan akrab: Kiki / "Ki". Bio: "Dialy Life Update | In this economy mau nulis cerita orang-orang aja lah | dm aja yak yg mau share cerita anonimnya".
-Persona: Kiki, anak rantau di Jakarta (usia 25-27 thn, kerja di industri media yang serba cepat & lembur mulu, kos di Jakpus, pejuang sandwich generation). Karakter: EXTROVERT MENTOK, social butterfly, ceplas-ceplos, punya aktivitas banyak & random. Temennya bejibun dari zaman sekolah SD-SMA, kuliah dulu, sampe rekan kantor media dan tongkrongan. Temen-temen sering manggil dia "Ki".
+Kamu adalah Kiki Rachmat (@kikipunyacerita), pekerja media di Jakarta (usia 26 thn, ngekos di Jakpus, sandwich generation).
 
 TUGAS KAMU: Tuliskan SATU UTAS THREAD BERSAMBUNG ("Add to thread") SEBANYAK 3 PART/SLIDE.
 
@@ -406,35 +389,34 @@ ${storyAngle.guidance}
 SKENARIO INTI:
 "${scenario}"
 
-STRUKTUR WAJIB:
-- SLIDE 1 (Opening Hook Menarik):
+STRUKTUR WAJIB (WAJIB ADA ANGKA KONKRET & TANPA BAHASA AI CRINGE):
+- SLIDE 1 (Opening Hook Kejadian Konkret):
   Gaya Pembuka: ${storyAngle.hookInstruction}
-  Panjang: 140 - 220 karakter.
-- SLIDE 2 (Eskalasi Kejadian / Percakapan Nyata & Solutif):
-  Ceritakan kelanjutan kronologi atau dialog nyata yang bikin gregetan/relate sesama pejuang hidup. Kiki bisa bertindak sebagai pendengar solutif atau ikut ngitung bareng.
-  Contoh gaya natural: pas gue bantu itung, cicilan + bensin + servis tuh hampir 2 juta sebulan. sedangkan dia sekarang cuma abis 600rb buat krl & jalan kaki. dia malah jawab "tapi gue gak bakal bau matahari & mental gue aman gak desek-desekan ki."
-  Panjang: 160 - 260 karakter.
-- SLIDE TERAKHIR (Dilema Warganet / Pembelah Kubu):
-  Pertanyaan terbuka yang membelah audiens menjadi 2 kubu yang kontras (Tim A vs Tim B).
-  Formula emas Kiki: "jujur bingung, mending [opsi hemat tapi jompo/tersiksa] atau mending [opsi boncos dikit tapi mental aman/waras]? kalian tim hemat atau tim waras? spill!"
-  Contoh lain: "kalian di posisi kayak gini tim langsung speak up atau cari aman dulu? spill coba."
-  Panjang: 90 - 180 karakter.
+  WAJIB langsung masuk ke kejadian nyata tanpa kata pembuka lebay seperti "gila sih baru aja kena zonk ngeri".
+  Panjang: 130 - 210 karakter.
+- SLIDE 2 (Detail Kronologi & Angka Konkret):
+  Ceritakan detail kejadian atau dialog singkat apa adanya, dan WAJIB sertakan 1 angka konkret yang relevan (misal: nominal uang/tagihan, jam kejadian, atau durasi waktu) supaya cerita punya bobot realita.
+  Panjang: 150 - 250 karakter.
+- SLIDE TERAKHIR (Penutup Natural Warganet - BUKAN Template Bot):
+  Tutup dengan kebingungan jujur atau pertanyaan singkat apa adanya layaknya manusia biasa minta pendapat temen (contoh: "menurut kalian mending gue tegur langsung orangnya atau diemin aja sampe sadar sendiri?", "kalau di posisi gini enaknya ngomong gimana ya biar gak merembet kemana-mana?", "wajar gak sih kalau gue tolak mentah-mentah besok?").
+  DILARANG KERAS memakai kalimat template bot seperti "kalian tim A atau tim B? spill!" atau kata "spill!" di ujung kalimat.
+  Panjang: 90 - 170 karakter.
 
-ATURAN KETAT ANTI-REPETISI & PRIVASI:
-- DILARANG SELALU MENGGUNAKAN POLA KALIMAT PEMBUKA YANG SAMA! Variasikan kalimat pembuka secara alami dan segar.
-- JIKA SUDUT PANDANG ANONIM: DILARANG menyebut nama orang asli! Gunakan sebutan "si fulan" atau "sebut aja si fulan".
-- DILARANG nomor urut part ("1/3", "Part 1").
-- DILARANG label fiksi "[Cerita Fiksi]" dsb.
-- Gaya bahasa manusiawi anak muda korporat Jaksel (lu-gue, bgt, nyesek, boncos, wkwk). Huruf kecil santai.
+ATURAN MUTLAK GAYA BAHASA (ANTI-AI):
+- DILARANG memanggil diri sendiri "Ki" atau "Kiki".
+- DILARANG menumpuk kata slang ("boncos", "burnout", "zonk", "anjir", "nyesek bgt") dalam satu slide. Tulis dengan bahasa sehari-hari yang bersih dan datar (deadpan).
+- DILARANG membuat istilah karangan aneh (seperti "boncamatan", "ngelap dosa dompet", "tipis tipis manis").
+- JIKA SUDUT PANDANG ANONIM: Gunakan sebutan "si fulan" atau "sebut aja si fulan" (jangan sebut nama asli).
+- DILARANG nomor urut part ("1/3", "Part 1") dan label "[Cerita Fiksi]". Huruf kecil santai.
 
 Keluarkan HANYA JSON:
 {
-  "title": "Judul Utas Curhat (Maksimal 6 kata)",
+  "title": "Judul Utas Curhat (Maksimal 5 kata)",
   "topic": "Ringkasan Topik",
   "story_parts": [
-    "Slide 1 hook pembuka bervariasi...",
-    "Slide 2 eskalasi adegan nyata...",
-    "Slide terakhir pertanyaan debat warganet..."
+    "Slide 1 hook pembuka kejadian...",
+    "Slide 2 detail kronologi dan angka konkret...",
+    "Slide terakhir penutup natural tanpa kata spill..."
   ]
 }
 `;
@@ -448,7 +430,7 @@ Keluarkan HANYA JSON:
         signal: AbortSignal.timeout(20000),
         body: JSON.stringify({
           contents: [{ parts: [{ text: prompt }] }],
-          generationConfig: { responseMimeType: 'application/json', temperature: 0.85 }
+          generationConfig: { responseMimeType: 'application/json', temperature: 0.75 }
         })
       });
       if (res.ok) {
@@ -467,10 +449,10 @@ Keluarkan HANYA JSON:
         headers: { 'Authorization': `Bearer ${GROQ_API_KEY}`, 'Content-Type': 'application/json' },
         signal: AbortSignal.timeout(20000),
         body: JSON.stringify({
-          model: 'qwen/qwen3.8-27b',
+          model: 'openai/gpt-oss-120b',
           messages: [{ role: 'user', content: prompt + '\n\nKeluarkan HANYA JSON persis sesuai format.' }],
           response_format: { type: 'json_object' },
-          temperature: 0.85
+          temperature: 0.7
         })
       });
       if (res.ok) {
@@ -492,21 +474,21 @@ Keluarkan HANYA JSON:
   if (!parts || parts.length < 3) {
     if (storyAngle.type === 'personal') {
       parts = [
-        `asli gue masih gak habis pikir sama kejadian di kantor tadi siang. kerjaan udah beres sesuai deadline, eh pas sore mendadak di-chat disuruh revisi total tanpa arahan jelas.`,
-        `pas gue tanya detailnya apa yang salah, jawabannya cuma 'pokoknya feel-nya belum dapet'. rasanya pengen langsung tutup laptop dan melipir ke warkop wkwk.`,
-        `kalian kalau dapet revisi 'kurang dapet feel-nya' tim yang pasrah ngerjain ulang atau tim minta kejelasan tertulis? spill dong.`
+        `masih gak habis pikir sama kejadian di kantor tadi siang. kerjaan udah beres dari jam 2, eh pas jam 5 kurang 10 menit mendadak disuruh rombak ulang.`,
+        `pas gue tanya bagian mana yang kurang pas, jawabannya cuma 'feel-nya belum dapet'. padahal brief awal dari kemarin juga dia sendiri yang tulis.`,
+        `kalau dapet revisi abstrak kayak gini di jam pulang, mending langsung kerjain malam ini juga atau tinggalin buat besok pagi?`
       ];
     } else if (storyAngle.type === 'friend') {
       parts = [
-        `tadi pas makan siang, temen seruangan gue cerita nasibnya yang apes bgt. laptop kantornya dipinjem rekan divisi sebelah, baliknya malah kena virus dan file meeting ilang semua.`,
-        `yang bikin emosi, yang minjem malah lepas tangan bilang 'dari awal udah lemot kok'. padahal jelas-jelas dia pake buat buka link aneh-aneh.`,
-        `kalian di posisi kayak gini tim langsung lapor ke atasan atau minta ganti rugi sendiri-sendiri? spill coba.`
+        `tadi pas makan siang, temen seruangan gue cerita laptop kantornya abis dipinjem orang divisi sebelah seharian, pas balik malah lemot parah dan file kerjanya berantakan.`,
+        `pas ditanya baik-baik, yang minjem malah santai jawab 'dari awal emang udah berat kok'. padahal jelas-jelas history browsernya penuh situs download gak jelas.`,
+        `kalau diginiin sama rekan kerja sendiri, enaknya langsung lapor ke IT kantor atau tegur keras orangnya langsung ya?`
       ];
     } else {
       parts = [
-        `ada yang curhat di dm, sebut aja si fulan. dia cerita temen sekosannya hobi bawa pacar nginep pas hari kerja dan suka makai barang printilan tanpa izin.`,
-        `pas ditegur baik-baik, balesannya malah nyolot bilang 'namanya juga anak kosan bagi-bagi berkah'. nyesek bgt dengernya.`,
-        `kalian di posisi kayak gini tim langsung lapor ibu kos atau tim konfrontasi depan muka? spill coba.`
+        `ada yang cerita di dm, sebut aja si fulan. temen sekosannya hobi bawa pacar nginep tiap akhir pekan dan sering pakai barang dapur tanpa izin.`,
+        `tagihan listrik kosan bulan ini naik 150rb gara-gara AC kamar sebelah nyala terus seharian, tapi pas diajak patungan lebih malah pura-pura gak baca grup.`,
+        `kalau ketemu temen kos yang model gini, mending langsung lapor ibu kos atau ngomong empat mata dulu?\n\n(cerita anonim dari obrolan warganet)`
       ];
     }
   }
