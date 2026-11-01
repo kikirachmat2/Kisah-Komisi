@@ -178,10 +178,18 @@ WAJIB sertakan 1 detail konkret (misal: jam, nominal uang/harga makanan/ongkos, 
 `;
   }
 
+  let cognitiveContext = '';
+  try {
+    const { buildCognitiveTuningContext } = require('./growthEngine');
+    if (buildCognitiveTuningContext) {
+      cognitiveContext = buildCognitiveTuningContext();
+    }
+  } catch (e) {}
+
   const prompt = `
 Kamu adalah Kiki Rachmat (@kikipunyacerita), pekerja media di Jakarta (usia 26 thn, ngekos di Jakpus, sandwich generation).
 Hari ini adalah: ${context.dateFormatted}.
-
+${cognitiveContext}
 ${guidance}
 
 ATURAN GAYA BAHASA MANUSIA ASLI (ANTI-AI & ANTI-CRINGE):
@@ -334,7 +342,15 @@ async function generateAnonymousCurhatStory(options = {}) {
     'Dilema split bill pacaran di Jakarta: cowok selalu nanggung tapi cewek gak pernah inisiatif bayar parkir atau minum'
   ];
 
-  const scenario = curatedScenarios[Math.floor(Math.random() * curatedScenarios.length)];
+  const scenario = options.topic || options.theme || curatedScenarios[Math.floor(Math.random() * curatedScenarios.length)];
+
+  let cognitiveContext = '';
+  try {
+    const { buildCognitiveTuningContext } = require('./growthEngine');
+    if (buildCognitiveTuningContext) {
+      cognitiveContext = buildCognitiveTuningContext();
+    }
+  } catch (e) {}
 
   const STORY_ANGLES = [
     {
@@ -380,7 +396,7 @@ async function generateAnonymousCurhatStory(options = {}) {
 
   const prompt = `
 Kamu adalah Kiki Rachmat (@kikipunyacerita), pekerja media di Jakarta (usia 26 thn, ngekos di Jakpus, sandwich generation).
-
+${cognitiveContext}
 TUGAS KAMU: Tuliskan SATU UTAS THREAD BERSAMBUNG ("Add to thread") SEBANYAK 3 PART/SLIDE.
 
 SUDUT PANDANG (ANGLE): ${storyAngle.name}

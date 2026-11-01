@@ -450,7 +450,25 @@ async function runTests() {
   console.log('  ✓ Varied Curhat Story Hook (Slide 1) [' + curhatStory.origin + ']:', curhatStory.slides[0]);
   console.log('  ✓ Varied Curhat Story Ending:', curhatLastSlide);
 
-  console.log('\n🎉 === ALL 16 TESTS PASSED SUCCESSFULLY! === 🎉');
+  // TEST 17: Cognitive Self-Tuning Engine (Auto-Adapt Loop)
+  console.log('\n[Test 17] Testing Cognitive Self-Tuning Engine (Auto-Adapt Loop)...');
+  const { buildCognitiveTuningContext, getAdaptivePriorityTopics, analyzePerformanceAndStrategize } = require('../src/growthEngine');
+  const strategyOut = await analyzePerformanceAndStrategize();
+  assert(strategyOut && strategyOut.summary, 'Strategy output must have summary');
+  assert(Array.isArray(strategyOut.dynamic_prompt_rules) && strategyOut.dynamic_prompt_rules.length > 0, 'Must generate dynamic_prompt_rules');
+  assert(Array.isArray(strategyOut.generated_new_topics) && strategyOut.generated_new_topics.length > 0, 'Must synthesize generated_new_topics');
+
+  const cogContext = buildCognitiveTuningContext();
+  assert(cogContext.includes('MEMORI KOGNITIF AUTO-ADAPT'), 'Cognitive context header must be present');
+  assert(cogContext.includes('ATURAN SELF-TUNING AKTIF'), 'Active self-tuning rules must be present');
+
+  const adaptiveTopics = getAdaptivePriorityTopics();
+  assert(adaptiveTopics.generatedTopics.length > 0, 'Adaptive generated topics persisted in DB');
+  console.log('  ✓ Dynamic Prompt Rules Persisted:', strategyOut.dynamic_prompt_rules.length, 'rules');
+  console.log('  ✓ Synthesized New Topics Persisted:', adaptiveTopics.generatedTopics.length, 'topics');
+  console.log('  ✓ Cognitive Tuning Context Block Ready (' + cogContext.length + ' chars)');
+
+  console.log('\n🎉 === ALL 17 TESTS PASSED SUCCESSFULLY! === 🎉');
 }
 
 runTests().catch(err => {

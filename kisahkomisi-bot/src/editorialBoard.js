@@ -1,5 +1,6 @@
 const db = require('./database');
 const { generateStory, TOPICS } = require('./aiStory');
+const { buildCognitiveTuningContext, getAdaptivePriorityTopics } = require('./growthEngine');
 
 const GROQ_API_KEY = process.env.GROQ_API_KEY;
 const OPENROUTER_API_KEY = process.env.OPENROUTER_API_KEY;
@@ -205,10 +206,12 @@ async function evaluateStoryWithQC(story) {
     };
   }
 
+  const cognitiveContext = buildCognitiveTuningContext ? buildCognitiveTuningContext() : '';
+
   const evaluationPrompt = `
 Kamu adalah Chief Editor & Kepala Kurator akun Threads viral @kikipunyacerita.
 Tugasmu adalah menguji dan mengurasi draf cerita menfess sebelum dijadwalkan tayang ke publik.
-
+${cognitiveContext}
 DATA DRAF CERITA:
 Topik: ${story.topic || '-'}
 Format Variant: ${story.variant || 'A'}
@@ -219,11 +222,11 @@ SLIDES:
 ${slides.map((s, idx) => `[Part ${idx + 1}]: ${s}`).join('\n\n')}
 
 KRITERIA PENILAIAN (Skala 1 - 10):
-1. realism_score: Apakah ini adegan konkret relatable yang dialami orang dewasa/pekerja Indonesia (kosan, teman, keluarga, transportasi, kantor)? TOLAK jika terasa seperti esai opini atau melodrama sinetron.
-2. human_tone_score: Apakah gaya bahasa 100% natural warganet Threads Indonesia (lu-gue/aku-kamu, santai, ceplas-ceplos)? TOLAK jika ada bau klise AI (seperti "tidak disangka-sangka", "pada akhirnya aku menyadari").
+1. realism_score: Apakah ini adegan konkret relatable yang dialami orang dewasa/pekerja Indonesia (kosan, teman, keluarga, transportasi, kantor) DAN memuat detail angka konkret (nominal uang/jam/durasi)? TOLAK (skor <6) jika terasa seperti keluhan abstrak tanpa angka, esai opini, atau melodrama sinetron.
+2. human_tone_score: Apakah gaya bahasa 100% natural warganet Threads Indonesia (lu-gue/aku-kamu, datar/deadpan, santai)? TOLAK jika menumpuk kata slang beruntun, memanggil diri sendiri "Ki", atau bau klise AI.
 3. format_pacing_score: Apakah alur cerita ringkas dan padat (slide 1 hook menarik tanpa link, slide lanjutan mengalir)?
 4. affiliate_score: Apakah penempatan rekomendasi produk Shopee terasa natural dan kontekstual di dalam thread (bukan hard-selling spam di slide 1)? Jika cerita tanpa link bernilai 9, jika rekomendasi produk halus dan nyambung bernilai 10.
-5. debate_score: Apakah memancing netizen untuk berdebat atau menceritakan pengalamannya di kolom reply?
+5. debate_score: Apakah memancing netizen untuk berdebat atau menceritakan pengalamannya di kolom reply tanpa memakai template bot "kalian tim A atau B? spill!"?
 
 Berikan output HANYA berupa JSON valid persis seperti format ini:
 {
@@ -239,7 +242,7 @@ Berikan output HANYA berupa JSON valid persis seperti format ini:
   "curator_note": "Ringkasan penilaian kurator dalam 1-2 kalimat"
 }
 
-Syarat Lolos (approved = true): total_score >= 7.5 dan realism >= 7.0. Jika terdeteksi gaya esai atau sinetron, set approved = false.
+Syarat Lolos (approved = true): total_score >= 7.5 dan realism >= 7.0. Jika terdeteksi gaya abstrak tanpa angka konkret, esai, atau sinetron, set approved = false.
 `;
 
   // 1. Coba QC via Groq (Primary QC LPU ultra-fast)
@@ -415,40 +418,59 @@ async function produceCuratedStory(options = null) {
     }
 
     if (!storyOpts.topic) {
-      // Filter topik sesuai niche yang dipilih
-      let nicheMatchingTopics = [];
-      if (targetNiche === 'finansial') {
-        nicheMatchingTopics = TOPICS.filter(t => /gaji|slip|uang|biaya|ekonomi|kantor/i.test(t));
-      } else if (targetNiche === 'krl') {
-        nicheMatchingTopics = [
-          'Drama KRL Jam Sibuk 7 Pagi (Desak-desakan Stasiun Manggarai vs emosi bawaan kantor)',
-          'Naik Transportasi Publik vs Cicilan Motor (Realitas biaya harian komuter Jabodetabek)',
-          'Drama Ojol vs Jalan Kaki Menuju Stasiun (Ngejar kereta pagi tapi kejebak macet gang sempit)'
-        ];
-      } else if (targetNiche === 'duniakerja') {
-        nicheMatchingTopics = TOPICS.filter(t => /magang|lembur|hrd|bos|cuti|gaji|karyawan|resign|meeting/i.test(t));
-      } else if (targetNiche === 'anakkos') {
-        nicheMatchingTopics = TOPICS.filter(t => /kos|kontrakan|token listrik|teman sekamar|kamar|shower/i.test(t));
-      } else if (targetNiche === 'relasi' || targetNiche === 'keluarga') {
-        nicheMatchingTopics = TOPICS.filter(t => /pacar|pasangan|kencan|mertua|suami|istri|ipar|nikah|kondangan/i.test(t));
-      } else if (targetNiche === 'receh' || targetNiche === 'halreceh') {
-        nicheMatchingTopics = TOPICS.filter(t => /parkir|shower|headset|sandal|laptop|charger|ojol|permen/i.test(t));
-      } else if (targetNiche === 'hobi' || targetNiche === 'hobirandom') {
-        nicheMatchingTopics = TOPICS.filter(t => /padel|running|monstera|kopi|v60|lego|gundam|thrift/i.test(t));
-      } else if (targetNiche === 'berseri') {
-        nicheMatchingTopics = TOPICS.filter(t => /part 1|obrolan kasus|misteri temen|skandal/i.test(t));
-      } else if (targetNiche === 'rumahtangga') {
-        nicheMatchingTopics = TOPICS.filter(t => /tetangga|pagar|arisan|komplek|sampah/i.test(t));
-      }
+      // 2a. Prioritaskan Topik Dinamis hasil Self-Tuning AI Chief Strategist (65% probabilitas jika tersedia & belum pernah dipakai)
+      const adaptive = getAdaptivePriorityTopics ? getAdaptivePriorityTopics() : { generatedTopics: [], priorityBankTopics: [] };
+      const freshGenerated = (adaptive.generatedTopics || []).filter(
+        t => !recentTopics.some(rt => rt.toLowerCase().includes(t.toLowerCase().slice(0, 22)))
+      );
+      const freshPriorityBank = (adaptive.priorityBankTopics || []).filter(
+        t => !recentTopics.some(rt => rt.toLowerCase().includes(t.toLowerCase().slice(0, 22)))
+      );
 
-      const freshNiche = nicheMatchingTopics.filter(t => !recentTopics.some(rt => rt.toLowerCase().includes(t.toLowerCase().slice(0, 20))));
-      if (freshNiche.length > 0) {
-        storyOpts.topic = freshNiche[Math.floor(Math.random() * freshNiche.length)];
-        console.log(`[EditorialBoard] Menggunakan topik pilar niche "${targetNiche}": "${storyOpts.topic}"`);
+      if (freshGenerated.length > 0 && Math.random() < 0.65) {
+        storyOpts.topic = freshGenerated[Math.floor(Math.random() * freshGenerated.length)];
+        storyOpts.theme = storyOpts.topic;
+        console.log(`[EditorialBoard] 🧠 Menggunakan topik sintesis Self-Tuning AI: "${storyOpts.topic}"`);
+      } else if (freshPriorityBank.length > 0 && Math.random() < 0.55) {
+        storyOpts.topic = freshPriorityBank[Math.floor(Math.random() * freshPriorityBank.length)];
+        storyOpts.theme = storyOpts.topic;
+        console.log(`[EditorialBoard] 🎯 Menggunakan topik prioritas strategi: "${storyOpts.topic}"`);
       } else {
-        const freshTopics = TOPICS.filter(t => !recentTopics.some(rt => rt.toLowerCase().includes(t.toLowerCase().slice(0, 20))));
-        if (freshTopics.length > 0) {
-          storyOpts.topic = freshTopics[Math.floor(Math.random() * freshTopics.length)];
+        // Filter topik sesuai niche yang dipilih
+        let nicheMatchingTopics = [];
+        if (targetNiche === 'finansial') {
+          nicheMatchingTopics = TOPICS.filter(t => /gaji|slip|uang|biaya|ekonomi|kantor/i.test(t));
+        } else if (targetNiche === 'krl') {
+          nicheMatchingTopics = [
+            'Drama KRL Jam Sibuk 7 Pagi (Desak-desakan Stasiun Manggarai vs emosi bawaan kantor)',
+            'Naik Transportasi Publik vs Cicilan Motor (Realitas biaya harian komuter Jabodetabek)',
+            'Drama Ojol vs Jalan Kaki Menuju Stasiun (Ngejar kereta pagi tapi kejebak macet gang sempit)'
+          ];
+        } else if (targetNiche === 'duniakerja') {
+          nicheMatchingTopics = TOPICS.filter(t => /magang|lembur|hrd|bos|cuti|gaji|karyawan|resign|meeting/i.test(t));
+        } else if (targetNiche === 'anakkos') {
+          nicheMatchingTopics = TOPICS.filter(t => /kos|kontrakan|token listrik|teman sekamar|kamar|shower/i.test(t));
+        } else if (targetNiche === 'relasi' || targetNiche === 'keluarga') {
+          nicheMatchingTopics = TOPICS.filter(t => /pacar|pasangan|kencan|mertua|suami|istri|ipar|nikah|kondangan/i.test(t));
+        } else if (targetNiche === 'receh' || targetNiche === 'halreceh') {
+          nicheMatchingTopics = TOPICS.filter(t => /parkir|shower|headset|sandal|laptop|charger|ojol|permen/i.test(t));
+        } else if (targetNiche === 'hobi' || targetNiche === 'hobirandom') {
+          nicheMatchingTopics = TOPICS.filter(t => /padel|running|monstera|kopi|v60|lego|gundam|thrift/i.test(t));
+        } else if (targetNiche === 'berseri') {
+          nicheMatchingTopics = TOPICS.filter(t => /part 1|obrolan kasus|misteri temen|skandal/i.test(t));
+        } else if (targetNiche === 'rumahtangga') {
+          nicheMatchingTopics = TOPICS.filter(t => /tetangga|pagar|arisan|komplek|sampah/i.test(t));
+        }
+
+        const freshNiche = nicheMatchingTopics.filter(t => !recentTopics.some(rt => rt.toLowerCase().includes(t.toLowerCase().slice(0, 20))));
+        if (freshNiche.length > 0) {
+          storyOpts.topic = freshNiche[Math.floor(Math.random() * freshNiche.length)];
+          console.log(`[EditorialBoard] Menggunakan topik pilar niche "${targetNiche}": "${storyOpts.topic}"`);
+        } else {
+          const freshTopics = TOPICS.filter(t => !recentTopics.some(rt => rt.toLowerCase().includes(t.toLowerCase().slice(0, 20))));
+          if (freshTopics.length > 0) {
+            storyOpts.topic = freshTopics[Math.floor(Math.random() * freshTopics.length)];
+          }
         }
       }
     }

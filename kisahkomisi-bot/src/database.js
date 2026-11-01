@@ -585,7 +585,7 @@ module.exports = {
 
   getTopPerformingStories: (limit = 5) => {
     return db.prepare(`
-      SELECT s.id, s.title, s.topic, s.product_name, s.published_at,
+      SELECT s.id, s.title, s.topic, s.format_type, s.topic_tag, s.slides_json, s.product_name, s.published_at,
              COALESCE(i.views, 0) as views,
              COALESCE(i.likes, 0) as likes,
              COALESCE(i.replies, 0) as replies,
@@ -594,6 +594,84 @@ module.exports = {
       LEFT JOIN story_insights i ON s.id = i.story_id
       WHERE s.status = 'published' AND s.threads_media_id IS NOT NULL
       ORDER BY views DESC, likes DESC, s.id DESC
+      LIMIT ?
+    `).all(limit);
+  },
+
+  getWinningStoryExamples: (limit = 3) => {
+    const rows = db.prepare(`
+      SELECT s.id, s.title, s.topic, s.format_type, s.topic_tag, s.slides_json,
+             COALESCE(i.views, 0) as views,
+             COALESCE(i.likes, 0) as likes,
+             COALESCE(i.replies, 0) as replies
+      FROM stories s
+      JOIN story_insights i ON s.id = i.story_id
+      WHERE s.status = 'published' AND s.threads_media_id IS NOT NULL AND i.views >= 25
+      ORDER BY i.views DESC, i.replies DESC
+      LIMIT ?
+    `).all(limit);
+
+    return rows.map(r => {
+      let slides = [];
+      try { slides = JSON.parse(r.slides_json); } catch (e) { slides = [String(r.slides_json || '')]; }
+      return {
+        ...r,
+        slides,
+        firstSlide: slides[0] || ''
+      };
+    });
+  },
+
+  getUnderperformingStoryExamples: (limit = 3) => {
+    const rows = db.prepare(`
+      SELECT s.id, s.title, s.topic, s.format_type, s.topic_tag, s.slides_json,
+             COALESCE(i.views, 0) as views,
+             COALESCE(i.likes, 0) as likes,
+             COALESCE(i.replies, 0) as replies
+      FROM stories s
+      LEFT JOIN story_insights i ON s.id = i.story_id
+      WHERE s.status = 'published'
+        AND s.threads_media_id IS NOT NULL
+        AND s.published_at <= datetime('now', '-6 hours')
+        AND COALESCE(i.views, 0) <= 15
+      ORDER BY s.id DESC
+      LIMIT ?
+    `).all(limit);
+
+    return rows.map(r => {
+      let slides = [];
+      try { slides = JSON.parse(r.slides_json); } catch (e) { slides = [String(r.slides_json || '')]; }
+      return {
+        ...r,
+        slides,
+        firstSlide: slides[0] || ''
+      };
+    });
+  },
+
+  getFormatPerformanceStats: () => {
+    return db.prepare(`
+      SELECT
+        COALESCE(s.format_type, 'story_affiliate') as format_type,
+        COUNT(s.id) as total_posts,
+        ROUND(AVG(COALESCE(i.views, 0)), 1) as avg_views,
+        MAX(COALESCE(i.views, 0)) as max_views,
+        ROUND(AVG(COALESCE(i.replies, 0)), 1) as avg_replies,
+        SUM(COALESCE(i.views, 0)) as sum_views
+      FROM stories s
+      LEFT JOIN story_insights i ON s.id = i.story_id
+      WHERE s.status = 'published' AND s.threads_media_id IS NOT NULL
+      GROUP BY COALESCE(s.format_type, 'story_affiliate')
+      ORDER BY avg_views DESC
+    `).all();
+  },
+
+  getRecentNetizenCommentsForIdeation: (limit = 10) => {
+    return db.prepare(`
+      SELECT comment_text, author_username, reply_text, created_at
+      FROM auto_replies
+      WHERE comment_text IS NOT NULL AND LENGTH(TRIM(comment_text)) >= 12
+      ORDER BY id DESC
       LIMIT ?
     `).all(limit);
   },

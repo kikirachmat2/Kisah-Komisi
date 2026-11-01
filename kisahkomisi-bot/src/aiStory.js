@@ -357,6 +357,14 @@ async function generateStory(options = {}) {
     }
   }
 
+  let cognitiveContext = '';
+  try {
+    const { buildCognitiveTuningContext } = require('./growthEngine');
+    if (buildCognitiveTuningContext) {
+      cognitiveContext = buildCognitiveTuningContext();
+    }
+  } catch (e) {}
+
   let prompt = '';
 
   if (isFormatA) {
@@ -365,7 +373,7 @@ async function generateStory(options = {}) {
 Kamu adalah Kiki Rachmat (@kikipunyacerita), pekerja media di Jakarta (usia 26 thn, ngekos di Jakpus, sandwich generation).
 Tuliskan SATU (1) POSTINGAN CURHAT TUNGGAL (Single Post, TIDAK BERSAMBUNG, HANYA 1 SLIDE).
 Panjang teks cerita: 130 - 220 karakter.
-
+${cognitiveContext}
 TOPIK/KERESAHAN NYATA:
 ${topic}
 
@@ -395,7 +403,7 @@ Keluarkan HANYA JSON:
     prompt = `
 Kamu adalah Kiki Rachmat (@kikipunyacerita), pekerja media di Jakarta (usia 26 thn, ngekos di Jakpus, sandwich generation).
 Tuliskan SATU UTAS MICRO-THREAD TEPAT 3 PART (PERSIS 3 SLIDE).
-
+${cognitiveContext}
 TOPIK/KERESAHAN NYATA:
 ${topic}
 

@@ -483,6 +483,48 @@ bot.command(['insight', 'statistik'], async (ctx) => {
   }
 });
 
+// Command: /autotune & /evolve (Trigger & Inspeksi Otak Self-Tuning Kognitif)
+bot.command(['autotune', 'evolve'], async (ctx) => {
+  await ctx.reply('🧠 Menjalankan Cognitive Self-Tuning Engine (Menganalisis Winner vs Flop & Memperbarui Aturan Prompt AI)...');
+  try {
+    try { await trackAllInsights(); } catch (e) {}
+    const strategy = await analyzePerformanceAndStrategize();
+    const formatStats = db.getFormatPerformanceStats ? db.getFormatPerformanceStats() : [];
+
+    let msg = `🧠 *COGNITIVE SELF-TUNING ENGINE ACTIVE*\n\n`;
+    msg += `📊 *Evaluasi Empiris:*\n_${strategy.summary || '-'}_\n\n`;
+    msg += `🎯 *Langkah Adaptasi:*\n_${strategy.actionable_strategy || '-'}_\n\n`;
+
+    if (Array.isArray(strategy.dynamic_prompt_rules) && strategy.dynamic_prompt_rules.length > 0) {
+      msg += `⚡ *Aturan Prompt Dinamis (Langsung Disuntik ke AI Generator):*\n`;
+      strategy.dynamic_prompt_rules.forEach((r, i) => {
+        msg += `${i + 1}. ${r}\n`;
+      });
+      msg += `\n`;
+    }
+
+    if (Array.isArray(strategy.generated_new_topics) && strategy.generated_new_topics.length > 0) {
+      msg += `💡 *Topik Baru Hasil Sintesis Data Viral:*\n`;
+      strategy.generated_new_topics.slice(0, 4).forEach((t, i) => {
+        msg += `• ${t}\n`;
+      });
+      msg += `\n`;
+    }
+
+    if (formatStats.length > 0) {
+      msg += `📈 *Ranking Format Berdasarkan Rata-rata Views:*\n`;
+      formatStats.slice(0, 4).forEach((f, i) => {
+        msg += `${i + 1}. \`${f.format_type}\`: *${f.avg_views} avg views* (max ${f.max_views}, ${f.total_posts} post)\n`;
+      });
+    }
+
+    safeReplyMarkdown(ctx, msg);
+  } catch (err) {
+    console.error('Error command autotune:', err);
+    ctx.reply(`❌ Gagal menjalankan autotune: ${err.message}`);
+  }
+});
+
 // Command: /cek_limit
 bot.command('cek_limit', async (ctx) => {
   const userId = process.env.THREADS_USER_ID;
@@ -1450,9 +1492,22 @@ cron.schedule('0 4 * * *', async () => {
 });
 
 // ==========================================
-// 📊 DAILY INSIGHT SYNC & STRATEGY DIGEST (Setiap Malam jam 21:00 WIB)
-// Menarik analitik Meta Threads & menyusun rekomendasi strategi konten otomatis
+// 📊 COGNITIVE SELF-TUNING & INSIGHT SYNC (Siang 13:30 WIB & Malam 21:00 WIB)
+// Menarik analitik Meta Threads, membandingkan Winner vs Flop, & memperbarui instruksi prompt AI otomatis
 // ==========================================
+cron.schedule('30 13 * * *', async () => {
+  console.log('[Scheduler] Menjalankan Mid-Day Cognitive Self-Tuning & Insight Sync (13:30 WIB)...');
+  try {
+    await trackAllInsights();
+    await analyzePerformanceAndStrategize();
+  } catch (err) {
+    console.warn('[Scheduler] Mid-day self-tuning warning:', err.message);
+  }
+}, {
+  scheduled: true,
+  timezone: 'Asia/Jakarta'
+});
+
 cron.schedule('0 21 * * *', async () => {
   console.log('[Scheduler] Menjalankan sinkronisasi insight & evaluasi strategi harian...');
   try {

@@ -180,22 +180,28 @@ async function callAiWithFallback(prompt, temperature = 0.7) {
  * Generate 1 Hot Take Sarkasme Realitas (Format 1-Liner untuk Repost & Quotes)
  */
 async function generateHotTake(options = {}) {
-  const theme = options.theme || HOT_TAKE_THEMES[Math.floor(Math.random() * HOT_TAKE_THEMES.length)];
+  const theme = options.theme || options.topic || HOT_TAKE_THEMES[Math.floor(Math.random() * HOT_TAKE_THEMES.length)];
   const topicTag = options.topicTag || getAutoTopicTag(theme);
 
+  let cognitiveContext = '';
+  try {
+    const { buildCognitiveTuningContext } = require('./growthEngine');
+    if (buildCognitiveTuningContext) cognitiveContext = buildCognitiveTuningContext();
+  } catch (e) {}
+
   const prompt = `
-Kamu adalah Kiki Rachmat (@kikipunyacerita), kurator Threads. Panggilan: "Ki". Bio: "Dialy Life Update | In this economy mau nulis cerita orang-orang aja lah | dm aja yak yg mau share cerita anonimnya".
-Persona: Anak muda korporat Jakarta Selatan (usia 25-27 thn, kerja di agensi/tech/kantor SCBD-Kuningan).
-Gaya ngetik: Human typing sejati warganet Threads Indonesia. Huruf kecil santai, kalimat padat (1-2 kalimat, 90-170 karakter), sinis-realistis, self-deprecating (menertawakan nasib sendiri).
+Kamu adalah Kiki Rachmat (@kikipunyacerita), pekerja media di Jakarta (usia 26 thn, ngekos di Jakpus, sandwich generation).
+${cognitiveContext}
+Gaya ngetik: Human typing sejati warganet Threads Indonesia. Huruf kecil santai, kalimat padat (1-2 kalimat, 90-175 karakter), datar (deadpan), sinis-realistis, self-deprecating.
 
 TEMA REALITAS:
 "${theme}"
 
-ATURAN KETAT ANAK KORPORAT JAKSEL:
-1. DILARANG sapaan basi (Guys, Halo, Selamat Pagi).
+ATURAN KETAT (ANTI-AI & ANTI-CRINGE):
+1. DILARANG sapaan basi (Guys, Halo, Selamat Pagi) dan DILARANG memanggil diri sendiri "Ki" atau "Kiki".
 2. DILARANG HASHTAG (#) apapun.
-3. DILARANG bahasa baku kaku atau nasihat motivasi ala LinkedIn.
-4. Gunakan istilah korporat & warganet yang natural (burnout, boncos, WFO/WFH, commute, split bill, paylater, reimburse, overhead, bandwidth, wkwk, haha, bgt).
+3. WAJIB masukkan 1 detail atau angka konkret (jam, nominal uang, durasi) supaya observasinya ngena dan nyata.
+4. DILARANG menumpuk kata slang beruntun dalam satu kalimat.
 5. Output HANYA teks postingan langsung tanpa tanda kutip. Huruf kecil santai.
 `;
 
@@ -225,24 +231,29 @@ ATURAN KETAT ANAK KORPORAT JAKSEL:
  * Generate 1 Menfess Spill (Crowdsourcing Reply Magnet - Obrolan Komunitas)
  */
 async function generateMenfessSpill(options = {}) {
-  const theme = options.theme || MENFESS_SPILL_THEMES[Math.floor(Math.random() * MENFESS_SPILL_THEMES.length)];
+  const theme = options.theme || options.topic || MENFESS_SPILL_THEMES[Math.floor(Math.random() * MENFESS_SPILL_THEMES.length)];
   const topicTag = options.topicTag || getAutoTopicTag(theme);
 
+  let cognitiveContext = '';
+  try {
+    const { buildCognitiveTuningContext } = require('./growthEngine');
+    if (buildCognitiveTuningContext) cognitiveContext = buildCognitiveTuningContext();
+  } catch (e) {}
+
   const prompt = `
-Kamu adalah Kiki Rachmat (@kikipunyacerita), kurator Threads. Panggilan: "Ki". Bio: "Dialy Life Update | In this economy mau nulis cerita orang-orang aja lah | dm aja yak yg mau share cerita anonimnya".
-Persona: Anak muda korporat Jakarta Selatan.
-Tuliskan SATU (1) POSTINGAN CROWDSOURCING / MENFESS SPILL PENDEK (panjang 110-180 karakter) untuk memancing warganet Threads bercerita.
+Kamu adalah Kiki Rachmat (@kikipunyacerita), pekerja media di Jakarta (usia 26 thn, ngekos di Jakpus, sandwich generation).
+${cognitiveContext}
+Tuliskan SATU (1) POSTINGAN CROWDSOURCING / DISKUSI PENDEK (panjang 110-185 karakter) untuk memancing warganet Threads berbagi pengalaman atau berhitung bareng.
 
 TOPIK PANCINGAN:
 "${theme}"
 
 ATURAN KETAT:
-1. DILARANG sapaan basi (Guys, Halo, Selamat Pagi).
+1. DILARANG sapaan basi (Guys, Halo, Selamat Pagi) dan DILARANG memanggil diri sendiri "Ki" atau "Kiki".
 2. DILARANG HASHTAG (#) apapun.
-3. DILARANG konsep asing / halusinasi (seperti koin sen atau budaya barat). Harus 100% realitas urban Indonesia (kantor Jabodetabek, kosan, KRL, warteg, ojol, split bill).
-4. Mulai langsung dengan gaya pancingan santai: "spill...", "sebutin 1...", "hal paling absurd...", atau "kelakuan paling zonk...".
-5. DILARANG MENGGUNAKAN FRASA "masuk DM", "kiriman DM", atau "DM gue"! Gunakan ajakan reply di kolom komentar (contoh: "coba cerita di bawah, pengen tau seaneh apa.", "ada yang pernah ngalamin juga? coba spill di reply.").
-6. Output HANYA teks postingan langsung tanpa tanda kutip. Huruf kecil santai.
+3. Harus 100% realitas urban Indonesia (kantor Jabodetabek, kosan, KRL, warteg, ojol, gaji/pengeluaran). Sertakan 1 patokan angka konkret (nominal uang/jam/durasi) agar orang terpancing membandingkan.
+4. DILARANG MENGGUNAKAN FRASA "masuk DM", "kiriman DM", atau "kalian tim A atau tim B? spill!". Gunakan pertanyaan manusia biasa yang memancing cerita di reply.
+5. Output HANYA teks postingan langsung tanpa tanda kutip. Huruf kecil santai.
 `;
 
   let text = await callAiWithFallback(prompt, 0.8);
@@ -656,11 +667,17 @@ async function generateFinancialBreakdown(options = {}) {
   ];
   const chosenArchetype = ARCHETYPES[Math.floor(Math.random() * ARCHETYPES.length)];
 
-  const theme = options.theme || `Realitas gaji ${targetIncome}jt di ${targetLocation} (${chosenArchetype.role})`;
+  const theme = options.theme || options.topic || `Realitas gaji ${targetIncome}jt di ${targetLocation} (${chosenArchetype.role})`;
+
+  let cognitiveContext = '';
+  try {
+    const { buildCognitiveTuningContext } = require('./growthEngine');
+    if (buildCognitiveTuningContext) cognitiveContext = buildCognitiveTuningContext();
+  } catch (e) {}
 
   const prompt = `
-Kamu adalah Kiki Rachmat (@kikipunyacerita), kurator Threads. Panggilan: "Ki". Bio: "Dialy Life Update | In this economy mau nulis cerita orang-orang aja lah | dm aja yak yg mau share cerita anonimnya".
-Persona: Anak muda korporat Jakarta Selatan (usia 25-27 thn, kerja di kantor SCBD/Kuningan/Jaksel).
+Kamu adalah Kiki Rachmat (@kikipunyacerita), pekerja media di Jakarta (usia 26 thn, ngekos di Jakpus, sandwich generation).
+${cognitiveContext}
 Tugas: Buat rincian data pengeluaran bulanan yang realistis dan relatable untuk ${chosenArchetype.role} (${chosenArchetype.focus}).
 
 TARGET PARAMETER WAJIB:
@@ -794,6 +811,15 @@ async function generateMixedPost(formatType, options = {}) {
  * 50% CERITA PANJANG / DM (Slot 3, 5, 6): Utas curhat DM anonim ("hari ini ada dm cerita anonim nih...") + Shopee Affiliate.
  */
 function getFormatForSlotNumber(slotNumber) {
+  let winningFormats = [];
+  try {
+    const raw = db.getSetting('WINNING_FORMATS_RANK');
+    if (raw) {
+      const parsed = JSON.parse(raw);
+      if (Array.isArray(parsed)) winningFormats = parsed;
+    }
+  } catch (e) {}
+
   switch (Number(slotNumber)) {
     case 1:
       // Slot 1 (07:15 Pagi Komuter): Life update pagi, KRL, cuaca, atau callback
@@ -804,9 +830,13 @@ function getFormatForSlotNumber(slotNumber) {
     case 3:
       // Slot 3 (12:30 Makan Siang): Curhat DM Anonim + Shopee Affiliate #1
       return FORMAT_TYPES.ANONYMOUS_CURHAT_STORY;
-    case 4:
-      // Slot 4 (16:30 Sore Pulang): Menfess Spill / Hot Take tajam organik
-      return Math.random() > 0.5 ? FORMAT_TYPES.MENFESS_SPILL : FORMAT_TYPES.HOT_TAKE;
+    case 4: {
+      // Slot 4 (16:30 Sore Pulang): Adaptive Organic Slot - utamakan format organik terkuat dari data nyata
+      const organicPool = [FORMAT_TYPES.MENFESS_SPILL, FORMAT_TYPES.HOT_TAKE, FORMAT_TYPES.FINANCIAL_BREAKDOWN];
+      const topOrganic = winningFormats.find(f => organicPool.includes(f) && f !== FORMAT_TYPES.FINANCIAL_BREAKDOWN);
+      if (topOrganic && Math.random() < 0.7) return topOrganic;
+      return Math.random() > 0.4 ? FORMAT_TYPES.MENFESS_SPILL : FORMAT_TYPES.HOT_TAKE;
+    }
     case 5:
       // Slot 5 (19:30 Malam Santai): Story Affiliate dengan angka konkret #2
       return FORMAT_TYPES.STORY_AFFILIATE;

@@ -117,53 +117,180 @@ async function trackAllInsights() {
 }
 
 /**
+ * Membangun memori kognitif dinamis (In-Context Empirical Learning) dari performa nyata di database.
+ * Dipakai langsung oleh semua generator konten (aiStory, dailyLifeEngine, contentMixer) dan QC Kurator
+ * agar sistem otomatis meniru pola pemenang (73rb views) dan menghindari pola yang flop (<15 views).
+ */
+function buildCognitiveTuningContext() {
+  try {
+    const winners = db.getWinningStoryExamples ? db.getWinningStoryExamples(3) : [];
+    const flops = db.getUnderperformingStoryExamples ? db.getUnderperformingStoryExamples(3) : [];
+    const formatStats = db.getFormatPerformanceStats ? db.getFormatPerformanceStats() : [];
+
+    let dynamicRules = [];
+    try {
+      const rawRules = db.getSetting('DYNAMIC_TUNING_DIRECTIVES');
+      if (rawRules) {
+        const parsed = JSON.parse(rawRules);
+        if (Array.isArray(parsed)) dynamicRules = parsed;
+      }
+    } catch (e) {}
+
+    if (dynamicRules.length === 0) {
+      dynamicRules = [
+        'Wajib cantumkan angka konkret di kalimat pertama/kedua (nominal uang Rp/jt/rb, jam kejadian, atau durasi waktu) agar pembaca berhenti scroll dan ikut menghitung.',
+        'Gunakan gaya observasi datar (deadpan) tentang realita biaya hidup, gaji, kosan, atau kelakuan orang kantor tanpa menumpuk kata slang atau tanda seru berlebihan.',
+        'Jangan gunakan kalimat tanya template survei di akhir ("kalian tim A atau tim B? spill!"); tutup dengan celetukan sinis-realistis atau kebingungan manusia biasa.'
+      ];
+    }
+
+    let block = `\n=== MEMORI KOGNITIF AUTO-ADAPT (DATA EMPIRIS AKUN @kikipunyacerita) ===\n`;
+    block += `ATURAN SELF-TUNING AKTIF (WAJIB DIIKUTI):\n`;
+    dynamicRules.slice(0, 4).forEach((r, idx) => {
+      block += `${idx + 1}. ${r}\n`;
+    });
+
+    if (winners.length > 0) {
+      block += `\nCONTOH POSTINGAN PEMENANG (TERBUKTI MELEDAK DI ALGORITMA THREADS - TIRU CARA BERPIKIR & KEPADATAN FAKTA/ANGKANYA, JANGAN COPY TEKSNYA):\n`;
+      winners.slice(0, 2).forEach((w, idx) => {
+        const snippet = (w.firstSlide || '').replace(/\s+/g, ' ').slice(0, 220);
+        block += `- Winner #${idx + 1} (${w.views} views, ${w.replies} replies, format: ${w.format_type || 'story'}): "${snippet}"\n`;
+      });
+    }
+
+    if (flops.length > 0) {
+      block += `\nANTI-EXAMPLE / CONTOH POSTINGAN FLOP (SEPI <15 VIEWS - HINDARI GAYA ABSTRAK/CRINGE SEPERTI INI):\n`;
+      flops.slice(0, 2).forEach((f, idx) => {
+        const snippet = (f.firstSlide || '').replace(/\s+/g, ' ').slice(0, 180);
+        block += `- Flop #${idx + 1} (${f.views} views): "${snippet}"\n`;
+      });
+    }
+
+    if (formatStats.length > 0) {
+      const topFmt = formatStats[0];
+      block += `\nFORMAT TERKUAT SAAT INI: ${topFmt.format_type} (Rata-rata ${topFmt.avg_views} views, rekor ${topFmt.max_views} views).\n`;
+    }
+    block += `=====================================================================\n`;
+    return block;
+  } catch (err) {
+    console.warn('[GrowthEngine] Gagal menyusun cognitive tuning context:', err.message);
+    return '';
+  }
+}
+
+/**
+ * Mengambil daftar topik prioritas gabungan (hasil sintesis AI + topik prioritas dari bank topik)
+ */
+function getAdaptivePriorityTopics() {
+  const result = {
+    generatedTopics: [],
+    priorityBankTopics: [],
+    winningFormats: []
+  };
+  try {
+    const genRaw = db.getSetting('DYNAMIC_GENERATED_TOPICS');
+    if (genRaw) {
+      const parsed = JSON.parse(genRaw);
+      if (Array.isArray(parsed)) result.generatedTopics = parsed.filter(Boolean);
+    }
+  } catch (e) {}
+
+  try {
+    const prioRaw = db.getSetting('PRIORITY_TOPICS');
+    if (prioRaw) {
+      const parsed = JSON.parse(prioRaw);
+      if (Array.isArray(parsed)) result.priorityBankTopics = parsed.filter(Boolean);
+    }
+  } catch (e) {}
+
+  try {
+    const fmtRaw = db.getSetting('WINNING_FORMATS_RANK');
+    if (fmtRaw) {
+      const parsed = JSON.parse(fmtRaw);
+      if (Array.isArray(parsed)) result.winningFormats = parsed.filter(Boolean);
+    }
+  } catch (e) {}
+
+  return result;
+}
+
+/**
  * Menganalisis data performa nyata akun dan menyusun strategi pertumbuhan otomatis
+ * (Self-Evolving Cognitive Loop: membandingkan post pemenang vs post flop, membaca komentar netizen,
+ * merumuskan aturan penulisan baru, dan menciptakan topik baru berpotensi viral).
  */
 async function analyzePerformanceAndStrategize() {
-  const topStories = db.getTopPerformingStories(5);
-  const accountHistory = db.getAccountInsightsHistory(7);
+  const topStories = db.getWinningStoryExamples ? db.getWinningStoryExamples(5) : db.getTopPerformingStories(5);
+  const flopStories = db.getUnderperformingStoryExamples ? db.getUnderperformingStoryExamples(5) : [];
+  const formatStats = db.getFormatPerformanceStats ? db.getFormatPerformanceStats() : [];
+  const recentComments = db.getRecentNetizenCommentsForIdeation ? db.getRecentNetizenCommentsForIdeation(8) : [];
   const latestAccount = db.getLatestAccountInsight() || { views: 0, likes: 0, replies: 0 };
 
   const prompt = `
-Kamu adalah Chief Growth Strategist & Head of Audience Retention untuk akun Threads viral @kikipunyacerita.
+Kamu adalah Cognitive Self-Tuning Engine & Chief Growth Strategist untuk akun Threads Indonesia @kikipunyacerita.
+Tugasmu adalah melakukan bedah empiris (data-driven) antara postingan yang MELEDAK vs postingan yang FLOP (sepi), lalu memprogram ulang aturan penulisan AI dan melahirkan topik-topik baru yang memicu debat & perhitungan nyata warganet.
 
-DATA PERFORMA NYATA DARI META THREADS API:
-- Total Views Hari Ini: ${latestAccount.views || 0} views
-- Total Likes: ${latestAccount.likes || 0}
-- Total Replies dari orang lain: ${latestAccount.replies || 0}
+1. DATA AKUN TERKINI:
+- Views Akun: ${latestAccount.views || 0} | Likes: ${latestAccount.likes || 0} | Replies: ${latestAccount.replies || 0}
 
-TOP CERITA (replies = HANYA balasan dari akun lain, bukan part thread sendiri):
-${topStories.map((s, idx) => `${idx + 1}. Judul: "${s.title}" | Topik: ${s.topic} | Views: ${s.views} | Likes: ${s.likes} | Replies asli: ${s.replies}`).join('\n')}
+2. PERFORMA PER FORMAT KONTEN:
+${formatStats.map(f => `- Format "${f.format_type}": ${f.total_posts} post | Avg Views: ${f.avg_views} | Max Views: ${f.max_views} | Avg Replies: ${f.avg_replies}`).join('\n') || '- Belum ada data format'}
 
-ATURAN ANALISIS:
-- Jika total sampel kecil (views < 500 atau replies asli = 0), JANGAN menarik kesimpulan kuat. Katakan datanya belum cukup.
-- Threads berbasis teks: JANGAN rekomendasikan hashtag, hook visual/video, atau "link di bio".
-- recommended_priority_topics WAJIB dipilih persis (copy teks utuh) dari daftar topik berikut, tidak boleh membuat topik baru:
+3. POSTINGAN PEMENANG (TERBUKTI VIRAL / VIEWS TERTINGGI):
+${topStories.map((s, idx) => `${idx + 1}. [${s.format_type || 'story'}] Views: ${s.views} | Replies: ${s.replies} | Hook: "${(s.firstSlide || s.title || '').replace(/\s+/g, ' ').slice(0, 200)}"`).join('\n') || '- Belum ada post pemenang'}
+
+4. POSTINGAN FLOP / GAGAL (VIEWS <= 15, SEPI INTERAKSI):
+${flopStories.map((s, idx) => `${idx + 1}. [${s.format_type || 'story'}] Views: ${s.views} | Hook: "${(s.firstSlide || s.title || '').replace(/\s+/g, ' ').slice(0, 180)}"`).join('\n') || '- Tidak ada sampel flop'}
+
+5. KOMENTAR ASLI NETIZEN TERBARU (Bahan Ideasi Topik Baru):
+${recentComments.map((c, idx) => `- @${c.author_username}: "${String(c.comment_text).replace(/\s+/g, ' ').slice(0, 140)}"`).join('\n') || '- Belum ada komentar baru'}
+
+6. DAFTAR BANK TOPIK STATIS:
 ${TOPICS.map(t => `  - ${t}`).join('\n')}
 
-TUGAS STRATEGIS:
-1. Evaluasi jujur apa yang terlihat dari data (termasuk jika datanya belum cukup).
-2. Rumuskan 3 rekomendasi taktis untuk menaikkan balasan asli dan views di Threads.
-3. Pilih 3-5 topik prioritas dari daftar di atas.
+TUGAS KOGNITIF KAMU:
+1. Bandingkan secara tajam: Kenapa Postingan Pemenang bisa tembus ribuan/puluhan ribu views sedangkan Postingan Flop cuma <15 views? (Perhatikan keberadaan angka rupiah konkret, rincian biaya, dilema realistis vs keluhan abstrak/bahasa AI).
+2. Rumuskan TEPAT 3 aturan instruksi prompt konkret ("dynamic_prompt_rules") yang akan disuntikkan langsung ke otak penulis AI di siklus berikutnya supaya setiap postingan baru punya DNA yang sama dengan Postingan Pemenang dan bebas dari penyakit Postingan Flop.
+3. Ciptakan 5 TOPIK BARU SPESIFIK ("generated_new_topics") yang belum pernah dibahas, wajib memuat situasi konkret & angka/dilema nyata pekerja/anak kos/pasutri/finansial di Indonesia (terinspirasi dari post pemenang & komentar netizen).
+4. Pilih 3-5 "recommended_priority_topics" dari Daftar Bank Topik Statis di atas.
+5. Urutkan 3 format terbaik di "winning_formats" berdasarkan data performa di atas.
 
-Keluarkan HANYA JSON persis sesuai struktur ini:
+Keluarkan HANYA JSON valid persis sesuai struktur ini:
 {
-  "summary": "Analisis singkat performa 1-2 kalimat",
+  "summary": "Analisis tajam 1-2 kalimat membandingkan pola pemenang vs pola yang flop",
   "key_learnings": [
-    "Poin observasi 1",
-    "Poin observasi 2"
+    "Observasi empiris 1",
+    "Observasi empiris 2"
   ],
-  "actionable_strategy": "Tindakan optimasi utama untuk slot tayang berikutnya",
+  "actionable_strategy": "Langkah adaptasi konkret yang langsung diterapkan sistem hari ini",
+  "dynamic_prompt_rules": [
+    "Aturan wajib 1 untuk penulis AI (spesifik & terukur)",
+    "Aturan wajib 2 untuk penulis AI",
+    "Aturan wajib 3 untuk penulis AI"
+  ],
+  "generated_new_topics": [
+    "Topik baru spesifik 1 (lengkap dengan konteks & angka/konflik nyata)",
+    "Topik baru spesifik 2",
+    "Topik baru spesifik 3",
+    "Topik baru spesifik 4",
+    "Topik baru spesifik 5"
+  ],
+  "winning_formats": [
+    "financial_breakdown",
+    "menfess_spill",
+    "anonymous_curhat_story"
+  ],
   "recommended_priority_topics": [
-    "Nama Topik 1",
-    "Nama Topik 2"
+    "Nama Topik dari Bank Statis 1",
+    "Nama Topik dari Bank Statis 2"
   ]
 }
 `;
 
   let strategyData = null;
+  const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
 
-  // Coba analisis via Groq 120B (Reasoning kuat)
+  // 1. Coba analisis via Groq 120B (Reasoning cepat & tajam)
   if (GROQ_API_KEY) {
     try {
       const res = await fetch('https://api.groq.com/openai/v1/chat/completions', {
@@ -172,12 +299,12 @@ Keluarkan HANYA JSON persis sesuai struktur ini:
           'Authorization': `Bearer ${GROQ_API_KEY}`,
           'Content-Type': 'application/json'
         },
-        signal: AbortSignal.timeout(15000),
+        signal: AbortSignal.timeout(18000),
         body: JSON.stringify({
           model: 'openai/gpt-oss-120b',
           messages: [{ role: 'user', content: prompt }],
           response_format: { type: 'json_object' },
-          temperature: 0.4
+          temperature: 0.35
         })
       });
 
@@ -193,7 +320,31 @@ Keluarkan HANYA JSON persis sesuai struktur ini:
     }
   }
 
-  // Fallback ke OpenRouter
+  // 2. Fallback ke Gemini 2.5 Flash
+  if (!strategyData && GEMINI_API_KEY) {
+    try {
+      const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${GEMINI_API_KEY}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        signal: AbortSignal.timeout(18000),
+        body: JSON.stringify({
+          contents: [{ parts: [{ text: prompt }] }],
+          generationConfig: { responseMimeType: 'application/json', temperature: 0.35 }
+        })
+      });
+      if (res.ok) {
+        const json = await res.json();
+        const content = json.candidates?.[0]?.content?.parts?.[0]?.text;
+        if (content) {
+          strategyData = JSON.parse(content.replace(/```json/g, '').replace(/```/g, '').trim());
+        }
+      }
+    } catch (e) {
+      console.warn('[GrowthEngine] Gemini strategy error:', e.message);
+    }
+  }
+
+  // 3. Fallback ke OpenRouter
   if (!strategyData && OPENROUTER_API_KEY) {
     try {
       const res = await fetch('https://openrouter.ai/api/v1/chat/completions', {
@@ -204,9 +355,9 @@ Keluarkan HANYA JSON persis sesuai struktur ini:
         },
         signal: AbortSignal.timeout(15000),
         body: JSON.stringify({
-          model: 'nvidia/nemotron-3.5-lightning:free',
+          model: 'openrouter/free',
           messages: [{ role: 'user', content: prompt + '\n\nBalas HANYA string JSON.' }],
-          temperature: 0.4
+          temperature: 0.35
         })
       });
 
@@ -225,16 +376,33 @@ Keluarkan HANYA JSON persis sesuai struktur ini:
 
   if (!strategyData) {
     strategyData = {
-      summary: 'Akun mempertahankan pertumbuhan organik yang stabil di tab Untuk Anda (FYP).',
+      summary: 'Data empiris menunjukkan postingan dengan rincian angka rupiah konkret (bedah gaji & biaya hidup) mendominasi mutlak dibanding keluhan abstrak.',
       key_learnings: [
-        'Topik dengan konflik personal dan barang sehari-hari memiliki rasio completion rate tertinggi.',
-        'Hook tanpa sapaan basi terbukti menahan audiens membaca hingga bagian akhir.'
+        'Postingan dengan rincian angka rupiah skimmable mendorong audiens berhenti scroll dan berdebat di kolom reply.',
+        'Kalimat pembuka yang abstrak atau penuh kata slang beruntun langsung dilewati algoritma For You.'
       ],
-      actionable_strategy: 'Pertahankan 3 slot tayang harian (Pagi 07:30, Siang 12:30, Malam 20:00) dengan fokus pada drama relasi & kehidupan kosan.',
+      actionable_strategy: 'Suntikkan wajib 1-2 angka konkret (rupiah/jam/persentase) di setiap slide pertama dan prioritaskan topik bedah realita finansial & dunia kerja.',
+      dynamic_prompt_rules: [
+        'Wajib cantumkan angka konkret di kalimat pertama/kedua (nominal uang Rp/jt/rb, jam kejadian, atau durasi waktu) agar pembaca ikut menghitung.',
+        'Tulis dengan nada observasi datar (deadpan) khas pekerja Jakarta tanpa menumpuk kata slang dan tanpa memanggil diri sendiri Ki.',
+        'Hindari penutup template "kalian tim A atau B? spill!"; gunakan pertanyaan dilema realistis atau celetukan jujur.'
+      ],
+      generated_new_topics: [
+        'Simulasi Gaji 6.8 Juta Anak Perantauan di Jakarta: Potongan Kosan 1.7 Juta, KRL, Kirim Ortu, Sisa Tabungan Cuma 400 Ribu',
+        'Dilema Reimburse Kantor 1.5 Juta Belum Cair 3 Minggu Padahal Saldo Rekening Pribadi Sisa 250 Ribu Menjelang Tanggal Tua',
+        'Teman Kantor Pinjam Uang 500 Ribu Buat Nombok Paylater Bilangnya Ganti Tanggal 25 Tapi Malah Pamer Beli Sepatu Lari Baru',
+        'Realita Biaya Nikah Sederhana vs Tuntutan Keluarga Besar yang Minta Katering 500 Porsi Tanpa Mau Ikut Patungan',
+        'Atasan Minta Standby Revisi Hari Sabtu Tanpa Hitungan Lembur Padahal Kontrak Kerja Jelas Senin-Jumat'
+      ],
+      winning_formats: [
+        'financial_breakdown',
+        'menfess_spill',
+        'anonymous_curhat_story'
+      ],
       recommended_priority_topics: [
-        'Drama Kosan & Teman Sekamar',
-        'Kantor Toxic & Rekan Muka Dua',
-        'Kencan Pertama Zonk & Aneh'
+        'Spill Gaji Karyawan Berujung Dikucilkan (Karyawan baru gaji lebih tinggi dari senior yang loyal 4 tahun)',
+        'Teman Pinjam Uang Pura-pura Amnesia (Ditagih beralasan lagi susah tapi update story liburan dan makan enak)',
+        'Drama Token Listrik Jebol di Kontrakan (Teman sekamar nyalain AC 24 jam tapi maunya patungan listrik rata)'
       ]
     };
   }
@@ -242,17 +410,41 @@ Keluarkan HANYA JSON persis sesuai struktur ini:
   // Simpan hasil strategi ke database
   db.recordStrategyLog(strategyData.summary, strategyData.actionable_strategy, strategyData.recommended_priority_topics);
 
-  // Terapkan adaptasi dinamis: simpan topik prioritas agar sistem AI mengutamakannya
-  // Hanya terima topik yang benar-benar ada di bank topik (cegah topik fiksi/horor lama masuk lagi)
+  // 1. Simpan Dynamic Prompt Rules (Aturan Self-Tuning yang langsung mengubah prompt generator)
+  if (Array.isArray(strategyData.dynamic_prompt_rules) && strategyData.dynamic_prompt_rules.length > 0) {
+    const cleanRules = strategyData.dynamic_prompt_rules.map(r => String(r).trim()).filter(Boolean).slice(0, 5);
+    db.setSetting('DYNAMIC_TUNING_DIRECTIVES', JSON.stringify(cleanRules));
+    console.log('[GrowthEngine] 🧠 Dynamic Prompt Directives diperbarui otomatis:', cleanRules);
+  }
+
+  // 2. Simpan Generated New Topics (Topik baru hasil sintesis empiris dari pemenang & komentar netizen)
+  if (Array.isArray(strategyData.generated_new_topics) && strategyData.generated_new_topics.length > 0) {
+    const cleanGenTopics = strategyData.generated_new_topics
+      .map(t => String(t).trim())
+      .filter(t => t.length >= 15 && !/demo|politik|dpr|presiden|partai/i.test(t))
+      .slice(0, 8);
+    if (cleanGenTopics.length > 0) {
+      db.setSetting('DYNAMIC_GENERATED_TOPICS', JSON.stringify(cleanGenTopics));
+      console.log('[GrowthEngine] 💡 Topik baru hasil sintesis AI disimpan:', cleanGenTopics);
+    }
+  }
+
+  // 3. Simpan Winning Formats Rank
+  if (Array.isArray(strategyData.winning_formats) && strategyData.winning_formats.length > 0) {
+    db.setSetting('WINNING_FORMATS_RANK', JSON.stringify(strategyData.winning_formats));
+  }
+
+  // 4. Simpan Priority Topics dari Bank Statis
   const validTopics = Array.isArray(strategyData.recommended_priority_topics)
     ? strategyData.recommended_priority_topics.filter(t => TOPICS.includes(t))
     : [];
   strategyData.recommended_priority_topics = validTopics;
   if (validTopics.length > 0) {
     db.setSetting('PRIORITY_TOPICS', JSON.stringify(validTopics));
-    console.log('[GrowthEngine] Rekomendasi topik prioritas otomatis disinkronkan ke AI Generator:', strategyData.recommended_priority_topics);
+    console.log('[GrowthEngine] 🎯 Rekomendasi topik prioritas disinkronkan:', strategyData.recommended_priority_topics);
   }
 
+  db.setSetting('LAST_COGNITIVE_TUNING_AT', new Date().toISOString());
   return strategyData;
 }
 
@@ -439,12 +631,25 @@ async function generateInsightReportMarkdown() {
   }
 
   if (latestStrategy) {
-    msg += `💡 *Strategi Optimasi Otomatis (AI Chief Strategist):*\n`;
+    msg += `💡 *Strategi Optimasi Otomatis (Cognitive Self-Tuning):*\n`;
     msg += `• *Evaluasi*: ${latestStrategy.summary}\n`;
     msg += `• *Rencana Aksi*: ${latestStrategy.recommendations}\n`;
   }
 
-  msg += `\n_Sistem autopilot mengunci pilar viral dan adaptif mencari tren baru setiap hari._`;
+  try {
+    const rawRules = db.getSetting('DYNAMIC_TUNING_DIRECTIVES');
+    if (rawRules) {
+      const rules = JSON.parse(rawRules);
+      if (Array.isArray(rules) && rules.length > 0) {
+        msg += `\n🧠 *Aturan Self-Tuning Aktif (Disuntik ke Prompt AI):*\n`;
+        rules.slice(0, 3).forEach((r, idx) => {
+          msg += `${idx + 1}. _${r}_\n`;
+        });
+      }
+    }
+  } catch (e) {}
+
+  msg += `\n_Sistem autopilot belajar dari data nyata (Winner vs Flop) dan memperbarui instruksi penulisan secara otomatis._`;
   return msg;
 }
 
@@ -455,5 +660,7 @@ module.exports = {
   countRealReplies,
   syncNicheAnalytics,
   evaluateAndLockWinningNiches,
-  normalizeNicheTag
+  normalizeNicheTag,
+  buildCognitiveTuningContext,
+  getAdaptivePriorityTopics
 };
