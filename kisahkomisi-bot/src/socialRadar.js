@@ -17,6 +17,8 @@ async function fetchLiveTrendHeadlines() {
     { name: 'Detik News', url: 'https://news.detik.com/rss', maxPerSource: 3 },
     { name: 'Detik Hot', url: 'https://hot.detik.com/rss', maxPerSource: 3 },
     { name: 'Detik Finance', url: 'https://finance.detik.com/rss', maxPerSource: 3 },
+    { name: 'CNBC Indonesia', url: 'https://www.cnbcindonesia.com/news/rss', maxPerSource: 3 },
+    { name: 'CNBC Market', url: 'https://www.cnbcindonesia.com/market/rss', maxPerSource: 2 },
     { name: 'CNN Indonesia', url: 'https://www.cnnindonesia.com/nasional/rss', maxPerSource: 3 },
     { name: 'Antara News', url: 'https://www.antaranews.com/rss/terkini.xml', maxPerSource: 2 }
   ];
@@ -193,7 +195,7 @@ async function scanThreadsViralTrends(forceFresh = false) {
     const cachedAt = db.getSetting('ACTIVE_VIRAL_WAVES_AT');
     if (cached && cachedAt) {
       const ageHours = (Date.now() - new Date(cachedAt).getTime()) / (1000 * 60 * 60);
-      if (ageHours < 3) {
+      if (ageHours < 0.75) {
         try {
           return JSON.parse(cached);
         } catch (e) {}

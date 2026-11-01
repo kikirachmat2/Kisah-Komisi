@@ -406,17 +406,21 @@ async function generateAnonymousCurhatStory(options = {}) {
 
   const storyAngle = options.angle ? (STORY_ANGLES.find(a => a.type === options.angle) || STORY_ANGLES[0]) : STORY_ANGLES[Math.floor(Math.random() * STORY_ANGLES.length)];
 
-  // Dapatkan produk kontekstual Shopee
-  const product = db.getRandomProduct();
+  // Dapatkan produk kontekstual Shopee HANYA jika withProduct !== false dan hasAffiliate !== false
+  const attachProduct = options.withProduct === true || (options.withProduct !== false && options.hasAffiliate === true);
+  let product = null;
   let trackedUrl = null;
   let adCopy = '';
-  if (product && product.affiliate_url) {
-    trackedUrl = appendSubId(product.affiliate_url, {
-      sub_id1: 'threads_ceritakiki',
-      sub_id2: storyAngle.type,
-      sub_id3: 'thread'
-    });
-    adCopy = generateContextualAd(product, trackedUrl);
+  if (attachProduct) {
+    product = db.getRandomProduct();
+    if (product && product.affiliate_url) {
+      trackedUrl = appendSubId(product.affiliate_url, {
+        sub_id1: 'threads_ceritakiki',
+        sub_id2: storyAngle.type,
+        sub_id3: 'thread'
+      });
+      adCopy = generateContextualAd(product, trackedUrl);
+    }
   }
 
   const prompt = `

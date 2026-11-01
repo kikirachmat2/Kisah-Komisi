@@ -495,7 +495,12 @@ async function produceCuratedStory(options = null) {
     }
   }
 
-  const formatType = storyOpts.formatType || storyOpts.format_type || 'story_affiliate';
+  let formatType = storyOpts.formatType || storyOpts.format_type;
+  if (!formatType) {
+    formatType = (storyOpts.hasAffiliate !== false) ? 'story_affiliate' : 'menfess_spill';
+  } else if (formatType === 'story_affiliate' && storyOpts.hasAffiliate === false) {
+    formatType = 'menfess_spill';
+  }
   const recentStories = [
     ...(storyOpts.inMemoryRecent || []),
     ...(db.getRecentStoriesForDeduplication ? db.getRecentStoriesForDeduplication(40) : [])

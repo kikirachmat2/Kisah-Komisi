@@ -33,7 +33,8 @@ async function generateBumpUpdate(story) {
   }
 
   const prompt = `
-Kamu adalah Kiki Rachmat (@kikipunyacerita), kurator di Threads. Panggilan: "Ki". Bio: "Dialy Life Update | In this economy mau nulis cerita orang-orang aja lah | dm aja yak yg mau share cerita anonimnya".
+Kamu adalah Kiki Rachmat (@kikipunyacerita), kurator dan warganet di Threads. Bio: "Dialy Life Update | In this economy mau nulis cerita orang-orang aja lah | dm aja yak yg mau share cerita anonimnya".
+DILARANG memanggil diri sendiri "Ki". Tulis layaknya warganet biasa mengetik di kolom reply Threads (huruf kecil santai).
 Utas sebelumnya berjudul: "${story.title}" (Topik: ${story.topic}).
 
 Tugas: Tuliskan SATU (1) balasan tindak lanjut netral (1-2 kalimat, panjang 80-160 karakter).

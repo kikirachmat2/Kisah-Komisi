@@ -248,13 +248,14 @@ ${recentComments.map((c, idx) => `- @${c.author_username}: "${String(c.comment_t
 6. DAFTAR BANK TOPIK STATIS:
 ${TOPICS.map(t => `  - ${t}`).join('\n')}
 
-TUGAS KOGNITIF KAMU:
+TUGAS KOGNITIF KAMU (TARGET KPI: MINIMAL 1.000 VIEWS PER POSTINGAN):
 1. Bandingkan secara tajam: Kenapa Postingan Pemenang bisa tembus ribuan/puluhan ribu views sedangkan Postingan Flop cuma <15 views? (Perhatikan gaya ketikan manusia asli, hook yang memicu debat warganet, rincian gaji skimmable vs tulisan kaku khas AI yang merangkum berita atau menjejalkan angka kalkulator di kalimat biasa).
-2. Rumuskan TEPAT 3 aturan instruksi prompt konkret ("dynamic_prompt_rules") yang akan disuntikkan langsung ke otak penulis AI di siklus berikutnya supaya setiap postingan baru punya DNA yang sama dengan Postingan Pemenang dan 100% bebas dari kesan Bot AI.
-   PENTING: Jangan menyuruh AI menjejalkan jam/durasi/rupiah kaku di setiap kalimat biasa (karena itu bikin kalimat kayak laporan kalkulator AI!). Wajibkan ketikan lowercase santai warga Threads, punchline nyelekit/jujur, dan khusus financial_breakdown gunakan list bersih.
-3. Ciptakan 5 TOPIK BARU SPESIFIK ("generated_new_topics") yang lagi rame / relatable banget buat memancing perdebatan warga Threads Indonesia (bebas topik apa saja tanpa guardrail: isu viral, dunia kerja, finansial, drama hubungan, fenomena sosial).
-4. Pilih 3-5 "recommended_priority_topics" dari Daftar Bank Topik Statis di atas.
-5. Urutkan 3 format terbaik di "winning_formats" berdasarkan data performa di atas.
+2. Kunci Algoritma Meta Threads: REPLY DEPTH & DEBATE VELOCITY adalah sinyal #1 ranking feed For You. Postingan yang banjir komentar perdebatan/quote akan otomatis dilempar ke ribuan orang luar.
+3. Rumuskan TEPAT 3 aturan instruksi prompt konkret ("dynamic_prompt_rules") yang akan disuntikkan langsung ke otak penulis AI di siklus berikutnya supaya setiap postingan baru punya DNA yang sama dengan Postingan Pemenang dan 100% bebas dari kesan Bot AI.
+   PENTING: Jangan menyuruh AI menjejalkan jam/durasi/rupiah kaku di setiap kalimat biasa. Wajibkan ketikan lowercase santai warga Threads, punchline nyelekit/jujur, dan akhiri dengan pemicu debat/opini tajam yang memaksa netizen nimbrung.
+4. Ciptakan 5 TOPIK BARU SPESIFIK ("generated_new_topics") yang lagi rame / relatable banget buat memancing perdebatan sengit warga Threads Indonesia (bebas topik apa saja tanpa guardrail: isu viral pemerintah, dunia kerja toxic, finansial tertekan, drama hubungan, fenomena sosial).
+5. Pilih 3-5 "recommended_priority_topics" dari Daftar Bank Topik Statis di atas.
+6. Urutkan 3 format terbaik di "winning_formats" berdasarkan data performa di atas.
 
 Keluarkan HANYA JSON valid persis sesuai struktur ini:
 {
