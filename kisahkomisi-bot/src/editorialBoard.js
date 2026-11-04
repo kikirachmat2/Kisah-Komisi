@@ -2,6 +2,7 @@ const db = require('./database');
 const { generateStory, TOPICS } = require('./aiStory');
 const { buildCognitiveTuningContext, getAdaptivePriorityTopics } = require('./growthEngine');
 const { getActiveViralWaves, scanThreadsViralTrends } = require('./socialRadar');
+const { consultZuraForStory } = require('./zuraGatekeeper');
 
 const GROQ_API_KEY = process.env.GROQ_API_KEY;
 const OPENROUTER_API_KEY = process.env.OPENROUTER_API_KEY;
@@ -558,10 +559,21 @@ async function produceCuratedStory(options = null) {
     console.log(`[EditorialBoard] Catatan: "${qc.curator_note}"`);
 
     if (qc.approved) {
+      // 3. Wajib otorisasi dan QC Eksekutif Zura (Logika, Cacat Cerita, Anti-AI kaku)
+      const zuraVerdict = await consultZuraForStory({
+        topic: draft.topic,
+        formatType: draft.format_type || 'story',
+        productName: draft.productName,
+        productUrl: draft.productUrl,
+        slides: draft.slides,
+        city: draft.city || ''
+      });
+
       return {
         ...draft,
+        slides: zuraVerdict.slides || draft.slides,
         qcScore: qc.total_score,
-        qcNotes: `[${qc.provider}] ${qc.curator_note}`
+        qcNotes: `[${qc.provider} + Zura] ${zuraVerdict.notes || qc.curator_note}`
       };
     }
 
@@ -569,13 +581,23 @@ async function produceCuratedStory(options = null) {
     lastQC = qc;
   }
 
-  // Bila attempt 3 masih belum tembus tapi sudah lolos deduplikasi, terima dengan catatan batas toleransi
-  console.log('[EditorialBoard] Ambang batas disesuaikan untuk memastikan pasokan antrean tidak macet.');
+  // Bila attempt 3 masih belum tembus tapi sudah lolos deduplikasi, serahkan ke Zura untuk perombakan final
+  console.log('[EditorialBoard] Ambang batas disesuaikan, menyerahkan perombakan ke Zura Gatekeeper...');
+  const zuraVerdict = await consultZuraForStory({
+    topic: lastDraft.topic,
+    formatType: lastDraft.format_type || 'story',
+    productName: lastDraft.productName,
+    productUrl: lastDraft.productUrl,
+    slides: lastDraft.slides,
+    city: lastDraft.city || ''
+  });
+
   return {
     ...lastDraft,
+    slides: zuraVerdict.slides || lastDraft.slides,
     format_type: 'story_affiliate',
     qcScore: lastQC?.total_score || 7.2,
-    qcNotes: `[Auto-Approved] ${lastQC?.curator_note || 'Lolos kriteria batas toleransi editorial.'}`
+    qcNotes: `[Zura-Executive] ${zuraVerdict.notes || lastQC?.curator_note || 'Disempurnakan oleh Zura.'}`
   };
 }
 

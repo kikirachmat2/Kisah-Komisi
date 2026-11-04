@@ -730,12 +730,16 @@ Berikan output HANYA berupa JSON valid persis seperti ini:
   "punchline": "tulis celetukan sinis-realistis khas anak korporat jaksel (lowercase, tanpa hashtag)"
 }
 
-ATURAN KETAT ANTI-DUPLIKASI & GAYA ANAK KORPORAT:
-1. Maksimal buat 5 s/d 6 item pengeluaran utama saja agar ringkas, mudah di-scan mata, dan tidak terpotong batas karakter Threads!
-2. Total pengeluaran items HARUS lebih kecil dari ${targetIncome} (sisakan 400rb - 1.2jt untuk sisa tabungan).
-3. DILARANG menghitung sisa sendiri dalam JSON, sistem kode yang akan menghitung sisa secara eksak.
-4. DILARANG PUNCHLINE KLISE BASI seperti: "ngajak nongkrong di senopati... mending pura-pura pingsan/tipes" atau "kopi 40rb vs ongkir 8rb". Buat celetukan segar tentang nasib kerjaan, reimburse kantor, potongan pajak, atau tabungan tipis.
-5. Output HANYA JSON murni tanpa markdown, tanpa teks pengantar.
+ATURAN KETAT ANTI-DUPLIKASI & LOGIKA REALITAS KOTA (ANTI-BEGO):
+1. LOGIKA GEOGRAFIS & TRANSPORTASI:
+   - KRL HANYA ADA DI JABODETABEK & JOGJA-SOLO. Jika lokasi adalah Surabaya, Bandung, dll, WAJIB gunakan "Bensin motor & parkir harian" atau "Transport ojol/angkot", DILARANG KERAS TULIS KRL!
+2. LOGIKA KEUANGAN MASUK AKAL:
+   - DILARANG campur "Sewa Kos/Kontrakan" dengan "Cicilan KPR" sekaligus, kecuali dijelaskan spesifik (misal KPR rumah subsidi ortu di kampung). Jangan bikin skenario ganjil yang bikin netizen bingung!
+3. Maksimal buat 5 s/d 6 item pengeluaran utama saja agar ringkas, mudah di-scan mata, dan tidak terpotong batas karakter Threads!
+4. Total pengeluaran items HARUS lebih kecil dari ${targetIncome} (sisakan 400rb - 1.2jt untuk sisa tabungan).
+5. DILARANG menghitung sisa sendiri dalam JSON, sistem kode yang akan menghitung sisa secara eksak.
+6. DILARANG PUNCHLINE KLISE BASI seperti: "ngajak nongkrong di senopati... mending pura-pura pingsan/tipes" atau "kopi 40rb vs ongkir 8rb". Buat celetukan segar tentang nasib kerjaan, reimburse kantor, potongan pajak, atau tabungan tipis.
+7. Output HANYA JSON murni tanpa markdown, tanpa teks pengantar.
 `;
 
   let budgetData = null;

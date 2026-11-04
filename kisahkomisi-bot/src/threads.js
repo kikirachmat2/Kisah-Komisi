@@ -142,7 +142,7 @@ async function publishTextPost(userId, accessToken, text, replyToId = null, topi
   }
 
   // Publish container
-  const publishUrl = `${THREADS_API_BASE}/${userId}/threads_publish`;
+  const publishUrl = `${THREADS_API_BASE}/${effectiveUserId}/threads_publish`;
   let publishedId = null;
   let lastError = null;
 
@@ -196,7 +196,8 @@ async function publishTextPost(userId, accessToken, text, replyToId = null, topi
  */
 async function getPublishingLimit(userId, accessToken) {
   const tokenToUse = getActiveAccessToken() || accessToken;
-  const url = `${THREADS_API_BASE}/${userId}/threads_publishing_limit?fields=quota_usage,config,reply_quota_usage,reply_config&access_token=${tokenToUse}`;
+  const effectiveUserId = userId || process.env.THREADS_USER_ID || db.getSetting('THREADS_USER_ID') || '28712871241704878';
+  const url = `${THREADS_API_BASE}/${effectiveUserId}/threads_publishing_limit?fields=quota_usage,config,reply_quota_usage,reply_config&access_token=${tokenToUse}`;
   const res = await fetch(url);
   return await res.json();
 }
@@ -305,7 +306,8 @@ async function publishStoryToThreads(userId, accessToken, story) {
  */
 async function getAccountInsights(userId, accessToken) {
   const tokenToUse = getActiveAccessToken() || accessToken;
-  const url = `https://graph.threads.net/v1.0/${userId}/threads_insights?metric=views,likes,replies,reposts,quotes&access_token=${tokenToUse}`;
+  const effectiveUserId = userId || process.env.THREADS_USER_ID || db.getSetting('THREADS_USER_ID') || '28712871241704878';
+  const url = `https://graph.threads.net/v1.0/${effectiveUserId}/threads_insights?metric=views,likes,replies,reposts,quotes&access_token=${tokenToUse}`;
   const res = await fetch(url);
   if (!res.ok) {
     const errText = await res.text();

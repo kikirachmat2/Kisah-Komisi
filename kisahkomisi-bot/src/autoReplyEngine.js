@@ -2,6 +2,7 @@ const path = require('path');
 require('dotenv').config({ path: path.join(__dirname, '../.env') });
 const db = require('./database');
 const { publishTextPost, getActiveAccessToken } = require('./threads');
+const { consultZuraForReply } = require('./zuraGatekeeper');
 
 const THREADS_API_BASE = 'https://graph.threads.net/v1.0';
 const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
@@ -388,9 +389,9 @@ async function runAutoEngagementScan(userId) {
     return { repliedCount: 0, scannedPosts: 0, reason: 'daily_limit' };
   }
 
-  // Ambil postingan yang tayang dalam 48 jam terakhir
+  // Ambil postingan yang tayang dalam 48 jam terakhir lengkap dengan kontennya
   const recentStories = db.db.prepare(`
-    SELECT id, title, threads_media_id, published_at
+    SELECT id, title, topic, slides_json, threads_media_id, published_at
     FROM stories 
     WHERE status = 'published' AND threads_media_id IS NOT NULL
       AND published_at >= datetime('now', '-48 hours')
@@ -460,8 +461,26 @@ async function runAutoEngagementScan(userId) {
 
       console.log(`[AutoReply] Memproses komentar terpilih @${comment.username} [Arketipe: ${comment.archetype}, Score: ${comment.score}]: "${comment.text.substring(0, 45)}..."`);
 
-      // 5. Generate balasan AI
-      const replyText = await generateEngagementReply(story.title, comment.text, comment.username);
+      // 5. Siapkan full context cerita untuk Zura
+      let postContent = story.topic || story.title;
+      try {
+        if (story.slides_json) {
+          const parsed = JSON.parse(story.slides_json);
+          if (Array.isArray(parsed) && parsed.length > 0) postContent = parsed.join('\n');
+        }
+      } catch (e) {}
+
+      const draftReply = await generateEngagementReply(story.title, comment.text, comment.username);
+
+      // 5b. Otorisasi Eksekutif Zura: Pastikan 100% kontekstual, nyambung, dan bebas template bot
+      const replyText = await consultZuraForReply({
+        postTitle: story.title,
+        postContent: postContent,
+        commenter: comment.username,
+        commentText: comment.text,
+        draftReply: draftReply || ''
+      });
+
       if (!replyText) continue;
 
       // 6. Terbitkan balasan ke Threads
