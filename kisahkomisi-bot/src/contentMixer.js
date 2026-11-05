@@ -37,7 +37,15 @@ const MENFESS_SPILL_THEMES = [
   'Sebutin 1 pengeluaran paling boncos minggu ini yang sebenernya gak penting tapi tetep lu beli',
   'Momen paling bikin lu pengen langsung logout laptop dan pura-pura amnesia pas jam kerja',
   'Sebutin 1 kebohongan paling sering lu ucapin ke atasan pas lagi WFH atau izin kerja',
-  'Rekor lembur paling gak masuk akal yang pernah lu jalanin demi gaji yang gak seberapa'
+  'Rekor lembur paling gak masuk akal yang pernah lu jalanin demi gaji yang gak seberapa',
+  'Hal paling bikin ilfil pas pertama kali main ke kosan atau rumah gebetan',
+  'Kelakuan teman yang kalau diajak patungan kado selalu ngilang pas ditagih transfer',
+  'Momen sadar kalau circle pertemanan lu ternyata isinya cuma saling manfaatin doang',
+  'Pengalaman dikasih janji manis promosi jabatan tapi ujungnya cuma nambah beban kerja',
+  'Hal paling absurd yang pernah dilarang sama ibu kos dengan alasan gak masuk akal',
+  'Momen ditanya kapan nikah sama saudara yang rumah tangganya sendiri berantakan',
+  'Sebutin 1 barang di kamar kos lu yang dibeli karena lapar mata tapi sekarang jadi pajangan doang',
+  'Pengalaman dighosting klien freelance padahal revisian udah kelar 3 ronde'
 ];
 
 // Bank tema Hal Receh Sehari-hari (Absurditas & Kerecehan Urban)
@@ -49,7 +57,13 @@ const RECEH_DAILY_THEMES = [
   'Laptop freeze pas revisi dokumen seharian belum sempat di-save',
   'Charger laptop ketinggalan di kosan padahal baterai sisa 11 persen pas meeting',
   'Momen pasrah pesen ojol motor pas mendadak hujan badai tanpa jas hujan cadangan',
-  'Beli kopi estetik 45 ribu tanpa mikir tapi ongkir makanan 10 ribu dipikirin 20 menit'
+  'Beli kopi estetik 45 ribu tanpa mikir tapi ongkir makanan 10 ribu dipikirin 20 menit',
+  'Ketiduran di KRL stasiun akhir kelewatan pas bangun udah di Depok jam 11 malam',
+  'Niat hemat bawa bekal kantor pas dibuka kuahnya tumpah membanjiri totebag laptop',
+  'Tutup botol tumbler kurang rapet di ransel bikin dokumen penting basah kuyup',
+  'Lampu kamar mandi kos putus pas malam hari terpaksa mandi pakai senter HP',
+  'Salah masuk lift gedung kantor pas jam sibuk malah kebawa ke lantai basemen parkiran',
+  'Beli barang diskon di ecommerce pas nyampe ukuran aslinya sekecil gantungan kunci'
 ];
 
 // Bank tema Hobi Random & Adulting Dilemmas
@@ -59,7 +73,11 @@ const RANDOM_HOBBIES_THEMES = [
   'Ritual nyeduh kopi V60 pake timbangan digital 20 menit tiap pagi padahal telat finger print',
   'Ngerakit lego atau gundam di umur 26 tahun demi nyembuhin inner child tapi boncos',
   'Thrift shop pasar senen niat hemat dapet baju vintage bau apek dan ongkos cuci lebih mahal',
-  'Beli buku self-improvement di pameran tebal 400 halaman yang dibaca cuma bab 1 doang'
+  'Beli buku self-improvement di pameran tebal 400 halaman yang dibaca cuma bab 1 doang',
+  'Mendadak daftar gym tahunan bayar 4 juta cuma datang 2 kali pas foto cermin pertama',
+  'Beli perlengkapan baking kue lengkap pas dicoba kuenya gosong dan bantat total',
+  'FOMO main keyboard mekanik custom ganti switch 3 kali ujungnya cuma buat ngetik chat Slack',
+  'Beli sepeda lipat niat gowes b2w ke kantor seminggu kemudian berdebu di pojokan kamar kos'
 ];
 
 // Bank tema Cerita Berseri (Obrolan Sana-Sini Multi-Slide)
@@ -67,7 +85,11 @@ const SERIALIZED_STORY_THEMES = [
   'Denger dari obrolan sana-sini soal audit dadakan divisi sebelah yang bikin manajer panik',
   'Obrolan warung kopi soal temen satu kosan yang paketnya numpuk tapi gak pernah keluar kamar',
   'Cerita dari obrolan kantor soal rekan kerja yang mendadak resign tanpa pamit pas dapet proyek gede',
-  'Denger obrolan tongkrongan soal drama pembagian warisan keluarga yang awalnya adem ayem'
+  'Denger obrolan tongkrongan soal drama pembagian warisan keluarga yang awalnya adem ayem',
+  'Dapet cerita dari obrolan warkop soal anak magang yang berani marahin direktur pas salah kirim email',
+  'Cerita dari tongkrongan anak kos soal tetangga sebelah yang tiap malam berisik live jualan baju',
+  'Denger obrolan pantry soal karyawan senior yang diam-diam buka usaha saingan pakai database kantor',
+  'Obrolan kawan perantauan soal dilema mertua yang maksa ikut pindah ke rumah kontrakan sempit'
 ];
 
 // Bank tema Financial Breakdown (In this economy reality check - Variasi Lengkap & Dibatasi)
@@ -82,7 +104,7 @@ const FINANCIAL_THEMES = [
   'Simulasi belanja bulanan & dana darurat gaji 7 jutaan di tengah inflasi harga bahan pokok'
 ];
 
-// Bank tema Hot Takes Sarkasme (Anak Muda Corporate Jaksel)
+// Bank tema Hot Takes Sarkasme (Anak Muda Corporate Jaksel & Realitas Warganet)
 const HOT_TAKE_THEMES = [
   'Orang yang hobi bales chat kerjaan pas weekend itu bukan loyal tapi gak punya kehidupan pribadi',
   'Normalisasi gak ikut patungan kado nikahan teman kantor yang gak pernah nyapa di pantry',
@@ -90,7 +112,14 @@ const HOT_TAKE_THEMES = [
   'Istilah loyalitas perusahaan itu cuma dongeng HRD pas giliran efisiensi karyawan',
   'Makin dewasa lingkaran pertemanan mengecil bukan karena sombong tapi sama-sama capek dan gak ada bandwidth',
   'Kerja lembur tiap hari bukan tanda produktif tapi tanda manajemen timeline atasan yang berantakan',
-  'Meeting marathon 2 jam bahas hal yang sebenernya bisa selesai di 3 baris pesan Slack'
+  'Meeting marathon 2 jam bahas hal yang sebenernya bisa selesai di 3 baris pesan Slack',
+  'FOMO upgrade HP boba tiap tahun dengan paylater 24 bulan itu bukan investasi tapi perbudakan gaya hidup',
+  'Budaya kekeluargaan di kantor itu red flag terbesar buat nutupin minimnya transparansi kompensasi',
+  'Split bill kencan pertama itu normal, yang aneh tuh kalau biaya parkir 2 ribu ikut ditagih ke kalkulator',
+  'Karier lu gak bakal ancur cuma gara-gara gak ikut nongkrong sepulang kerja sama geng manajer',
+  'Minta maaf ke atasan pas ambil hak cuti tahunan adalah bukti rusaknya budaya kerja korporat modern',
+  'Flexing saldo rekening di medsos itu antara pamer kekayaan semu atau cari mangsa buat pinjol',
+  'Nasihat orang tua zaman dulu soal beli rumah di umur 25 udah kadaluarsa di tengah inflasi properti hari ini'
 ];
 
 /**

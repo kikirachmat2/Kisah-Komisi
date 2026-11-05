@@ -93,6 +93,54 @@ const TOPICS_WORKPLACE_SETUP = [
   'Pergelangan Tangan Sakit Akibat Mouse Biasa (Nge-drag file dan coding 10 jam sehari pergelangan tangan berasa kram dan ngilu)'
 ];
 
+const TOPICS_KULTUR_DIGITAL = [
+  'FOMO Upgrade iPhone Boba vs Tabungan Tipis (Gaji mepet UMR tapi maksa cicil 24 bulan demi gengsi circle nongkrong)',
+  'Subscription Trap Generasi Digital (Langganan Netflix, Spotify, iCloud, ChatGPT, dan Gym sebulan 1.2 juta padahal jarang dibuka)',
+  'Fenomena Flexing Paylater di Medsos (Pamer liburan dan staycation di story padahal tagihan bulan depan bikin sesak napas)',
+  'Doomscrolling Medsos vs Insomnia Akut (Tiap malam niat tidur jam 10 tapi jempol scroll reels sampai jam 2 subuh sambil overthinking masa depan)',
+  'Kencan Pertama Split Bill Berujung Ribut (Hitung-hitungan biaya parkir 2 ribu dan saus sambal ekstra dibagi dua sampai receh)',
+  'Terjebak Tren Pamer Saldo Tabungan (Netizen pamer mutasi ratusan juta di Threads bikin minder pekerja kantoran yang gajinya pas-pasan)',
+  'FOMO Konser Musik Luar Negeri (War tiket 4 juta pakai paylater demi story 15 detik, sisa bulan makan mie instan)',
+  'Jebakan Belanja Online Tanggal Kembar (Checkout barang diskon yang sebenarnya gak butuh cuma demi dopamin gratis)',
+  'Obsesi Self-Improvement Beracun (Beli webinar dan ebook produktivitas 500 ribu tapi kerjaan harian tetap ditunda-tunda)'
+];
+
+const TOPICS_ADULTING_TABOO = [
+  'Teman Nikah Pinjam Tabungan Nikah Kita (Niat bantu teman malah pas giliran kita mau nikah uangnya pura-pura lupa)',
+  'Warisan Keluarga Bikin Saudara Kandung Putus Kontak (Tanah warisan kakek dijual sepihak oleh paman tertua tanpa musyawarah)',
+  'Dilema Merawat Orang Tua Sakit vs Karir di Ibu Kota (Anak pertama dituntut pulang kampung lepas karir demi jaga orang tua)',
+  'Patungan Biaya Rumah Sakit Keluarga Besar (Keluarga yang mampu pura-pura miskin pas giliran bayar pengobatan nenek)',
+  'Tuntutan Resepsi Nikah Mewah Demi Gengsi Orang Tua (Calon pengantin mau akad sederhana tapi ortu maksa sewa gedung mewah 150 juta)',
+  'Dilema Tinggal Bareng Mertua vs Ngontrak Rumah Petak (Antara hemat biaya sewa tapi kena tekanan mental tiap hari)',
+  'Teman Curhat Masalah Rumah Tangga Ujungnya Baper (Niat jadi pendengar yang baik malah dituduh jadi orang ketiga)',
+  'Anak Sulung Jadi Tulang Punggung Sekaligus Penjamin Hutang (Nama KTP dipakai ortu buat pinjaman bank tanpa izin)',
+  'Arisan Keluarga Jadi Ajang Pamer Kekayaan (Tiap kumpul keluarga selalu ada tante yang banding-bandingin gaji dan mobil menantu)'
+];
+
+const TOPICS_KARIER_DAN_ETIKA = [
+  'Nepotisme Anak Bos Langsung Jadi Manajer (Kerja gak becus tapi bawahan senior yang harus beresin revisi dan laporan tiap hari)',
+  'Fenomena Quiet Firing di Korporat (Karyawan lama ga dipecat tapi sengaja ga dikasih kerjaan dan diisolasi biar resign sendiri)',
+  'Perang Dingin Divisi Sales vs Divisi Operasional (Sales janjiin fitur mustahil ke klien, tim teknis yang dipaksa begadang)',
+  'Atasan Maling Kredit Proyek Bawahan (Ide presentasi kita dipresentasikan bos ke direksi seolah-olah inisiatif tunggal dia)',
+  'Dilema Whistleblower Penggelapan Uang Kantor (Tau kecurangan manajer keuangan tapi takut dipecat kalau lapor ke direksi)',
+  'Pemberian SP Siluman Tanpa Peringatan Lisan (Tiba-tiba disodorin surat peringatan pas minta evaluasi kenaikan gaji)',
+  'Diskriminasi Gaji Karyawan Lama vs Hire Baru (Karyawan baru lulus nego gaji lebih tinggi 40% dari staf loyal 3 tahun)',
+  'Budaya Toxic Jam Pulang Tenggo (Kerjaan selesai jam 5 tapi satu divisi ga ada yang berani bangun karena bos masih di ruangan)',
+  'Bos Yang Hobi Mikromajemen Parah (Tiap kirim email harus di-cc bos dan revisi tata bahasa berulang kali)'
+];
+
+const TOPICS_PERANTAUAN_DAERAH = [
+  'Kejutan Budaya Anak Rantau Pertama Kali di Jakarta (Kaget ritme jalan orang Jakarta serba cepat dan budaya bahasa lu-gue)',
+  'Niat Healing Kerja Remote di Bali Malah Boncos (Biaya cafe dan sewa motor mahal, gaji lokal UMR Denpasar mepet)',
+  'Dilema Mudik Lebaran Bawa Uang Tipis (Tekanan bawa oleh-oleh dan amplop ponakan padahal saldo rekening pas-pasan)',
+  'Kontras Gaya Hidup Rantau vs Standar Kampung Halaman (Di Jakarta makan warteg 15 ribu di kampung dibilang pelit ga mau traktir)',
+  'Gegar Bahasa dan Kebiasaan di Kantor Multikultural (Salah paham slang daerah pas meeting kantor yang campur aduk)',
+  'Rindu Masakan Rumah vs Katering Harian Hambar (Kangen sambal buatan ibu pas lagi demam sendirian di kamar kos)',
+  'Solidaritas Semu Sesama Anak Daerah di Perantauan (Diajak patungan kontrakan bareng taunya kabur ga bayar bagian)',
+  'Dilema Beli Rumah di Pinggiran Kota vs Selamanya Ngontrak (Pilihan cicil rumah 2 jam dari kantor atau sewa kos seumur hidup)',
+  'Romantisme Semu Kehidupan Kos-Kosan Urban (Kamar pengap tanpa jendela tapi gengsi mau pulang kampung tanpa kesuksesan)'
+];
+
 const TOPICS_CERITA_BERSERI = [
   'Obrolan Kasus Skandal Kantor Divisi Sebelah (Part 1: Kejanggalan laporan audit kas kecil berujung saling lempar tanggung jawab)',
   'Misteri Temen Kosan Kamar Ujung yang Gak Pernah Keliatan (Part 1: Paket numpuk depan pintu tapi lampu selalu nyala)',
@@ -105,6 +153,10 @@ const TOPICS = [
   ...TOPICS_REMOTE_TECH,
   ...TOPICS_CORPORATE_DILEMMA,
   ...TOPICS_WORKPLACE_SETUP,
+  ...TOPICS_KULTUR_DIGITAL,
+  ...TOPICS_ADULTING_TABOO,
+  ...TOPICS_KARIER_DAN_ETIKA,
+  ...TOPICS_PERANTAUAN_DAERAH,
   ...TOPICS_INTIMATE_MENFESS,
   ...TOPICS_SOCIAL_DILEMMA,
   ...TOPICS_HAL_RECEH,
@@ -317,6 +369,18 @@ function getAutoTopicTag(topic) {
   }
   if (t.includes('setup') || t.includes('mouse') || t.includes('keyboard') || t.includes('monitor') || t.includes('meja') || t.includes('ergonomic') || t.includes('kabel')) {
     return 'workplace_setup';
+  }
+  if (t.includes('fomo') || t.includes('iphone') || t.includes('subscription') || t.includes('netflix') || t.includes('paylater') || t.includes('doomscrolling') || t.includes('split bill') || t.includes('konser')) {
+    return 'kultur_digital';
+  }
+  if (t.includes('warisan') || t.includes('tabungan nikah') || t.includes('resepsi') || t.includes('tulang punggung') || t.includes('sakit') || t.includes('mertua')) {
+    return 'adulting_taboo';
+  }
+  if (t.includes('nepotisme') || t.includes('quiet firing') || t.includes('whistleblower') || t.includes('tenggo') || t.includes('kredit proyek') || t.includes('sp siluman') || t.includes('mikromajemen')) {
+    return 'etika_karier';
+  }
+  if (t.includes('rantau') || t.includes('bali') || t.includes('mudik') || t.includes('kampung') || t.includes('daerah') || t.includes('lu-gue') || t.includes('gegar')) {
+    return 'perantauan_daerah';
   }
   if (t.includes('politik kantor') || t.includes('promosi') || t.includes('paklaring') || t.includes('revisi') || t.includes('atasan arogan') || t.includes('sikut')) {
     return 'corporate_dilemma';
@@ -893,6 +957,10 @@ module.exports = {
   generateContextualAd,
   TOPICS,
   TOPICS_CORPORATE,
+  TOPICS_KULTUR_DIGITAL,
+  TOPICS_ADULTING_TABOO,
+  TOPICS_KARIER_DAN_ETIKA,
+  TOPICS_PERANTAUAN_DAERAH,
   TOPICS_INTIMATE_MENFESS,
   TOPICS_SOCIAL_DILEMMA,
   TOPICS_HAL_RECEH,

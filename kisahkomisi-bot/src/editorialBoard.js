@@ -466,6 +466,20 @@ async function produceCuratedStory(options = null) {
             'Naik Transportasi Publik vs Cicilan Motor (Realitas biaya harian komuter Jabodetabek)',
             'Drama Ojol vs Jalan Kaki Menuju Stasiun (Ngejar kereta pagi tapi kejebak macet gang sempit)'
           ];
+        } else if (targetNiche === 'remote_tech') {
+          nicheMatchingTopics = TOPICS.filter(t => /remote|wfh|freelance|client|coding|timezone/i.test(t));
+        } else if (targetNiche === 'corporate_dilemma') {
+          nicheMatchingTopics = TOPICS.filter(t => /politik kantor|promosi|paklaring|revisi|atasan arogan|sikut/i.test(t));
+        } else if (targetNiche === 'workplace_setup') {
+          nicheMatchingTopics = TOPICS.filter(t => /setup|mouse|keyboard|monitor|meja|ergonomic|kabel/i.test(t));
+        } else if (targetNiche === 'kultur_digital') {
+          nicheMatchingTopics = TOPICS.filter(t => /fomo|iphone|subscription|netflix|paylater|doomscrolling|split bill|konser/i.test(t));
+        } else if (targetNiche === 'adulting_taboo') {
+          nicheMatchingTopics = TOPICS.filter(t => /warisan|tabungan nikah|resepsi|tulang punggung|sakit|mertua/i.test(t));
+        } else if (targetNiche === 'etika_karier') {
+          nicheMatchingTopics = TOPICS.filter(t => /nepotisme|quiet firing|whistleblower|tenggo|kredit proyek|sp siluman|mikromajemen/i.test(t));
+        } else if (targetNiche === 'perantauan_daerah') {
+          nicheMatchingTopics = TOPICS.filter(t => /rantau|bali|mudik|kampung|daerah|lu-gue|gegar/i.test(t));
         } else if (targetNiche === 'duniakerja') {
           nicheMatchingTopics = TOPICS.filter(t => /magang|lembur|hrd|bos|cuti|gaji|karyawan|resign|meeting/i.test(t));
         } else if (targetNiche === 'anakkos') {

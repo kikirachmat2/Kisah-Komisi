@@ -459,6 +459,10 @@ function normalizeNicheTag(rawTag) {
   if (clean.includes('remote') || clean.includes('wfh') || clean.includes('tech') || clean.includes('freelance')) return 'remote_tech';
   if (clean.includes('setup') || clean.includes('meja') || clean.includes('ergonomic') || clean.includes('mouse') || clean.includes('monitor')) return 'workplace_setup';
   if (clean.includes('dilema') || clean.includes('politik') || clean.includes('promosi') || clean.includes('hrd')) return 'corporate_dilemma';
+  if (clean.includes('digital') || clean.includes('fomo') || clean.includes('medsos') || clean.includes('paylater') || clean.includes('iphone')) return 'kultur_digital';
+  if (clean.includes('taboo') || clean.includes('warisan') || clean.includes('resepsi') || clean.includes('nikah') || clean.includes('mertua')) return 'adulting_taboo';
+  if (clean.includes('etika') || clean.includes('nepotisme') || clean.includes('firing') || clean.includes('bos') || clean.includes('tenggo')) return 'etika_karier';
+  if (clean.includes('rantau') || clean.includes('perantauan') || clean.includes('daerah') || clean.includes('mudik') || clean.includes('bali')) return 'perantauan_daerah';
   if (clean.includes('finansial') || clean.includes('gaji') || clean.includes('ekonomi')) return 'finansial';
   if (clean.includes('krl') || clean.includes('komuter') || clean.includes('transportasi') || clean.includes('ojol')) return 'krl';
   if (clean.includes('kerja') || clean.includes('kantor') || clean.includes('lembur')) return 'duniakerja';
