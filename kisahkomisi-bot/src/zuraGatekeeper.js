@@ -94,20 +94,7 @@ function invokeZuraCLI(mode, payload) {
  * @returns {Promise<Object>} verdict Zura
  */
 async function consultZuraForStory(storyData) {
-  console.log(`[ZuraGatekeeper] 🧐 Menyerahkan draf cerita ke Zura untuk QC Eksekutif...`);
-
-  // 1. Stage ke Supabase (Fleet Cloud Hub)
-  let stagingId = null;
-  if (supabaseFleet) {
-    try {
-      stagingId = await supabaseFleet.stageThreadsPost(storyData);
-      if (stagingId) {
-        console.log(`[ZuraGatekeeper] ☁️ Draf berhasil distage di Supabase (ID: ${stagingId}).`);
-      }
-    } catch (e) {
-      console.warn(`[ZuraGatekeeper] Gagal stage draf ke Supabase: ${e.message}`);
-    }
-  }
+  console.log(`[ZuraGatekeeper] 🧐 Menyerahkan draf cerita ke Zura untuk QC Eksekutif (Local Primary)...`);
 
   const payload = {
     topic: storyData.topic || '',
@@ -118,12 +105,28 @@ async function consultZuraForStory(storyData) {
     city: storyData.city || ''
   };
 
-  const verdict = await invokeZuraCLI('--story', payload);
+  // 1. PRIMARY PATH: Local Zura Advisory Engine (Zero-Latency, 100% Offline-capable)
+  const advisoryPromise = invokeZuraCLI('--story', payload);
+
+  // 2. BACKUP / ALTERNATIVE MIRROR: Supabase Cloud (Non-blocking Asynchronous Shadow Write)
+  if (supabaseFleet) {
+    supabaseFleet.stageThreadsPost(storyData).then((stagingId) => {
+      if (stagingId) {
+        advisoryPromise.then((v) => {
+          if (v) {
+            const hasRev = Array.isArray(v.revised_slides) && v.revised_slides.length >= 1;
+            const finalS = (v.recommended_action === 'USE_REVISED' && hasRev) ? v.revised_slides : storyData.slides;
+            const isAppr = v.is_approved !== false && v.recommended_action !== 'REJECT';
+            supabaseFleet.updateStagingVerdict(stagingId, isAppr, v.critique || '', finalS).catch(() => {});
+          }
+        }).catch(() => {});
+      }
+    }).catch(() => {});
+  }
+
+  const verdict = await advisoryPromise;
   if (!verdict) {
     console.warn('[ZuraGatekeeper] Zura tidak merespons, fallback ke draf original.');
-    if (supabaseFleet && stagingId) {
-      supabaseFleet.updateStagingVerdict(stagingId, true, 'Zura offline fallback', storyData.slides).catch(() => {});
-    }
     return {
       isApproved: true,
       slides: storyData.slides,
@@ -142,9 +145,6 @@ async function consultZuraForStory(storyData) {
   // Jika Zura merekomendasikan revisi atau menolak karena cacat logika, gunakan revised_slides Zura jika ada!
   if (verdict.recommended_action === 'USE_REVISED' && hasRevisedSlides) {
     console.log(`[ZuraGatekeeper] ✨ Menggunakan versi naskah yang sudah dirombak total oleh Zura (${verdict.revised_slides.length} slide).`);
-    if (supabaseFleet && stagingId) {
-      supabaseFleet.updateStagingVerdict(stagingId, true, verdict.critique || 'Dirombak oleh Zura', verdict.revised_slides).catch(() => {});
-    }
     return {
       isApproved: true,
       slides: verdict.revised_slides,
@@ -157,9 +157,6 @@ async function consultZuraForStory(storyData) {
   if (verdict.is_approved === false || verdict.recommended_action === 'REJECT') {
     if (hasRevisedSlides) {
       console.log(`[ZuraGatekeeper] ✨ Draf awal ditolak, tapi Zura menyediakan naskah revisi valid. Menggunakan revisi Zura.`);
-      if (supabaseFleet && stagingId) {
-        supabaseFleet.updateStagingVerdict(stagingId, true, verdict.critique || 'Diganti revisi Zura', verdict.revised_slides).catch(() => {});
-      }
       return {
         isApproved: true,
         slides: verdict.revised_slides,
@@ -168,19 +165,12 @@ async function consultZuraForStory(storyData) {
       };
     }
     console.warn(`[ZuraGatekeeper] ⛔ Zura MEM-VETO draf cerita (tanpa revisi otomatis). Draf ditolak demi menjaga reputasi akun!`);
-    if (supabaseFleet && stagingId) {
-      supabaseFleet.updateStagingVerdict(stagingId, false, verdict.critique || 'Ditolak total oleh Zura', storyData.slides).catch(() => {});
-    }
     return {
       isApproved: false,
       slides: storyData.slides,
       notes: verdict.critique || 'Ditolak total oleh Zura (Cacat Logika/Hitung)',
       logicFlaws: verdict.logic_flaws || []
     };
-  }
-
-  if (supabaseFleet && stagingId) {
-    supabaseFleet.updateStagingVerdict(stagingId, true, verdict.critique || 'Disetujui Zura', hasRevisedSlides ? verdict.revised_slides : storyData.slides).catch(() => {});
   }
 
   return {

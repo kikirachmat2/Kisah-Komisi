@@ -1,6 +1,8 @@
 /**
- * src/supabaseFleet.js - Supabase Unified Fleet & Tri-Party Bridge for KisahKomisi
- * Bridges Threads Bot with Zura COO and KiBot V3 via Supabase PostgreSQL.
+ * src/supabaseFleet.js - Secondary Backup & Alternative Mirror for KisahKomisi
+ * ROLE: Asynchronous shadow mirror & offsite backup ONLY.
+ * Local SQLite (data/kisahkomisi.db) remains the primary single source of truth.
+ * All operations here are non-blocking and fail-safe.
  */
 
 const { Pool } = require('pg');
@@ -22,10 +24,11 @@ function getPool() {
       user,
       password,
       ssl: { rejectUnauthorized: false },
-      max: 5,
-      idleTimeoutMillis: 30000,
-      connectionTimeoutMillis: 5000,
+      max: 3,
+      idleTimeoutMillis: 15000,
+      connectionTimeoutMillis: 3000,
     });
+
 
     pool.on('error', (err) => {
       console.warn('[SupabaseFleet] PG Pool warning:', err.message);
@@ -193,3 +196,4 @@ module.exports = {
   updatePostMetrics,
   startHeartbeat
 };
+
