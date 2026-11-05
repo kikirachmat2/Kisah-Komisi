@@ -799,7 +799,11 @@ module.exports = {
     return db.prepare(`
       INSERT INTO strategy_logs (summary, recommendations, top_topics)
       VALUES (?, ?, ?)
-    `).run(summary, recommendations, topTopics ? JSON.stringify(topTopics) : null);
+    `).run(
+      summary || 'Evaluasi performa berkala akun',
+      recommendations || 'Optimasi engagement konten dan pilar organik',
+      topTopics ? JSON.stringify(topTopics) : null
+    );
   },
 
   getLatestStrategyLog: () => {
