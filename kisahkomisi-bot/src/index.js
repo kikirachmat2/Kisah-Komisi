@@ -77,39 +77,28 @@ function formatRupiah(number) {
   }).format(number);
 }
 
-// Kirim notifikasi / alert ke Telegram admin & War Room Group (Return boolean status)
+// Kirim notifikasi / alert ke Telegram War Room Group (Return boolean status)
+// STRICT GUARD: DILARANG PC / DM ke akun pribadi Bos Kiki.
+// Semua laporan, alert, naskah posting, dan metrik WAJIB masuk ke grup War Room saja menggunakan akun bot sendiri!
 async function sendAdminAlert(text, extra = {}) {
-  const targetChats = [
-    process.env.TELEGRAM_GROUP_CHAT_ID || '-5329037538',
-    process.env.ADMIN_CHAT_ID || '1346696386',
-    db.getSetting('LAST_ADMIN_CHAT_ID')
-  ].filter(Boolean);
-
-  const uniqueChats = [...new Set(targetChats)];
-  if (uniqueChats.length === 0) {
-    console.log('[Alert] Tidak ada target chat yang terdaftar untuk menerima alert.');
-    return false;
-  }
-
-  let sentAny = false;
-  for (const chatId of uniqueChats) {
+  const targetChat = process.env.TELEGRAM_GROUP_CHAT_ID || '-5329037538';
+  try {
+    await bot.telegram.sendMessage(targetChat, text, { parse_mode: 'Markdown', ...extra });
+    return true;
+  } catch (e) {
     try {
-      await bot.telegram.sendMessage(chatId, text, { parse_mode: 'Markdown', ...extra });
-      sentAny = true;
-    } catch (e) {
-      try {
-        const plain = text.replace(/[*_`\[\]()]/g, '');
-        const cleanExtra = { ...extra };
-        delete cleanExtra.parse_mode;
-        await bot.telegram.sendMessage(chatId, plain, cleanExtra);
-        sentAny = true;
-      } catch (err2) {
-        // Silently skip if one chat fails
-      }
+      const plain = text.replace(/[*_`\[\]()]/g, '');
+      const cleanExtra = { ...extra };
+      delete cleanExtra.parse_mode;
+      await bot.telegram.sendMessage(targetChat, plain, cleanExtra);
+      return true;
+    } catch (err2) {
+      console.warn('[Telegram Group Alert] Gagal kirim pesan ke grup:', err2.message);
+      return false;
     }
   }
-  return sentAny;
 }
+
 
 // Helper untuk mengirim pesan markdown dengan aman (fallback plain text jika ada formatting error)
 async function safeReplyMarkdown(ctx, text, extra = {}) {
@@ -161,9 +150,10 @@ function sanitizeStoryBeforePublish(story) {
   };
 }
 
-// Kirim backup file database SQLite ke Telegram admin
+// Kirim backup file database SQLite ke Telegram War Room Group
 async function sendDatabaseBackup(targetChatId = null) {
-  const chatId = targetChatId || process.env.ADMIN_CHAT_ID || db.getSetting('LAST_ADMIN_CHAT_ID');
+  const chatId = targetChatId || process.env.TELEGRAM_GROUP_CHAT_ID || '-5329037538';
+
   if (!chatId) {
     console.log('[Backup] Tidak ada chatId untuk mengirim backup.');
     return false;
