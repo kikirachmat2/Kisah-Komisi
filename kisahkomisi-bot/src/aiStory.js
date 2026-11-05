@@ -70,6 +70,29 @@ const TOPICS_HOT_TAKE_RINGAN = [
   'Split Bill Makan Bareng Dibulatkan ke Atas (Yang pesen wagyu bayar sama rata sama yang cuma pesen es teh manis)'
 ];
 
+const TOPICS_REMOTE_TECH = [
+  'Realitas WFH Kerja di Kasur tapi Punggung Remuk (Gaji dollar keliatan keren tapi jam kerja ngikutin timezone US jam 2 subuh)',
+  'Godaan Buka Laptop Pas Cuti (Manajer nge-tag Slack urgen pas lagi di pantai, antara cuek atau panik kena SP)',
+  'Invoice Freelance Luar Negeri Tertahan di Bank (Kerjaan beres 3 minggu lalu tapi dana nyangkut kena verifikasi kepatuhan)',
+  'Perang Batin Gaji Kantor Lokal vs Kontrak Remote (Pilihan antara stabilitas BPJS atau gaji 3x lipat tanpa jaminan karir)',
+  'Lembur Marathon Bikin Mata Perih dan Migrain (Menatap 3 monitor sekaligus dari jam 9 pagi sampe tengah malam)'
+];
+
+const TOPICS_CORPORATE_DILEMMA = [
+  'Promosi Kosong Tanpa Kenaikan Gaji (Dikasih titel Lead baru tapi pas ditanya slip gaji katanya nunggu evaluasi tahun depan)',
+  'Budaya Resign Dianggap Musuh Perusahaan (Karyawan loyal ajukan resign baik-baik tapi surat paklaring dipersulit HRD)',
+  'Sikut-sikutan Politik Kantor Jelang Bonus Akhir Tahun (Rekan kerja seruangan diam-diam claim hasil kerja tim sebagai inisiatif pribadi)',
+  'Revisi Menit Terakhir Sebelum Jam Pulang (Kerjaan sudah di-approve jam 2 siang mendadak dirombak total pas jam 5 sore)',
+  'Dilema Speak Up Lawan Atasan Arogan (Tahu keputusan bos salah arah tapi kalau protes takut diparkir di divisi buangan)'
+];
+
+const TOPICS_WORKPLACE_SETUP = [
+  'Setup Meja Kerja 15 Juta tapi Kursi Bikin Encok (Monitor curved dan mechanical keyboard mahal tapi punggung jompo)',
+  'Kabel Meja Kerja Kusut Kayak Benang Ruwet (Tiap mau cabut charger laptop harus narik kabel yang nyangkut di kolong meja)',
+  'Lampu Kamar Silau Bikin Mata Cepat Capek (Lembur malam hari cuma modal lampu plafon bikin mata perih dan silau ke layar)',
+  'Pergelangan Tangan Sakit Akibat Mouse Biasa (Nge-drag file dan coding 10 jam sehari pergelangan tangan berasa kram dan ngilu)'
+];
+
 const TOPICS_CERITA_BERSERI = [
   'Obrolan Kasus Skandal Kantor Divisi Sebelah (Part 1: Kejanggalan laporan audit kas kecil berujung saling lempar tanggung jawab)',
   'Misteri Temen Kosan Kamar Ujung yang Gak Pernah Keliatan (Part 1: Paket numpuk depan pintu tapi lampu selalu nyala)',
@@ -79,6 +102,9 @@ const TOPICS_CERITA_BERSERI = [
 
 const TOPICS = [
   ...TOPICS_CORPORATE,
+  ...TOPICS_REMOTE_TECH,
+  ...TOPICS_CORPORATE_DILEMMA,
+  ...TOPICS_WORKPLACE_SETUP,
   ...TOPICS_INTIMATE_MENFESS,
   ...TOPICS_SOCIAL_DILEMMA,
   ...TOPICS_HAL_RECEH,
@@ -149,8 +175,9 @@ function cleanProductName(rawName) {
 }
 
 /**
- * Menghasilkan copy rekomendasi produk yang organik, realistis, dan relevan dengan konteks kehidupan
- * Mencegah klaim konyol seperti menaruh talenan atau tanah 10kg di meja kantor.
+ * Menghasilkan copy rekomendasi produk yang organik, problem-solver, dan bebas kalimat iklan kaku
+ * Zero hard-selling: Dilarang keras memakai frasa canggung seperti 'selingan dikit' atau 'btw kemarin gue checkout'.
+ * Produk diposisikan murni sebagai alat bertahan hidup (antidote) dari penderitaan/isu di slide sebelumnya.
  */
 function generateContextualAd(product, trackedUrl) {
   if (!product || !trackedUrl) return '';
@@ -158,39 +185,59 @@ function generateContextualAd(product, trackedUrl) {
   const name = cleanProductName(product.name);
   const fullName = `${cat} ${name}`.toLowerCase();
 
-  // 1. Deteksi Barang Cewek/Wanita
-  const isFemaleProduct = /eyelash|bulumata|daster|bra|hijab|wanita|cewe|cewek|lipstick|lip balm|softlens|dress|rok|tunik|kutek|scrunchie/i.test(fullName);
-  if (isFemaleProduct) {
-    const femaleTemplates = [
-      `selingan dikit, kemarin cewek gue beli ${name} ini dan ternyata kepake banget buat harian: ${trackedUrl}`,
-      `btw kalau ada yang lagi nyari ${name} murah tapi awet, kemarin nemu di toko ini: ${trackedUrl}`
+  // 1. Kategori: Meja Kerja, Ergonomic & Tech Productivity (Screenbar, Mouse, Wristrest, Meja)
+  if (cat.includes('kerja') || cat.includes('kantor') || fullName.includes('monitor') || fullName.includes('mouse') || fullName.includes('wrist') || fullName.includes('keyboard') || fullName.includes('meja') || fullName.includes('organizer')) {
+    if (fullName.includes('light') || fullName.includes('lampu') || fullName.includes('bar')) {
+      const templates = [
+        `pas lembur marathon depan laptop malam-malam lampu kamar bikin silau ke layar, penyelamat mata gue biar ga migrain cuma screenbar ${name} ini: ${trackedUrl}`,
+        `daripada mata perih dan silau ngetik sampai subuh modal lampu plafon, kebantu banget pas masang monitor light bar ini di meja: ${trackedUrl}`
+      ];
+      return templates[Math.floor(Math.random() * templates.length)];
+    }
+    if (fullName.includes('mouse') || fullName.includes('wrist') || fullName.includes('pad')) {
+      const templates = [
+        `tiap hari ngetik dan coding berjam-jam bikin pergelangan tangan kram, penyelamat punggung sama urat tangan gue cuma ganti pake ${name} ini: ${trackedUrl}`,
+        `daripada tangan pegel ngilu tiap buka laptop seharian, bantalan/mouse ergonomis ini beneran nahan urat tangan biar gak mati rasa: ${trackedUrl}`
+      ];
+      return templates[Math.floor(Math.random() * templates.length)];
+    }
+    const templates = [
+      `biar meja kerja gak bikin makin stres liat kabel kusut pas kerja, kebantu rapi pake ${name} ini di meja: ${trackedUrl}`,
+      `buat nahan beban kerja marathon depan laptop seharian, setup printilan ${name} ini yang bikin meja tetep waras: ${trackedUrl}`
     ];
-    return femaleTemplates[Math.floor(Math.random() * femaleTemplates.length)];
+    return templates[Math.floor(Math.random() * templates.length)];
   }
 
-  // 2. Kategori: Botol Minum / Tumbler / Gaya Hidup
-  if (cat.includes('botol') || cat.includes('tumbler') || name.toLowerCase().includes('tumbler') || name.toLowerCase().includes('termos')) {
+  // 2. Kategori: Botol Minum / Tumbler / Anti Boncos Kopi
+  if (cat.includes('botol') || cat.includes('tumbler') || fullName.includes('tumbler') || fullName.includes('termos')) {
     const templates = [
-      `selingan bentar, daripada beli minum kemasan terus di luar, gue sekarang bawa tumbler ${name} ini tiap ngantor: ${trackedUrl}`,
-      `btw buat yang nyari botol minum tahan dingin seharian di meja kerja, gue pake yang ini: ${trackedUrl}`
+      `daripada boncos beli es kopi susu 35rb tiap sore demi melek lembur, mending seduh sendiri bawa tumbler dingin ${name} ini ke meja: ${trackedUrl}`,
+      `buat nahan kantuk seharian di kantor tanpa bikin dompet bocor beli minum luar, gue selalu andelin tumbler tahan dingin ini: ${trackedUrl}`
     ];
     return templates[Math.floor(Math.random() * templates.length)];
   }
 
   // 3. Kategori: Elektronik & Gadget (Charger, Kabel, Kipas)
-  if (cat.includes('elektronik') || cat.includes('gadget') || name.toLowerCase().includes('charger') || name.toLowerCase().includes('kabel') || name.toLowerCase().includes('kipas')) {
+  if (cat.includes('elektronik') || cat.includes('gadget') || fullName.includes('charger') || fullName.includes('kabel') || fullName.includes('kipas')) {
+    if (fullName.includes('kipas')) {
+      const templates = [
+        `hawa kosan gerah parah kayak di oven pas siang bolong, untung ada kipas hening ${name} ini yang nyelametin tidur tanpa jebolin token listrik: ${trackedUrl}`,
+        `pas AC kamar kosan mati atau gerah lembur di meja sempit, penyelamat darurat gue cuma kipas portable adem ini: ${trackedUrl}`
+      ];
+      return templates[Math.floor(Math.random() * templates.length)];
+    }
     const templates = [
-      `selingan dikit, kemarin gue beli ${name} ini buat cadangan di tas kerja biar gak ribet pinjem temen kantor: ${trackedUrl}`,
-      `btw buat yang sering kehabisan baterai pas di jalan, kepala charger/kabel ini lumayan bandel harganya receh: ${trackedUrl}`
+      `daripada panik baterai sekarat pas lagi commuting atau ngerjain tugas di luar, charger/kabel bandel ${name} ini wajib standby di tas: ${trackedUrl}`,
+      `buat yang sering keteteran cari colokan pas jam kerja, kepala charger/kabel ini lumayan awet buat tempur harian: ${trackedUrl}`
     ];
     return templates[Math.floor(Math.random() * templates.length)];
   }
 
   // 4. Kategori: Skincare & Grooming / Perawatan Diri
-  if (cat.includes('skincare') || cat.includes('grooming') || cat.includes('perawatan') || name.toLowerCase().includes('wash') || name.toLowerCase().includes('deodorant') || name.toLowerCase().includes('serum')) {
+  if (cat.includes('skincare') || cat.includes('grooming') || cat.includes('perawatan') || fullName.includes('wash') || fullName.includes('deodorant') || fullName.includes('serum')) {
     const templates = [
-      `selingan dikit, abis seharian kena debu jalanan Jakarta, cuci muka pake ${name} ini lumayan bikin seger lagi: ${trackedUrl}`,
-      `btw buat perawatan harian yang murah meriah di kosan, gue sekarang rutin stok ini: ${trackedUrl}`
+      `seharian kena debu polusi jalanan sama ac kantor bikin muka kusam, cuci muka pake ${name} ini lumayan bikin seger lagi sebelum tepar: ${trackedUrl}`,
+      `buat ngerawat muka biar gak keliatan kuyu abis lembur marathon tapi tetep hemat, sabun/perawatan ini andalan harian gue: ${trackedUrl}`
     ];
     return templates[Math.floor(Math.random() * templates.length)];
   }
@@ -198,8 +245,8 @@ function generateContextualAd(product, trackedUrl) {
   // 5. Kategori: Parfum & Wewangian
   if (cat.includes('parfum') || cat.includes('wewangian')) {
     const templates = [
-      `selingan bentar, buat parfum harian ngantor yang wanginya kalem dan gak bikin pusing di KRL, gue pake ini: ${trackedUrl}`,
-      `btw kemarin iseng checkout parfum murah ini buat taruh di tas kerja, taunya wanginya tahan lama: ${trackedUrl}`
+      `buat parfum harian ngantor yang wanginya kalem dan gak bikin enek pas desak-desakan komuter, gue andelin aroma ${name} ini: ${trackedUrl}`,
+      `daripada bau apek abis kena asap jalanan sebelum masuk ruangan meeting, semprotan ${name} ini lumayan tahan lama nemenin kerja: ${trackedUrl}`
     ];
     return templates[Math.floor(Math.random() * templates.length)];
   }
@@ -207,8 +254,8 @@ function generateContextualAd(product, trackedUrl) {
   // 6. Kategori: Camilan & Minuman
   if (cat.includes('camilan') || cat.includes('makanan') || cat.includes('teh') || cat.includes('lemon')) {
     const templates = [
-      `selingan dikit, stok cemilan murah di meja kerja biar gak jajan kopi mahal terus tiap sore: ${trackedUrl}`,
-      `btw buat temen ngemil pas lagi lembur depan laptop, kemarin gue checkout ini lumayan banyak isinya: ${trackedUrl}`
+      `stok cemilan murah di meja kerja biar gak jajan kopi mahal terus tiap sore, ${name} ini lumayan nemenin lembur: ${trackedUrl}`,
+      `buat ganjel perut pas dikejar deadline malam depan laptop, cemilan ${name} ini andalan murah meriah: ${trackedUrl}`
     ];
     return templates[Math.floor(Math.random() * templates.length)];
   }
@@ -216,14 +263,14 @@ function generateContextualAd(product, trackedUrl) {
   // 7. Kategori: Rumah Tangga & Kosan
   if (cat.includes('kosan') || cat.includes('rumah')) {
     const templates = [
-      `selingan bentar, printilan kosan murah yang kemarin gue beli biar kamar gak berantakan: ${trackedUrl}`,
-      `btw buat anak kos yang butuh barang praktis harga receh, kemarin gue nemu ini: ${trackedUrl}`
+      `printilan kosan praktis yang bener-bener kepake biar kamar sempit gak makin sumpek, ${name} ini ngebantu banget: ${trackedUrl}`,
+      `buat anak kosan yang butuh barang awet harga miring buat nata kamar, kemarin nemu ${name} ini: ${trackedUrl}`
     ];
     return templates[Math.floor(Math.random() * templates.length)];
   }
 
-  // Fallback kasual & bersih
-  return `selingan dikit, kemarin gue checkout ${name} ini dan lumayan kepake buat harian di kosan/kantor: ${trackedUrl}`;
+  // Fallback kasual problem-solver
+  return `buat yang lagi ngalamin situasi serupa dan butuh solusi praktis harian, barang ${name} ini lumayan ngebantu banget: ${trackedUrl}`;
 }
 
 /**
@@ -232,6 +279,9 @@ function generateContextualAd(product, trackedUrl) {
 function getThematicVibe(category) {
   if (!category) return 'kehidupan kerja, kantor, kosan, atau rumah tangga';
   const cat = category.toLowerCase();
+  if (cat.includes('kerja') || cat.includes('kantor') || cat.includes('mouse') || cat.includes('monitor')) {
+    return 'marathon lembur di depan laptop, mata silau, pergelangan tangan pegal, dan meja kerja berantakan';
+  }
   if (cat.includes('elektronik') || cat.includes('gadget')) {
     return 'kelelahan lembur kerja, kabel kusut di meja kantor, atau baterai habis saat perjalanan pulang';
   }
@@ -262,6 +312,15 @@ function getThematicVibe(category) {
 function getAutoTopicTag(topic) {
   if (!topic) return 'curhat';
   const t = topic.toLowerCase();
+  if (t.includes('wfh') || t.includes('remote') || t.includes('freelance') || t.includes('client') || t.includes('coding') || t.includes('timezone')) {
+    return 'remote_tech';
+  }
+  if (t.includes('setup') || t.includes('mouse') || t.includes('keyboard') || t.includes('monitor') || t.includes('meja') || t.includes('ergonomic') || t.includes('kabel')) {
+    return 'workplace_setup';
+  }
+  if (t.includes('politik kantor') || t.includes('promosi') || t.includes('paklaring') || t.includes('revisi') || t.includes('atasan arogan') || t.includes('sikut')) {
+    return 'corporate_dilemma';
+  }
   if (t.includes('kantor') || t.includes('kerja') || t.includes('gaji') || t.includes('lembur') || t.includes('bos') || t.includes('hrd') || t.includes('magang') || t.includes('resign') || t.includes('meeting')) {
     return 'duniakerja';
   }
@@ -740,7 +799,7 @@ Keluarkan HANYA JSON:
     const sentences = cleanRaw.split(/(?<=[.!?])\s+/).filter(Boolean);
     const hook = `denger dari obrolan sana-sini, ${sentences.slice(0, 2).join(' ')}`.substring(0, 240);
     const body = sentences.slice(2, 6).join(' ').substring(0, 300) || 'pas kejadian ini terungkap, rasanya bener-bener ga habis pikir sama situasinya.';
-    const question = 'kalian di posisi kayak gini tim langsung speak up atau cari aman dulu? spill dong.';
+    const question = 'mending langsung speak up di depan forum dengan risiko dimusuhi, atau telen sendiri pura-pura budek demi amannya gaji bulanan?';
     parsed = {
       title: 'Cerita Warganet',
       topic: cleanRaw.substring(0, 60),
@@ -752,7 +811,7 @@ Keluarkan HANYA JSON:
 
   // Pastikan minimal 3 bagian
   if (cleanParts.length < 3) {
-    cleanParts.push('kalian di posisi kayak gini tim langsung speak up atau cari aman dulu? spill dong alasannya.');
+    cleanParts.push('mending langsung speak up dengan risiko dimusuhi, atau telen sendiri demi amannya gaji bulanan?');
   }
 
   // Bersihkan label fiksi dan frasa DM di seluruh slide
@@ -767,11 +826,22 @@ Keluarkan HANYA JSON:
       .trim();
   }).filter(Boolean);
 
-  // Sisipkan produk Shopee jika opsi withProduct aktif
+  // Sisipkan produk Shopee jika opsi withProduct aktif (Wajib Kontekstual Sesuai Topik)
   let product = null;
   let trackedProductUrl = null;
   if (options.withProduct === true) {
-    product = db.getRandomProduct();
+    let relevantCategories = [];
+    const tLower = (cleanRaw || '').toLowerCase();
+    if (tLower.includes('wfh') || tLower.includes('laptop') || tLower.includes('remote') || tLower.includes('mouse') || tLower.includes('monitor') || tLower.includes('meja')) {
+      relevantCategories = ['Elektronik & Kerja', 'Kerja & Kantor', 'Gadget & Aksesoris'];
+    } else if (tLower.includes('kantor') || tLower.includes('kerja') || tLower.includes('gaji') || tLower.includes('lembur') || tLower.includes('bos')) {
+      relevantCategories = ['Elektronik & Kerja', 'Gaya Hidup & Botol', 'Kerja & Kantor', 'Gadget & Aksesoris'];
+    } else if (tLower.includes('kos') || tLower.includes('kontrakan') || tLower.includes('kamar') || tLower.includes('gerah')) {
+      relevantCategories = ['Rumah Tangga & Kosan', 'Gaya Hidup & Botol', 'Elektronik & Kosan', 'Perabot & Kosan'];
+    } else {
+      relevantCategories = ['Gaya Hidup & Botol', 'Elektronik & Gadget', 'Gadget & Aksesoris'];
+    }
+    product = db.getRandomProduct(relevantCategories);
     if (product && product.affiliate_url) {
       trackedProductUrl = appendSubId(product.affiliate_url, {
         sub_id1: 'threads_ceritakiki',

@@ -155,8 +155,33 @@ async function consultZuraForReply(replyData) {
   return verdict.approved_reply;
 }
 
+/**
+ * Konsultasi & Pembuatan Thread Bumper Susulan ke Zura
+ * @param {Object} bumpData - { postTitle, topic, rootPart, lastPart }
+ * @returns {Promise<string|null>} teks bumper spontan yang disetujui Zura
+ */
+async function consultZuraForBump(bumpData) {
+  console.log(`[ZuraGatekeeper] 🧵 Meminta Zura menyusun update susulan organik untuk thread: "${bumpData.postTitle}"...`);
+  const payload = {
+    post_title: bumpData.postTitle || '',
+    topic: bumpData.topic || '',
+    root_part: bumpData.rootPart || '',
+    last_part: bumpData.lastPart || ''
+  };
+
+  const verdict = await invokeZuraCLI('--bump', payload);
+  if (!verdict || !verdict.bump_text) {
+    return null;
+  }
+
+  console.log(`[ZuraGatekeeper] 🎯 Zura menyetujui update susulan: "${verdict.bump_text}"`);
+  return verdict.bump_text;
+}
+
 module.exports = {
   consultZuraForStory,
   consultZuraForReply,
+  consultZuraForBump,
   resolveZuraEnv
 };
+

@@ -456,6 +456,9 @@ Keluarkan HANYA JSON valid persis sesuai struktur ini:
 function normalizeNicheTag(rawTag) {
   if (!rawTag) return 'curhat';
   const clean = String(rawTag).toLowerCase().split(/[|,/]/)[0].trim().replace(/[^a-z0-9_]/g, '');
+  if (clean.includes('remote') || clean.includes('wfh') || clean.includes('tech') || clean.includes('freelance')) return 'remote_tech';
+  if (clean.includes('setup') || clean.includes('meja') || clean.includes('ergonomic') || clean.includes('mouse') || clean.includes('monitor')) return 'workplace_setup';
+  if (clean.includes('dilema') || clean.includes('politik') || clean.includes('promosi') || clean.includes('hrd')) return 'corporate_dilemma';
   if (clean.includes('finansial') || clean.includes('gaji') || clean.includes('ekonomi')) return 'finansial';
   if (clean.includes('krl') || clean.includes('komuter') || clean.includes('transportasi') || clean.includes('ojol')) return 'krl';
   if (clean.includes('kerja') || clean.includes('kantor') || clean.includes('lembur')) return 'duniakerja';

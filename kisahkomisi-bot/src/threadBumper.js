@@ -2,6 +2,7 @@ const path = require('path');
 require('dotenv').config({ path: path.join(__dirname, '../.env') });
 const db = require('./database');
 const { publishTextPost, getActiveAccessToken } = require('./threads');
+const { consultZuraForBump } = require('./zuraGatekeeper');
 
 const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
 const GROQ_API_KEY = process.env.GROQ_API_KEY;
@@ -32,6 +33,34 @@ async function generateBumpUpdate(story) {
     return null;
   }
 
+  // 1. Prioritaskan konsultasi Zura Gatekeeper untuk update susulan manusiawi & spontan
+  try {
+    let rootPart = story.title;
+    let lastPart = story.topic || '';
+    if (story.slides_json) {
+      try {
+        const slides = JSON.parse(story.slides_json);
+        if (Array.isArray(slides) && slides.length > 0) {
+          rootPart = slides[0];
+          lastPart = slides[slides.length - 1];
+        }
+      } catch (e) {}
+    }
+
+    const zuraBump = await consultZuraForBump({
+      postTitle: story.title,
+      topic: story.topic,
+      rootPart,
+      lastPart
+    });
+
+    if (zuraBump && isValidBump(zuraBump)) {
+      return zuraBump;
+    }
+  } catch (e) {
+    console.warn('[ThreadBumper] Zura bump error, fallback ke LLM generator:', e.message);
+  }
+
   const prompt = `
 Kamu adalah Kiki Rachmat (@kikipunyacerita), kurator dan warganet di Threads. Bio: "Dialy Life Update | In this economy mau nulis cerita orang-orang aja lah | dm aja yak yg mau share cerita anonimnya".
 DILARANG memanggil diri sendiri "Ki". Tulis layaknya warganet biasa mengetik di kolom reply Threads (huruf kecil santai).
@@ -41,7 +70,7 @@ Tugas: Tuliskan SATU (1) balasan tindak lanjut netral (1-2 kalimat, panjang 80-1
 ATURAN KETAT INTEGRITAS:
 1. DILARANG KERAS mengarang kelanjutan fiktif seolah dapat kabar lanjutan (dilarang bilang 'pelaku nangis', 'dapet kabar baru', dsb).
 2. DILARANG menggunakan klausa palsu seperti 'Banyak yang salfok di komen:'.
-3. Balasan HANYA berupa pertanyaan lanjutan seputar dilema atau perspektif alternatif bagi warganet yang baru membaca utas ini.
+3. Balasan HANYA berupa unek-unek spontan atau celetukan santai manusia seputar dilema thread ini.
 4. Nol link, nol promosi produk.
 5. Output HANYA teks balasan langsung tanpa tanda kutip.
 `;
@@ -131,11 +160,11 @@ ATURAN KETAT INTEGRITAS:
     }
   }
 
-  // Fallback aman dan utuh jika AI error
+  // Fallback celetukan spontan warganet jika seluruh AI offline
   const fallbacks = [
-    'Update dikit: Banyak obrolan sana-sini yang nanyain kelanjutan kasus ini. Ternyata masalahnya udah mulai dimediasi sama pihak terkait tadi sore. Semoga ada solusi adil!',
-    'Btw ada update lanjutan: Katanya si empunya cerita udah mutusin buat ambil sikap tegas setelah baca saran-saran di komen. Makasih banyak buat yang udah kasih insight!',
-    'Barusan dapet kabar tambahan: Cerita ini ternyata rame dibahas di kantor sebelah juga. Realita dunia kerja emang kadang lebih drama dari sinetron wkwk. Tetap semangat pejuang rupiah!'
+    'update: pas dipikir-pikir lagi situasi kayak gini emang serba salah bgt, tapi makasih banyak buat yang udah sharing pandangannya.',
+    'update: liat obrolan di komen pada rame bahas hal serupa, emang realita sekarang lagi nuntut kita buat ekstra sabar haha.',
+    'btw jujur pas di posisi itu otak beneran nge-freeze ga kepikiran opsi lain, ternyata banyak juga yang pernah ngalamin hal mirip.'
   ];
   return fallbacks[Math.floor(Math.random() * fallbacks.length)];
 }

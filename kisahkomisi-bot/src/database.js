@@ -234,25 +234,39 @@ function initSchema() {
     CREATE INDEX IF NOT EXISTS idx_niche_locked ON niche_analytics(is_locked);
   `);
 
-  // Seed pilar niche awal jika tabel baru dibuat
-  const nicheCount = db.prepare(`SELECT COUNT(*) as cnt FROM niche_analytics`).get()?.cnt || 0;
-  if (nicheCount === 0) {
-    const seedNiches = [
-      { tag: 'finansial', label: 'Finansial & In This Economy', locked: 1, reason: 'Pilar Viral: Simulasi Gaji & Realitas Finansial' },
-      { tag: 'krl', label: 'Komuter & Transportasi Publik', locked: 1, reason: 'Pilar Viral: Realitas Jam Sibuk & Perjalanan Kerja' },
-      { tag: 'duniakerja', label: 'Dunia Kerja & Kantor', locked: 1, reason: 'Pilar Utama: Drama Rekan Kantor & Lembur' },
-      { tag: 'anakkos', label: 'Anak Kos & Kontrakan', locked: 0, reason: null },
-      { tag: 'relasi', label: 'Percintaan & Kencan', locked: 0, reason: null },
-      { tag: 'rumahtangga', label: 'Tetangga & Lingkungan', locked: 0, reason: null },
-      { tag: 'lifestyle_belanja', label: 'Belanja & Gaya Hidup', locked: 0, reason: null },
-      { tag: 'radar_viral', label: 'Live Real-time Trending Radar', locked: 0, reason: null }
-    ];
-    const insertNiche = db.prepare(`
-      INSERT OR IGNORE INTO niche_analytics (niche_tag, category_label, is_locked, lock_reason)
-      VALUES (?, ?, ?, ?)
-    `);
-    seedNiches.forEach(n => insertNiche.run(n.tag, n.label, n.locked, n.reason));
-  }
+  // Seed dan sinkronisasi pilar niche (termasuk ekspansi pilar baru)
+  const expandedNiches = [
+    { tag: 'finansial', label: 'Finansial & In This Economy', locked: 1, reason: 'Pilar Viral: Simulasi Gaji & Realitas Finansial' },
+    { tag: 'krl', label: 'Komuter & Transportasi Publik', locked: 1, reason: 'Pilar Viral: Realitas Jam Sibuk & Perjalanan Kerja' },
+    { tag: 'duniakerja', label: 'Dunia Kerja & Kantor', locked: 1, reason: 'Pilar Utama: Drama Rekan Kantor & Lembur' },
+    { tag: 'remote_tech', label: 'Remote Worker & Tech Lifestyle', locked: 0, reason: null },
+    { tag: 'corporate_dilemma', label: 'Dilema Karir & Politik Kantor', locked: 0, reason: null },
+    { tag: 'workplace_setup', label: 'Gadget Meja Kerja & Produktivitas', locked: 0, reason: null },
+    { tag: 'anakkos', label: 'Anak Kos & Kontrakan', locked: 0, reason: null },
+    { tag: 'relasi', label: 'Percintaan & Kencan', locked: 0, reason: null },
+    { tag: 'rumahtangga', label: 'Tetangga & Lingkungan', locked: 0, reason: null },
+    { tag: 'lifestyle_belanja', label: 'Belanja & Gaya Hidup', locked: 0, reason: null },
+    { tag: 'radar_viral', label: 'Live Real-time Trending Radar', locked: 0, reason: null }
+  ];
+  const insertNiche = db.prepare(`
+    INSERT OR IGNORE INTO niche_analytics (niche_tag, category_label, is_locked, lock_reason)
+    VALUES (?, ?, ?, ?)
+  `);
+  expandedNiches.forEach(n => insertNiche.run(n.tag, n.label, n.locked, n.reason));
+
+  // Seed produk penunjang kerja & produktivitas (High-Ticket & Problem-Solver)
+  const seedTechProducts = [
+    { category: 'Elektronik & Kerja', name: 'Baseus i-Wok Series Monitor Light Bar Lampu Layar Komputer', url: 'https://s.shopee.co.id/6AlvzebJ5P' },
+    { category: 'Elektronik & Kerja', name: 'Delux M618DB Wireless Vertical Ergonomic Mouse Anti Pegal', url: 'https://s.shopee.co.id/7fajmPVb2m' },
+    { category: 'Kerja & Kantor', name: 'Memory Foam Keyboard Wrist Rest Pad Sandaran Tangan Empuk', url: 'https://s.shopee.co.id/5fpfOjdD6K' },
+    { category: 'Gadget & Aksesoris', name: 'UGREEN Silicone Cable Clip Organizer Manajemen Kabel Meja', url: 'https://s.shopee.co.id/7fajmPVb2m' }
+  ];
+  const insertProd = db.prepare(`
+    INSERT INTO product_bank (category, name, description, affiliate_url, active)
+    SELECT ?, ?, 'Produk affiliate rekomendasi penunjang produktivitas', ?, 1
+    WHERE NOT EXISTS (SELECT 1 FROM product_bank WHERE name = ?)
+  `);
+  seedTechProducts.forEach(p => insertProd.run(p.category, p.name, p.url, p.name));
 }
 
 initSchema();
