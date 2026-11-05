@@ -440,12 +440,15 @@ async function generateStory(options = {}) {
   }
 
   const isFormatA = (variant === 'A');
-  const withProduct = options.withProduct !== false && !isFormatA;
+  // Hardened Zero-Link Rule: Feed utama 100% bebas tautan Shopee agar algoritma meledak puluhan ribu views.
+  // Link Shopee HANYA disisipkan di slide bila options.withProduct secara eksplisit diset true.
+  const withProductInSlides = options.withProduct === true && !isFormatA;
 
   let product = null;
   let trackedProductUrl = null;
 
-  if (withProduct) {
+  // Tetap kurasi produk pendamping untuk metadata database (agar siap dipakai Surge Affiliate Bumper bila views >= 500)
+  if (options.attachProductMetadata !== false) {
     let relevantCategories = [];
     const tLower = (topic || '').toLowerCase();
     if (tLower.includes('kantor') || tLower.includes('kerja') || tLower.includes('gaji') || tLower.includes('lembur') || tLower.includes('bos')) {
@@ -674,8 +677,8 @@ Keluarkan HANYA JSON:
     cleanParts = cleanParts.slice(0, 3);
   }
 
-  // SEMATKAN REKOMENDASI PRODUK KONTEKSTUAL SHOPEE (Bila withProduct aktif)
-  if (product && trackedProductUrl && !isFormatA) {
+  // SEMATKAN REKOMENDASI PRODUK KONTEKSTUAL SHOPEE (Hanya bila withProductInSlides aktif)
+  if (product && trackedProductUrl && withProductInSlides) {
     const contextualAd = generateContextualAd(product, trackedProductUrl);
     // Masukkan sebelum slide pertanyaan penutup
     if (cleanParts.length >= 3) {

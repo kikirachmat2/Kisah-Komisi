@@ -854,14 +854,20 @@ module.exports = {
   // Thread Bumper Helpers
   getLatestPublishedStoryUnbumped: (minHoursAgo = 2.5, maxHoursAgo = 6) => {
     return db.prepare(`
-      SELECT id, title, topic, slides_json, threads_media_id, last_media_id, published_at
-      FROM stories
-      WHERE status = 'published' 
-        AND threads_media_id IS NOT NULL 
-        AND bumped_at IS NULL
-        AND published_at >= datetime('now', '-' || ? || ' hours')
-        AND published_at <= datetime('now', '-' || ? || ' hours')
-      ORDER BY id DESC
+      SELECT 
+        s.id, s.title, s.topic, s.slides_json, s.product_name, s.product_url,
+        s.threads_media_id, s.last_media_id, s.published_at,
+        COALESCE(si.views, 0) as views,
+        COALESCE(si.likes, 0) as likes,
+        COALESCE(si.replies, 0) as replies
+      FROM stories s
+      LEFT JOIN story_insights si ON s.id = si.story_id
+      WHERE s.status = 'published' 
+        AND s.threads_media_id IS NOT NULL 
+        AND s.bumped_at IS NULL
+        AND s.published_at >= datetime('now', '-' || ? || ' hours')
+        AND s.published_at <= datetime('now', '-' || ? || ' hours')
+      ORDER BY s.id DESC
       LIMIT 1
     `).get(maxHoursAgo, minHoursAgo);
   },

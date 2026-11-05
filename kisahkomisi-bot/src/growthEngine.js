@@ -1,6 +1,7 @@
 const db = require('./database');
 const { getAccountInsights, getMediaInsights, getActiveAccessToken } = require('./threads');
 const { TOPICS } = require('./aiStory');
+const { reportStoryOutcome } = require('./zuraGatekeeper');
 
 const GROQ_API_KEY = process.env.GROQ_API_KEY;
 const OPENROUTER_API_KEY = process.env.OPENROUTER_API_KEY;
@@ -97,6 +98,18 @@ async function trackAllInsights() {
 
       db.upsertStoryInsight(story.id, story.threads_media_id, postMetrics);
       results.postsTracked++;
+
+      // Laporkan performa riil ke memori eksekutif Zura (Closed Feedback Loop)
+      if (postMetrics.views > 0 || postMetrics.likes > 0) {
+        reportStoryOutcome({
+          storyId: story.id,
+          title: story.title,
+          views: postMetrics.views,
+          likes: postMetrics.likes,
+          replies: postMetrics.replies,
+          formatType: story.format_type || 'story'
+        }).catch(() => {});
+      }
     } catch (err) {
       // Post lama atau post yang baru saja tayang <1 jam mungkin belum siap insight-nya dari Meta
     }

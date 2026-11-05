@@ -77,29 +77,38 @@ function formatRupiah(number) {
   }).format(number);
 }
 
-// Kirim notifikasi / alert ke Telegram admin (Return boolean status)
+// Kirim notifikasi / alert ke Telegram admin & War Room Group (Return boolean status)
 async function sendAdminAlert(text, extra = {}) {
-  const adminChatId = process.env.ADMIN_CHAT_ID || db.getSetting('LAST_ADMIN_CHAT_ID');
-  if (!adminChatId) {
-    console.log('[Alert] Tidak ada adminChatId yang terdaftar untuk menerima alert.');
+  const targetChats = [
+    process.env.TELEGRAM_GROUP_CHAT_ID || '-5329037538',
+    process.env.ADMIN_CHAT_ID || '1346696386',
+    db.getSetting('LAST_ADMIN_CHAT_ID')
+  ].filter(Boolean);
+
+  const uniqueChats = [...new Set(targetChats)];
+  if (uniqueChats.length === 0) {
+    console.log('[Alert] Tidak ada target chat yang terdaftar untuk menerima alert.');
     return false;
   }
-  try {
-    await bot.telegram.sendMessage(adminChatId, text, { parse_mode: 'Markdown', ...extra });
-    return true;
-  } catch (e) {
-    console.warn('[Alert] Gagal kirim markdown ke admin, fallback plain text:', e.message);
+
+  let sentAny = false;
+  for (const chatId of uniqueChats) {
     try {
-      const plain = text.replace(/[*_`\[\]()]/g, '');
-      const cleanExtra = { ...extra };
-      delete cleanExtra.parse_mode;
-      await bot.telegram.sendMessage(adminChatId, plain, cleanExtra);
-      return true;
-    } catch (err2) {
-      console.warn('[Alert] Gagal mengirim notifikasi ke admin:', err2.message);
-      return false;
+      await bot.telegram.sendMessage(chatId, text, { parse_mode: 'Markdown', ...extra });
+      sentAny = true;
+    } catch (e) {
+      try {
+        const plain = text.replace(/[*_`\[\]()]/g, '');
+        const cleanExtra = { ...extra };
+        delete cleanExtra.parse_mode;
+        await bot.telegram.sendMessage(chatId, plain, cleanExtra);
+        sentAny = true;
+      } catch (err2) {
+        // Silently skip if one chat fails
+      }
     }
   }
+  return sentAny;
 }
 
 // Helper untuk mengirim pesan markdown dengan aman (fallback plain text jika ada formatting error)

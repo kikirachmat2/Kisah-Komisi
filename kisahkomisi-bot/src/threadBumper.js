@@ -47,11 +47,19 @@ async function generateBumpUpdate(story) {
       } catch (e) {}
     }
 
+    const isSurgeAffiliate = Number(story.views || 0) >= 500 && Boolean(story.product_url);
+    if (isSurgeAffiliate) {
+      console.log(`[ThreadBumper] 🚀 SURGE AFFILIATE AKTIF! Thread tembus ${story.views} views. Menyiapkan rekomendasi solusi kontekstual Shopee...`);
+    }
+
     const zuraBump = await consultZuraForBump({
       postTitle: story.title,
       topic: story.topic,
       rootPart,
-      lastPart
+      lastPart,
+      views: Number(story.views || 0),
+      productName: story.product_name || '',
+      productUrl: story.product_url || ''
     });
 
     if (zuraBump && isValidBump(zuraBump)) {
@@ -61,7 +69,20 @@ async function generateBumpUpdate(story) {
     console.warn('[ThreadBumper] Zura bump error, fallback ke LLM generator:', e.message);
   }
 
-  const prompt = `
+  const isSurge = Number(story.views || 0) >= 500 && Boolean(story.product_url);
+
+  const prompt = isSurge ? `
+Kamu adalah Kiki Rachmat (@kikipunyacerita), kurator dan warganet di Threads (pekerja media 26 tahun di Jakpus).
+DILARANG memanggil diri sendiri "Ki". Tulis layaknya warganet biasa mengetik di kolom reply Threads (huruf kecil santai).
+Utas sebelumnya berjudul: "${story.title}" (Topik: ${story.topic}) dan sedang viral tembus ${story.views} views!
+
+Tugas: Tuliskan SATU (1) balasan susulan santai sebagai problem solver yang menjawab keresahan netizen di thread dengan merekomendasikan solusi: "${story.product_name}" (Link: ${story.product_url}).
+ATURAN SURGE AFFILIATE:
+1. Hubungkan solusi produk secara 100% masuk akal dengan masalah utama cerita.
+2. Gunakan gaya obrolan santai ("btw ada yg nanya solusinya...", "buat yg ngalamin hal serupa, kmrn gue pake ini lumayan ngebantu: [link]").
+3. Panjang: 100 - 220 karakter. Huruf kecil santai.
+4. Output HANYA teks balasan langsung tanpa tanda kutip.
+` : `
 Kamu adalah Kiki Rachmat (@kikipunyacerita), kurator dan warganet di Threads. Bio: "Dialy Life Update | In this economy mau nulis cerita orang-orang aja lah | dm aja yak yg mau share cerita anonimnya".
 DILARANG memanggil diri sendiri "Ki". Tulis layaknya warganet biasa mengetik di kolom reply Threads (huruf kecil santai).
 Utas sebelumnya berjudul: "${story.title}" (Topik: ${story.topic}).

@@ -543,6 +543,13 @@ async function produceCuratedStory(options = null) {
           city: mixed.city || ''
         });
 
+        // HARD VETO ENFORCEMENT: Jika Zura menolak, tolak draf dan regenerasi!
+        if (zuraVerdict && zuraVerdict.isApproved === false) {
+          console.warn(`[EditorialBoard] ⛔ Postingan (${formatType}) diveto oleh Zura: ${zuraVerdict.notes}. Regenerasi draf baru...`);
+          bestMixed = mixed;
+          continue;
+        }
+
         return {
           ...mixed,
           slides: (zuraVerdict && zuraVerdict.slides && zuraVerdict.slides.length > 0) ? zuraVerdict.slides : mixed.slides,
@@ -564,6 +571,11 @@ async function produceCuratedStory(options = null) {
       slides: bestMixed?.slides || [],
       city: bestMixed?.city || ''
     });
+
+    if (zuraVerdict && zuraVerdict.isApproved === false) {
+      console.warn(`[EditorialBoard] ⛔ Iterasi akhir format ${formatType} tetap diveto Zura (${zuraVerdict.notes}). Membatalkan antrean draf rusak.`);
+      throw new Error(`Draf format ${formatType} ditolak Zura karena cacat integritas: ${zuraVerdict.notes}`);
+    }
 
     return {
       ...bestMixed,
@@ -606,9 +618,16 @@ async function produceCuratedStory(options = null) {
         city: draft.city || ''
       });
 
+      // HARD VETO ENFORCEMENT: Jika Zura menolak, jangan biarkan draf cacat tayang!
+      if (zuraVerdict && zuraVerdict.isApproved === false) {
+        console.warn(`[EditorialBoard] ⛔ Draf percobaan ${attempt} diveto oleh Zura: ${zuraVerdict.notes}. Mengulang generasi draf baru...`);
+        lastDraft = draft;
+        continue;
+      }
+
       return {
         ...draft,
-        slides: zuraVerdict.slides || draft.slides,
+        slides: (zuraVerdict && zuraVerdict.slides && zuraVerdict.slides.length > 0) ? zuraVerdict.slides : draft.slides,
         qcScore: qc.total_score,
         qcNotes: `[${qc.provider} + Zura] ${zuraVerdict.notes || qc.curator_note}`
       };
@@ -621,20 +640,25 @@ async function produceCuratedStory(options = null) {
   // Bila attempt 3 masih belum tembus tapi sudah lolos deduplikasi, serahkan ke Zura untuk perombakan final
   console.log('[EditorialBoard] Ambang batas disesuaikan, menyerahkan perombakan ke Zura Gatekeeper...');
   const zuraVerdict = await consultZuraForStory({
-    topic: lastDraft.topic,
-    formatType: lastDraft.format_type || 'story',
-    productName: lastDraft.productName,
-    productUrl: lastDraft.productUrl,
-    slides: lastDraft.slides,
-    city: lastDraft.city || ''
+    topic: lastDraft?.topic || 'obrolan warganet',
+    formatType: lastDraft?.format_type || 'story',
+    productName: lastDraft?.productName,
+    productUrl: lastDraft?.productUrl,
+    slides: lastDraft?.slides || [],
+    city: lastDraft?.city || ''
   });
+
+  if (zuraVerdict && zuraVerdict.isApproved === false) {
+    console.warn(`[EditorialBoard] ⛔ Draf akhir tetap diveto Zura (${zuraVerdict.notes}). Membatalkan antrean draf cacat.`);
+    throw new Error(`Draf cerita ditolak Zura karena cacat integritas: ${zuraVerdict.notes}`);
+  }
 
   return {
     ...lastDraft,
-    slides: zuraVerdict.slides || lastDraft.slides,
+    slides: (zuraVerdict && zuraVerdict.slides && zuraVerdict.slides.length > 0) ? zuraVerdict.slides : lastDraft.slides,
     format_type: 'story_affiliate',
     qcScore: lastQC?.total_score || 7.2,
-    qcNotes: `[Zura-Executive] ${zuraVerdict.notes || lastQC?.curator_note || 'Disempurnakan oleh Zura.'}`
+    qcNotes: `[Zura-Executive] ${zuraVerdict?.notes || lastQC?.curator_note || 'Disempurnakan oleh Zura.'}`
   };
 }
 

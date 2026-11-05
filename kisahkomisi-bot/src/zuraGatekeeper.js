@@ -111,9 +111,11 @@ async function consultZuraForStory(storyData) {
     console.log(`[ZuraGatekeeper] ⚠️ Plot holes ditemukan Zura:`, verdict.logic_flaws);
   }
 
-  // Jika Zura merekomendasikan revisi atau menolak karena cacat logika, gunakan revised_slides Zura!
-  if ((verdict.recommended_action === 'USE_REVISED' || !verdict.is_approved) && Array.isArray(verdict.revised_slides) && verdict.revised_slides.length >= 2) {
-    console.log(`[ZuraGatekeeper] ✨ Menggunakan versi naskah yang sudah dirombak total oleh Zura agar 100% logis dan manusiawi.`);
+  const hasRevisedSlides = Array.isArray(verdict.revised_slides) && verdict.revised_slides.length >= 1;
+
+  // Jika Zura merekomendasikan revisi atau menolak karena cacat logika, gunakan revised_slides Zura jika ada!
+  if (verdict.recommended_action === 'USE_REVISED' && hasRevisedSlides) {
+    console.log(`[ZuraGatekeeper] ✨ Menggunakan versi naskah yang sudah dirombak total oleh Zura (${verdict.revised_slides.length} slide).`);
     return {
       isApproved: true,
       slides: verdict.revised_slides,
@@ -122,9 +124,29 @@ async function consultZuraForStory(storyData) {
     };
   }
 
+  // Jika Zura menolak keras dan tidak ada naskah revisi yang valid, VETO TOTAL!
+  if (verdict.is_approved === false || verdict.recommended_action === 'REJECT') {
+    if (hasRevisedSlides) {
+      console.log(`[ZuraGatekeeper] ✨ Draf awal ditolak, tapi Zura menyediakan naskah revisi valid. Menggunakan revisi Zura.`);
+      return {
+        isApproved: true,
+        slides: verdict.revised_slides,
+        notes: verdict.critique || 'Draf awal ditolak, diganti revisi Zura',
+        logicFlaws: verdict.logic_flaws || []
+      };
+    }
+    console.warn(`[ZuraGatekeeper] ⛔ Zura MEM-VETO draf cerita (tanpa revisi otomatis). Draf ditolak demi menjaga reputasi akun!`);
+    return {
+      isApproved: false,
+      slides: storyData.slides,
+      notes: verdict.critique || 'Ditolak total oleh Zura (Cacat Logika/Hitung)',
+      logicFlaws: verdict.logic_flaws || []
+    };
+  }
+
   return {
-    isApproved: verdict.is_approved !== false,
-    slides: (verdict.revised_slides && verdict.revised_slides.length >= 2) ? verdict.revised_slides : storyData.slides,
+    isApproved: true,
+    slides: hasRevisedSlides ? verdict.revised_slides : storyData.slides,
     notes: verdict.critique || 'Disetujui Zura',
     logicFlaws: verdict.logic_flaws || []
   };
@@ -157,17 +179,20 @@ async function consultZuraForReply(replyData) {
 }
 
 /**
- * Konsultasi & Pembuatan Thread Bumper Susulan ke Zura
- * @param {Object} bumpData - { postTitle, topic, rootPart, lastPart }
+ * Konsultasi & Pembuatan Thread Bumper Susulan ke Zura (Mendukung Surge Affiliate)
+ * @param {Object} bumpData - { postTitle, topic, rootPart, lastPart, views, productName, productUrl }
  * @returns {Promise<string|null>} teks bumper spontan yang disetujui Zura
  */
 async function consultZuraForBump(bumpData) {
-  console.log(`[ZuraGatekeeper] 🧵 Meminta Zura menyusun update susulan organik untuk thread: "${bumpData.postTitle}"...`);
+  console.log(`[ZuraGatekeeper] 🧵 Meminta Zura menyusun update susulan (${bumpData.views || 0} views) untuk: "${bumpData.postTitle}"...`);
   const payload = {
     post_title: bumpData.postTitle || '',
     topic: bumpData.topic || '',
     root_part: bumpData.rootPart || '',
-    last_part: bumpData.lastPart || ''
+    last_part: bumpData.lastPart || '',
+    views: Number(bumpData.views || 0),
+    product_name: bumpData.productName || '',
+    product_url: bumpData.productUrl || ''
   };
 
   const verdict = await invokeZuraCLI('--bump', payload);
@@ -179,10 +204,31 @@ async function consultZuraForBump(bumpData) {
   return verdict.bump_text;
 }
 
+/**
+ * Mengirimkan laporan performa riil postingan ke Zura (Closed Feedback Loop)
+ * @param {Object} outcomeData - { storyId, title, views, likes, replies, formatType }
+ */
+async function reportStoryOutcome(outcomeData) {
+  try {
+    const payload = {
+      story_id: outcomeData.storyId,
+      title: outcomeData.title,
+      views: Number(outcomeData.views || 0),
+      likes: Number(outcomeData.likes || 0),
+      replies: Number(outcomeData.replies || 0),
+      format_type: outcomeData.formatType || 'story'
+    };
+    await invokeZuraCLI('--feedback', payload);
+  } catch (e) {
+    // Non-blocking telemetry
+  }
+}
+
 module.exports = {
   consultZuraForStory,
   consultZuraForReply,
   consultZuraForBump,
+  reportStoryOutcome,
   resolveZuraEnv
 };
 
