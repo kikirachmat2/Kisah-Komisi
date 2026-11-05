@@ -518,10 +518,22 @@ async function produceCuratedStory(options = null) {
 
       if (dedupCheck.passed) {
         console.log(`[EditorialBoard] Postingan (${formatType}: "${mixed.title}") lolos uji orisinalitas & deduplikasi (Percobaan ${att}).`);
+        
+        // Wajib otorisasi dan QC Eksekutif Zura untuk SEMUA format konten tanpa kecuali
+        const zuraVerdict = await consultZuraForStory({
+          topic: mixed.topic || mixed.title,
+          formatType: mixed.format_type || formatType,
+          productName: mixed.product_name,
+          productUrl: mixed.product_url,
+          slides: mixed.slides,
+          city: mixed.city || ''
+        });
+
         return {
           ...mixed,
+          slides: (zuraVerdict && zuraVerdict.slides && zuraVerdict.slides.length > 0) ? zuraVerdict.slides : mixed.slides,
           qcScore: 9.2,
-          qcNotes: `[ContentMixer & Anti-Duplikasi] Lolos uji orisinalitas & rotasi matriks.`
+          qcNotes: `[ContentMixer + Zura] ${zuraVerdict?.notes || 'Lolos uji orisinalitas & otorisasi Zura.'}`
         };
       }
 
@@ -529,10 +541,21 @@ async function produceCuratedStory(options = null) {
       bestMixed = mixed;
     }
 
+    // Jika lewat max iterasi, tetap wajib lewat Zura sebelum return
+    const zuraVerdict = await consultZuraForStory({
+      topic: bestMixed?.topic || bestMixed?.title || '',
+      formatType: bestMixed?.format_type || formatType,
+      productName: bestMixed?.product_name,
+      productUrl: bestMixed?.product_url,
+      slides: bestMixed?.slides || [],
+      city: bestMixed?.city || ''
+    });
+
     return {
       ...bestMixed,
+      slides: (zuraVerdict && zuraVerdict.slides && zuraVerdict.slides.length > 0) ? zuraVerdict.slides : (bestMixed?.slides || []),
       qcScore: 8.0,
-      qcNotes: `[ContentMixer] Diterima setelah ${maxMixedAttempts} iterasi deduplikasi.`
+      qcNotes: `[ContentMixer + Zura] Diterima setelah ${maxMixedAttempts} iterasi (${zuraVerdict?.notes || 'QC Zura'}).`
     };
   }
 

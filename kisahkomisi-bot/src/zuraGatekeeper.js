@@ -60,7 +60,7 @@ function invokeZuraCLI(mode, payload) {
 
     const payloadStr = JSON.stringify(payload);
     execFile(pythonBin, [scriptPath, mode, payloadStr], {
-      timeout: 25000,
+      timeout: 35000,
       maxBuffer: 1024 * 1024
     }, (error, stdout, stderr) => {
       if (error) {
@@ -147,8 +147,9 @@ async function consultZuraForReply(replyData) {
   };
 
   const verdict = await invokeZuraCLI('--reply', payload);
-  if (!verdict || !verdict.approved_reply) {
-    return replyData.draftReply;
+  if (!verdict || !verdict.approved_reply || verdict.is_relevant === false) {
+    console.warn(`[ZuraGatekeeper] ⚠️ Zura menolak balasan komentar (tidak relevan / AI offline). Membatalkan balasan demi integritas konten.`);
+    return null;
   }
 
   console.log(`[ZuraGatekeeper] 🎯 Zura menyetujui balasan kontekstual: "${verdict.approved_reply}"`);
