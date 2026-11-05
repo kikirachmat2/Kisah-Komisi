@@ -12,6 +12,15 @@ const { execFile } = require('child_process');
 const fs = require('fs');
 const path = require('path');
 
+let supabaseFleet = null;
+try {
+  supabaseFleet = require('./supabaseFleet');
+  supabaseFleet.startHeartbeat(60000);
+} catch (e) {
+  // Graceful fallback if pg or supabaseFleet is missing
+}
+
+
 // Kandidat path Python virtualenv Zura
 const CANDIDATE_PYTHONS = [
   '/home/ubuntu/zura-core/venv/bin/python3',
@@ -86,6 +95,20 @@ function invokeZuraCLI(mode, payload) {
  */
 async function consultZuraForStory(storyData) {
   console.log(`[ZuraGatekeeper] 🧐 Menyerahkan draf cerita ke Zura untuk QC Eksekutif...`);
+
+  // 1. Stage ke Supabase (Fleet Cloud Hub)
+  let stagingId = null;
+  if (supabaseFleet) {
+    try {
+      stagingId = await supabaseFleet.stageThreadsPost(storyData);
+      if (stagingId) {
+        console.log(`[ZuraGatekeeper] ☁️ Draf berhasil distage di Supabase (ID: ${stagingId}).`);
+      }
+    } catch (e) {
+      console.warn(`[ZuraGatekeeper] Gagal stage draf ke Supabase: ${e.message}`);
+    }
+  }
+
   const payload = {
     topic: storyData.topic || '',
     format_type: storyData.formatType || 'story',
@@ -98,6 +121,9 @@ async function consultZuraForStory(storyData) {
   const verdict = await invokeZuraCLI('--story', payload);
   if (!verdict) {
     console.warn('[ZuraGatekeeper] Zura tidak merespons, fallback ke draf original.');
+    if (supabaseFleet && stagingId) {
+      supabaseFleet.updateStagingVerdict(stagingId, true, 'Zura offline fallback', storyData.slides).catch(() => {});
+    }
     return {
       isApproved: true,
       slides: storyData.slides,
@@ -116,6 +142,9 @@ async function consultZuraForStory(storyData) {
   // Jika Zura merekomendasikan revisi atau menolak karena cacat logika, gunakan revised_slides Zura jika ada!
   if (verdict.recommended_action === 'USE_REVISED' && hasRevisedSlides) {
     console.log(`[ZuraGatekeeper] ✨ Menggunakan versi naskah yang sudah dirombak total oleh Zura (${verdict.revised_slides.length} slide).`);
+    if (supabaseFleet && stagingId) {
+      supabaseFleet.updateStagingVerdict(stagingId, true, verdict.critique || 'Dirombak oleh Zura', verdict.revised_slides).catch(() => {});
+    }
     return {
       isApproved: true,
       slides: verdict.revised_slides,
@@ -128,6 +157,9 @@ async function consultZuraForStory(storyData) {
   if (verdict.is_approved === false || verdict.recommended_action === 'REJECT') {
     if (hasRevisedSlides) {
       console.log(`[ZuraGatekeeper] ✨ Draf awal ditolak, tapi Zura menyediakan naskah revisi valid. Menggunakan revisi Zura.`);
+      if (supabaseFleet && stagingId) {
+        supabaseFleet.updateStagingVerdict(stagingId, true, verdict.critique || 'Diganti revisi Zura', verdict.revised_slides).catch(() => {});
+      }
       return {
         isApproved: true,
         slides: verdict.revised_slides,
@@ -136,12 +168,19 @@ async function consultZuraForStory(storyData) {
       };
     }
     console.warn(`[ZuraGatekeeper] ⛔ Zura MEM-VETO draf cerita (tanpa revisi otomatis). Draf ditolak demi menjaga reputasi akun!`);
+    if (supabaseFleet && stagingId) {
+      supabaseFleet.updateStagingVerdict(stagingId, false, verdict.critique || 'Ditolak total oleh Zura', storyData.slides).catch(() => {});
+    }
     return {
       isApproved: false,
       slides: storyData.slides,
       notes: verdict.critique || 'Ditolak total oleh Zura (Cacat Logika/Hitung)',
       logicFlaws: verdict.logic_flaws || []
     };
+  }
+
+  if (supabaseFleet && stagingId) {
+    supabaseFleet.updateStagingVerdict(stagingId, true, verdict.critique || 'Disetujui Zura', hasRevisedSlides ? verdict.revised_slides : storyData.slides).catch(() => {});
   }
 
   return {
@@ -218,6 +257,17 @@ async function reportStoryOutcome(outcomeData) {
       replies: Number(outcomeData.replies || 0),
       format_type: outcomeData.formatType || 'story'
     };
+
+    // Sync to Supabase
+    if (supabaseFleet) {
+      supabaseFleet.updatePostMetrics(
+        payload.story_id,
+        payload.views,
+        payload.likes,
+        payload.replies
+      ).catch(() => {});
+    }
+
     await invokeZuraCLI('--feedback', payload);
   } catch (e) {
     // Non-blocking telemetry
