@@ -28,6 +28,10 @@ const {
 const { runAutoEngagementScan } = require('./autoReplyEngine');
 const { executeThreadBump } = require('./threadBumper');
 const { executeHotTake } = require('./hotTakesEngine');
+const { executeDatabaseBackup } = require('./backupManager');
+const { isSupabaseConfigured, syncStoriesToSupabase, generateSupabaseSchemaSql } = require('./supabaseSync');
+const { processShopeeConversionReport } = require('./shopeeReconciler');
+const { generateFinancialCardSvg, saveFinancialCard } = require('./cardGenerator');
 
 const token = process.env.BOT_TOKEN;
 const THREADS_USERNAME = process.env.THREADS_USERNAME || 'kikipunyacerita';
@@ -152,33 +156,8 @@ function sanitizeStoryBeforePublish(story) {
 
 // Kirim backup file database SQLite ke Telegram War Room Group
 async function sendDatabaseBackup(targetChatId = null) {
-  const chatId = targetChatId || process.env.TELEGRAM_GROUP_CHAT_ID || '-5329037538';
-
-  if (!chatId) {
-    console.log('[Backup] Tidak ada chatId untuk mengirim backup.');
-    return false;
-  }
-
-  const dbFile = db.getDbPath();
-  if (!fs.existsSync(dbFile)) {
-    console.warn('[Backup] File database tidak ditemukan di path:', dbFile);
-    return false;
-  }
-
-  const now = new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19);
-  try {
-    await bot.telegram.sendDocument(chatId, {
-      source: dbFile,
-      filename: `kisahkomisi-backup-${now}.db`
-    }, {
-      caption: `💾 *Backup Database Otomatis Kisah Komisi*\n📅 ${new Date().toLocaleString('id-ID', { timeZone: 'Asia/Jakarta' })} WIB\nFile ini berisi seluruh antrean cerita, histori komisi, dan data produk affiliate.`
-    });
-    console.log('[Backup] Database berhasil dikirim ke Telegram.');
-    return true;
-  } catch (e) {
-    console.error('[Backup] Gagal mengirim database:', e.message);
-    return false;
-  }
+  const res = await executeDatabaseBackup(bot, targetChatId);
+  return res.success;
 }
 
 // Command: /start & /help
@@ -299,10 +278,124 @@ bot.command('hapus_post', async (ctx) => {
 
 // Command: /backup
 bot.command('backup', async (ctx) => {
-  await ctx.reply('⏳ Menyiapkan file backup database SQLite...');
-  const success = await sendDatabaseBackup(ctx.chat.id);
-  if (!success) {
-    ctx.reply('❌ Gagal membuat backup database. Silakan periksa log server.');
+  await ctx.reply('⏳ Menyiapkan file backup terkompresi database SQLite (Kisah Komisi & Zura)...');
+  const res = await executeDatabaseBackup(bot, ctx.chat.id);
+  if (!res.success) {
+    ctx.reply(`❌ Gagal membuat backup database: ${res.error || res.reason}`);
+  }
+});
+
+// Command: /circuit (Cek status Meta API Circuit Breaker)
+bot.command('circuit', (ctx) => {
+  const status = db.getMetaCircuitBreakerStatus();
+  if (status.active) {
+    ctx.replyWithMarkdown(
+      `🚨 *META CIRCUIT BREAKER: AKTIF (PAUSED)*\n\n` +
+      `• *Sisa Waktu*: ${status.remainingMinutes} menit lagi\n` +
+      `• *Berlaku Sampai*: ${status.until}\n` +
+      `• *Penyebab*: \`${status.reason}\`\n\n` +
+      `_Sistem menahan postingan dan auto-reply agar akun tidak terkena shadowban Meta._\n` +
+      `Ketik \`/reset_circuit\` jika ingin membuka paksa.`
+    );
+  } else {
+    ctx.replyWithMarkdown(`🟢 *META CIRCUIT BREAKER: NORMAL*\n\nTidak ada batasan rate limit atau spam block dari Meta Threads.`);
+  }
+});
+
+// Command: /reset_circuit (Buka kunci paksa)
+bot.command('reset_circuit', (ctx) => {
+  db.clearMetaCircuitBreaker();
+  ctx.reply('✅ Meta Circuit Breaker berhasil di-reset. Seluruh operasi normal kembali.');
+});
+
+// Command: /sync_supabase
+bot.command('sync_supabase', async (ctx) => {
+  await ctx.reply('⏳ Memeriksa koneksi & sinkronisasi Supabase Cloud...');
+  const res = await syncStoriesToSupabase(30);
+  if (!res.configured) {
+    ctx.replyWithMarkdown(
+      `ℹ️ *SUPABASE BELUM DIKONFIGURASI*\n\n` +
+      `Untuk menghubungkan Web Studio / Cloud PostgreSQL:\n` +
+      `1. Buat project baru di [supabase.com](https://supabase.com)\n` +
+      `2. Buka SQL Editor & jalankan query schema.\n` +
+      `3. Isi \`SUPABASE_URL\` & \`SUPABASE_KEY\` di file \`.env\`.\n\n` +
+      `Ketik \`/supabase_schema\` untuk melihat script SQL DDL-nya.`
+    );
+  } else if (res.success === false) {
+    ctx.reply(`⚠️ Gagal sync ke Supabase: ${res.error}`);
+  } else {
+    ctx.replyWithMarkdown(`✅ *Sinkronisasi Supabase Sukses!*\n\n• ${res.syncedCount} postingan berhasil di-mirror ke cloud.\n• Waktu: ${res.syncedAt}`);
+  }
+});
+
+// Command: /supabase_schema
+bot.command('supabase_schema', (ctx) => {
+  const sql = generateSupabaseSchemaSql();
+  ctx.replyWithMarkdown(`📋 *SUPABASE POSTGRESQL DDL:*\n\`\`\`sql\n${sql}\n\`\`\``);
+});
+
+// Command: /card_preview (Uji coba kartu visual SVG)
+bot.command('card_preview', async (ctx) => {
+  try {
+    const cardRes = saveFinancialCard({
+      title: 'Realita Gaji 6jt di Jakpus',
+      salaryText: 'Gaji Bersih Rp 6.000.000 / Bulan',
+      city: 'Jakarta Pusat',
+      items: [
+        { label: 'Kosan & Listrik', amount: 'Rp 1.800.000', pct: 30 },
+        { label: 'Makan & Minum', amount: 'Rp 2.000.000', pct: 33 },
+        { label: 'Transport KRL/Ojol', amount: 'Rp 500.000', pct: 8 },
+        { label: 'Kirim Orang Tua', amount: 'Rp 1.000.000', pct: 17 },
+        { label: 'Sisa Tabungan / Darurat', amount: 'Rp 700.000', pct: 12 }
+      ],
+      dilemaNote: 'Sisa 700rb buat bertahan hidup atau masih bisa mikirin investasi?'
+    });
+
+    await ctx.replyWithDocument({
+      source: cardRes.path,
+      filename: 'financial_breakdown_card.svg'
+    }, {
+      caption: '🎨 *Visual Card Preview (1080x1080)*\nFormat kartu grafis siap pakai untuk Carousel Meta Threads.'
+    });
+  } catch (e) {
+    ctx.reply(`❌ Gagal render visual card: ${e.message}`);
+  }
+});
+
+// Upload listener: Dokumen CSV Shopee Affiliate Report
+bot.on('document', async (ctx) => {
+  const doc = ctx.message.document;
+  const fileName = (doc.file_name || '').toLowerCase();
+
+  if (fileName.endsWith('.csv')) {
+    await ctx.reply(`📊 Mendeteksi file CSV: \`${doc.file_name}\`. Mengunduh & memproses rekonsiliasi komisi Shopee...`);
+    try {
+      const link = await ctx.telegram.getFileLink(doc.file_id);
+      const res = await fetch(link.href);
+      const text = await res.text();
+      const report = processShopeeConversionReport(text);
+
+      if (!report.success) {
+        return ctx.reply(`⚠️ Gagal proses laporan: ${report.reason}`);
+      }
+
+      let summary = `🎉 *REKONSILIASI SHOPEE AFFILIATE SUKSES!*\n\n`;
+      summary += `• *Total Transaksi*: ${report.totalOrders} pesanan\n`;
+      summary += `• *Pesanan Selesai*: ${report.completedOrders} pesanan\n`;
+      summary += `• *Total Komisi Cair*: *Rp ${report.totalCommissionIdr.toLocaleString('id-ID')}*\n`;
+      if (report.pendingCommissionIdr > 0) {
+        summary += `• *Komisi Pending*: Rp ${report.pendingCommissionIdr.toLocaleString('id-ID')}\n`;
+      }
+      summary += `\n🏆 *Top 3 Produk Penghasil Cuan:*\n`;
+      report.topProducts.slice(0, 3).forEach((p, idx) => {
+        summary += `${idx + 1}. *${p.name}* -> Rp ${p.commission.toLocaleString('id-ID')}\n`;
+      });
+      summary += `\n_Data komisi berhasil diserap ke memori analitik!_`;
+
+      await safeReplyMarkdown(ctx, summary);
+    } catch (e) {
+      ctx.reply(`❌ Gagal membaca dokumen CSV: ${e.message}`);
+    }
   }
 });
 
@@ -1655,6 +1748,22 @@ cron.schedule('0 4 * * *', async () => {
     }
   } catch (err) {
     console.error('[Patrol] Gagal audit link:', err.message);
+  }
+}, {
+  scheduled: true,
+  timezone: 'Asia/Jakarta'
+});
+
+// ==========================================
+// 📦 AUTOMATED REMOTE DATABASE BACKUP (Tiap Hari jam 04:15 WIB)
+// Mengompresi SQLite DB & mengunggah langsung ke Telegram War Room Group
+// ==========================================
+cron.schedule('15 4 * * *', async () => {
+  console.log('[Scheduler] Menjalankan automated daily backup database ke Telegram...');
+  try {
+    await executeDatabaseBackup(bot);
+  } catch (err) {
+    console.error('[Scheduler] Gagal auto-backup database:', err.message);
   }
 }, {
   scheduled: true,

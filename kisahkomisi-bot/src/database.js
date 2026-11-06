@@ -951,5 +951,51 @@ module.exports = {
     `).run(newViews, newLikes, newReplies, avgViews, avgReplies, nicheTag);
   },
 
+  // Meta Threads Adaptive Circuit Breaker Helpers
+  isMetaCircuitBreakerActive: () => {
+    const until = db.prepare(`SELECT value FROM app_settings WHERE key = 'META_CIRCUIT_BREAKER_UNTIL'`).get();
+    if (!until || !until.value) return false;
+    const expiry = new Date(until.value).getTime();
+    if (Date.now() < expiry) {
+      return true;
+    }
+    // Expired, auto clear
+    db.prepare(`DELETE FROM app_settings WHERE key = 'META_CIRCUIT_BREAKER_UNTIL'`).run();
+    return false;
+  },
+
+  getMetaCircuitBreakerStatus: () => {
+    const until = db.prepare(`SELECT value FROM app_settings WHERE key = 'META_CIRCUIT_BREAKER_UNTIL'`).get();
+    const reason = db.prepare(`SELECT value FROM app_settings WHERE key = 'META_CIRCUIT_BREAKER_REASON'`).get();
+    if (!until || !until.value) return { active: false };
+    const expiry = new Date(until.value).getTime();
+    const remainingMinutes = Math.max(0, Math.round((expiry - Date.now()) / 60000));
+    return {
+      active: Date.now() < expiry,
+      until: until.value,
+      remainingMinutes,
+      reason: reason?.value || 'Rate limit / Meta API safety trip'
+    };
+  },
+
+  tripMetaCircuitBreaker: (reason = 'Meta rate limit / spam detection', durationMinutes = 120) => {
+    const expiryDate = new Date(Date.now() + durationMinutes * 60 * 1000).toISOString();
+    db.prepare(`
+      INSERT INTO app_settings (key, value, updated_at) VALUES ('META_CIRCUIT_BREAKER_UNTIL', ?, CURRENT_TIMESTAMP)
+      ON CONFLICT(key) DO UPDATE SET value = excluded.value, updated_at = CURRENT_TIMESTAMP
+    `).run(expiryDate);
+    db.prepare(`
+      INSERT INTO app_settings (key, value, updated_at) VALUES ('META_CIRCUIT_BREAKER_REASON', ?, CURRENT_TIMESTAMP)
+      ON CONFLICT(key) DO UPDATE SET value = excluded.value, updated_at = CURRENT_TIMESTAMP
+    `).run(reason);
+    console.warn(`[CircuitBreaker] 🚨 Meta Circuit Breaker TRIPPED for ${durationMinutes}m! Reason: ${reason}`);
+    return { expiryDate, durationMinutes, reason };
+  },
+
+  clearMetaCircuitBreaker: () => {
+    db.prepare(`DELETE FROM app_settings WHERE key IN ('META_CIRCUIT_BREAKER_UNTIL', 'META_CIRCUIT_BREAKER_REASON')`).run();
+    console.log('[CircuitBreaker] 🟢 Meta Circuit Breaker cleared. System normal.');
+  },
+
   getDbPath: () => dbPath
 };

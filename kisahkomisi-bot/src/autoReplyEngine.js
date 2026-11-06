@@ -154,8 +154,14 @@ function sanitizeReply(text) {
  */
 function detectCommentArchetype(text) {
   const lower = (text || '').toLowerCase();
-  
-  if (/ujung.*(jualan|promo|shopee|iklan)|jualan mulu|promo mulu|spill link|affiliate|sales|dagang|nyari komisi|dapat komisi/i.test(lower)) {
+
+  // 1. BUYING INTENT / PRODUCT INQUIRY (Prioritas Tertinggi: Calon Pembeli Aktif)
+  if (/beli\s*di\s*mana|spill\s*(link|toko|produk|barang|merk)|link(nya)?\s*(dong|mana|kak|bang|min|ada)|ada\s*link(nya)?|minta\s*link|merk\s*apa|nama\s*(produk|barang|toko)nya|checkout\s*di\s*mana|rekomendasi\s*link/i.test(lower)) {
+    return 'PRODUCT_INQUIRY';
+  }
+
+  // 2. AFFILIATE CRITIC (Sinis/nyindir jualan)
+  if (/ujung.*(jualan|promo|shopee|iklan)|jualan\s*mulu|promo\s*mulu|sales|dagang|nyari\s*komisi|dapat\s*komisi|iklan\s*terselubung/i.test(lower)) {
     return 'AFFILIATE_CRITIC';
   }
 
@@ -191,12 +197,18 @@ function detectCommentArchetype(text) {
  * 2. SPONTANEOUS BANTER: Tanggapi dengan celetukan pendek, tawa getir, atau afirmasi (5-14 kata).
  * 3. DILARANG MENGAKU BOT, AI, ATAU FIKSI!
  */
-async function generateEngagementReply(storyTitle, netizenComment, authorUsername) {
+async function generateEngagementReply(storyTitle, netizenComment, authorUsername, productInfo = null) {
   if (!netizenComment || !authorUsername) return null;
 
   const archetype = detectCommentArchetype(netizenComment);
   let archetypeGuideline = '';
   switch (archetype) {
+    case 'PRODUCT_INQUIRY':
+      if (productInfo && productInfo.url) {
+        return `kemarin gue checkout di toko resminya di sini kak: ${productInfo.url}`;
+      }
+      archetypeGuideline = 'Netizen bertanya link/toko/merk produk yang dibahas. Jawab santai dan ramah khas anak tongkrongan yang ngasih rekomendasi jujur.';
+      break;
     case 'AFFILIATE_CRITIC':
       archetypeGuideline = 'Netizen sinis/nyindir "ujung-ujungnya jualan/promo Shopee/affiliate". Bales cuek santai tapi gak songong, jujur butuh duit khas Kiki budak media & sandwich gen (contoh: "ya maap butuh duit wkwk", "namanya juga anak rantau bang butuh nambah bayar kosan wkwk", "ya maap namanya juga usaha cari sesuap nasi wkwk"). DILARANG marah, songong, atau defensif!';
       break;
@@ -389,9 +401,9 @@ async function runAutoEngagementScan(userId) {
     return { repliedCount: 0, scannedPosts: 0, reason: 'daily_limit' };
   }
 
-  // Ambil postingan yang tayang dalam 48 jam terakhir lengkap dengan kontennya
+  // Ambil postingan yang tayang dalam 48 jam terakhir lengkap dengan konten & metadata produk
   const recentStories = db.db.prepare(`
-    SELECT id, title, topic, slides_json, threads_media_id, published_at
+    SELECT id, title, topic, slides_json, product_name, product_url, threads_media_id, published_at
     FROM stories 
     WHERE status = 'published' AND threads_media_id IS NOT NULL
       AND published_at >= datetime('now', '-48 hours')
@@ -441,15 +453,16 @@ async function runAutoEngagementScan(userId) {
       .map(comment => {
         const archetype = detectCommentArchetype(comment.text);
         let score = 0;
-        // Bobot prioritas arketipe: Auditor & Curhat paling memicu viralitas
-        if (archetype === 'AUDITOR_EXPENSE') score += 15;
+        // Bobot prioritas arketipe: PRODUCT_INQUIRY paling tinggi karena prospek cuan langsung!
+        if (archetype === 'PRODUCT_INQUIRY') score += 40;
+        else if (archetype === 'AUDITOR_EXPENSE') score += 15;
         else if (archetype === 'CURHAT_SHARING') score += 12;
         else if (archetype === 'ASK_LOCATION') score += 10;
         else if (archetype === 'SOCIAL_DILEMMA') score += 8;
         else score += 3;
 
-        // Komentar dengan panjang proporsional (25 - 200 karakter) adalah rentang emas diskusi
-        if (comment.text.length >= 25 && comment.text.length <= 200) score += 5;
+        // Komentar dengan panjang proporsional (10 - 200 karakter)
+        if (comment.text.length >= 10 && comment.text.length <= 200) score += 5;
 
         return { ...comment, archetype, score };
       })
@@ -470,16 +483,32 @@ async function runAutoEngagementScan(userId) {
         }
       } catch (e) {}
 
-      const draftReply = await generateEngagementReply(story.title, comment.text, comment.username);
+      let replyText = null;
 
-      // 5b. Otorisasi Eksekutif Zura: Pastikan 100% kontekstual, nyambung, dan bebas template bot
-      const replyText = await consultZuraForReply({
-        postTitle: story.title,
-        postContent: postContent,
-        commenter: comment.username,
-        commentText: comment.text,
-        draftReply: draftReply || ''
-      });
+      // Jika warganet bertanya link produk (Buying Intent) dan postingan punya metadata produk Shopee:
+      if (comment.archetype === 'PRODUCT_INQUIRY' && story.product_url) {
+        console.log(`[AutoReply] 🛍️ Closing Affiliate Aktif! Menjawab pertanyaan link dari @${comment.username}...`);
+        const closingOptions = [
+          `kemarin gue belinya di official store ini kak, mumpung dapet diskon ongkir: ${story.product_url}`,
+          `ini link produk yang kemarin gue pake kak, awet bgt barangnya: ${story.product_url}`,
+          `beli di toko ini kak kemarin, pengirimannya cepet bgt: ${story.product_url}`
+        ];
+        replyText = closingOptions[Math.floor(Math.random() * closingOptions.length)];
+      } else {
+        const draftReply = await generateEngagementReply(story.title, comment.text, comment.username, {
+          name: story.product_name,
+          url: story.product_url
+        });
+
+        // 5b. Otorisasi Eksekutif Zura: Pastikan 100% kontekstual, nyambung, dan bebas template bot
+        replyText = await consultZuraForReply({
+          postTitle: story.title,
+          postContent: postContent,
+          commenter: comment.username,
+          commentText: comment.text,
+          draftReply: draftReply || ''
+        });
+      }
 
       if (!replyText) continue;
 

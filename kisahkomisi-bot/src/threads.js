@@ -63,6 +63,12 @@ async function waitForContainerFinished(containerId, accessToken, maxAttempts = 
  * Jika replyToId diisi, post akan menjadi REPLY di bawah post tersebut.
  */
 async function publishTextPost(userId, accessToken, text, replyToId = null, topicTag = null) {
+  // 0. Cek Adaptive Meta Circuit Breaker (Anti-Shadowban & Anti-Rate-Limit)
+  if (db.isMetaCircuitBreakerActive()) {
+    const status = db.getMetaCircuitBreakerStatus();
+    throw new Error(`[CircuitBreaker] Meta API sedang di-pause selama ${status.remainingMinutes} menit lagi untuk mencegah shadowban. Alasan: ${status.reason}`);
+  }
+
   // Selalu prioritaskan token aktif di DB (hasil auto-refresh)
   const tokenToUse = getActiveAccessToken() || accessToken;
   if (!tokenToUse) {
@@ -110,12 +116,22 @@ async function publishTextPost(userId, accessToken, text, replyToId = null, topi
         break;
       }
 
-      // Deteksi error fatal Meta (190: Auth/Token, 200: Permission, 368: Spam/Block)
+      // Deteksi error fatal Meta & Rate Limits / Spam Blocks
       if (resJson.error) {
         const code = resJson.error.code;
         const subcode = resJson.error.error_subcode;
         const msg = resJson.error.message || 'Unknown Meta API error';
-        if (code === 190 || code === 200 || code === 368) {
+
+        // Code 4, 17, 32, 613: Rate Limit. Code 368: Spam Block. HTTP 429.
+        if (code === 4 || code === 17 || code === 32 || code === 368 || code === 613 || containerRes.status === 429) {
+          const tripDuration = code === 368 ? 360 : 120;
+          db.tripMetaCircuitBreaker(`Meta API limit/block [${code}]: ${msg}`, tripDuration);
+          const fatalErr = new Error(`Meta Circuit Breaker Tripped [${code}]: ${msg}`);
+          fatalErr.metaCode = code;
+          throw fatalErr;
+        }
+
+        if (code === 190 || code === 200) {
           const fatalErr = new Error(`Meta API Fatal Error [${code}${subcode ? '/' + subcode : ''}]: ${msg}`);
           fatalErr.metaCode = code;
           fatalErr.metaSubcode = subcode;
