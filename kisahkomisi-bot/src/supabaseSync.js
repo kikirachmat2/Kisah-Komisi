@@ -143,9 +143,33 @@ async function syncStoriesToSupabase(limit = 20) {
       throw new Error(`Supabase REST Error (${res.status}): ${errText}`);
     }
 
+    // Sync insights as well
+    const insightsPayload = stories.filter(s => s.views > 0 || s.likes > 0 || s.replies > 0).map(s => ({
+      story_id: s.id,
+      threads_media_id: s.threads_media_id,
+      views: s.views,
+      likes: s.likes,
+      replies: s.replies
+    }));
+
+    if (insightsPayload.length > 0) {
+      const insEndpoint = `${SUPABASE_URL.replace(/\/+$/, '')}/rest/v1/story_insights?on_conflict=story_id`;
+      await fetch(insEndpoint, {
+        method: 'POST',
+        headers: {
+          'apikey': SUPABASE_KEY,
+          'Authorization': `Bearer ${SUPABASE_KEY}`,
+          'Content-Type': 'application/json',
+          'Prefer': 'resolution=merge-duplicates'
+        },
+        body: JSON.stringify(insightsPayload)
+      });
+    }
+
     return {
       configured: true,
       syncedCount: payload.length,
+      insightsSynced: insightsPayload.length,
       syncedAt: new Date().toISOString()
     };
   } catch (err) {

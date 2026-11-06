@@ -1617,6 +1617,9 @@ async function executeScheduledPosting(slotTime, label, slotNumber = null) {
         `🔗 [Buka Postingan Threads](${permalink})\n` +
         `Akun: *@${THREADS_USERNAME}*`
       );
+
+      // Auto shadow sync to Supabase Cloud
+      syncStoriesToSupabase(20).catch(se => console.warn('[Scheduler] Supabase auto-sync failed:', se.message));
     } catch (err) {
       console.error(`[Scheduler] Gagal posting konten #${story.id} (${story.title}) slot ${label}:`, err.message);
       db.markStoryFailed(story.id, err.message);
@@ -1794,6 +1797,8 @@ cron.schedule('0 21 * * *', async () => {
     await analyzePerformanceAndStrategize();
     const report = await generateInsightReportMarkdown();
     await sendAdminAlert(report);
+    // Auto shadow sync to Supabase Cloud
+    await syncStoriesToSupabase(50).catch(se => console.warn('[Scheduler] Supabase auto-sync failed:', se.message));
   } catch (err) {
     console.error('[Scheduler] Gagal sync insights harian:', err.message);
   }
