@@ -9,8 +9,11 @@
 
 const db = require('./database');
 
-const SUPABASE_URL = process.env.SUPABASE_URL || '';
-const SUPABASE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_KEY || process.env.SUPABASE_ANON_KEY || '';
+function getSupabaseConfig() {
+  const url = process.env.SUPABASE_URL || '';
+  const key = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_KEY || process.env.SUPABASE_ANON_KEY || '';
+  return { url, key };
+}
 
 /**
  * Menghasilkan SQL Schema DDL untuk Supabase Studio (SQL Editor)
@@ -74,14 +77,16 @@ CREATE INDEX IF NOT EXISTS idx_story_insights_views ON story_insights(views DESC
  * Memeriksa kesiapan koneksi Supabase
  */
 function isSupabaseConfigured() {
-  return Boolean(SUPABASE_URL && SUPABASE_KEY);
+  const { url, key } = getSupabaseConfig();
+  return Boolean(url && key);
 }
 
 /**
  * Sinkronisasi data SQLite ke Supabase Cloud via REST API
  */
 async function syncStoriesToSupabase(limit = 20) {
-  if (!isSupabaseConfigured()) {
+  const { url, key } = getSupabaseConfig();
+  if (!url || !key) {
     return {
       configured: false,
       message: 'SUPABASE_URL atau SUPABASE_KEY belum diset di .env. Gunakan generateSupabaseSchemaSql() untuk menyiapkan tabel.',
@@ -126,12 +131,12 @@ async function syncStoriesToSupabase(limit = 20) {
       };
     });
 
-    const endpoint = `${SUPABASE_URL.replace(/\/+$/, '')}/rest/v1/stories?on_conflict=id`;
+    const endpoint = `${url.replace(/\/+$/, '')}/rest/v1/stories?on_conflict=id`;
     const res = await fetch(endpoint, {
       method: 'POST',
       headers: {
-        'apikey': SUPABASE_KEY,
-        'Authorization': `Bearer ${SUPABASE_KEY}`,
+        'apikey': key,
+        'Authorization': `Bearer ${key}`,
         'Content-Type': 'application/json',
         'Prefer': 'resolution=merge-duplicates'
       },
@@ -153,12 +158,12 @@ async function syncStoriesToSupabase(limit = 20) {
     }));
 
     if (insightsPayload.length > 0) {
-      const insEndpoint = `${SUPABASE_URL.replace(/\/+$/, '')}/rest/v1/story_insights?on_conflict=story_id`;
+      const insEndpoint = `${url.replace(/\/+$/, '')}/rest/v1/story_insights?on_conflict=story_id`;
       await fetch(insEndpoint, {
         method: 'POST',
         headers: {
-          'apikey': SUPABASE_KEY,
-          'Authorization': `Bearer ${SUPABASE_KEY}`,
+          'apikey': key,
+          'Authorization': `Bearer ${key}`,
           'Content-Type': 'application/json',
           'Prefer': 'resolution=merge-duplicates'
         },
