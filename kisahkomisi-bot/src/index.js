@@ -172,7 +172,7 @@ function renderHelpMenu(name = 'Kawan') {
     `• \`/target\` : Cek & atur KPI target minimal views/post (saat ini 1000 views)\n` +
     `• \`/autotune\` : Evaluasi performa winner vs flop & perbarui instruksi AI otomatis\n` +
     `• \`/insight\` : Cek analitik penayangan & evaluasi tren terkini\n` +
-    `• \`/veto\` : Batalkan penerbitan draf dalam 15-menit veto window\n` +
+    `• \`/veto\` : Batalkan penerbitan draf dalam 3-jam deliberation window\n` +
     `• \`/bikin_cerita\` : AI buat 1 cerita menfess viral (Lolos Kurasi QC)\n` +
     `• \`/isi_stok\` : Trigger otomatis isi buffer stok (Target 18 konten / 3 hari)\n` +
     `• \`/stok\` : Cek status & komposisi buffer stok (Affiliate vs Viral)\n` +
@@ -218,8 +218,8 @@ bot.command('status', async (ctx) => {
     msg += `🛍️ *Produk Affiliate*: *${productsCount} produk (100% Beku / Frozen selama Eksperimen)*\n`;
     msg += `🔑 *Terakhir Token Di-refresh*: ${lastRefresh}\n`;
     msg += `🛡️ *Jitter Posting*: Dinonaktifkan (0s - Presisi Waktu Eksperimen Paired A/B)\n`;
-    msg += `⏳ *Veto Window*: Aktif (Preview draf dikirim jam 06:30 & 21:00 WIB)\n`;
-    msg += `\n⏰ *Jadwal Tayang Paired A/B (2x Sehari WIB):*\n• Pagi: 07:00:00 WIB (Veto cutoff: 06:30 - 07:00 WIB)\n• Malam: 21:30:00 WIB (Veto cutoff: 21:00 - 21:30 WIB)`;
+    msg += `⏳ *Deliberation Window*: Aktif (Preview draf staging dikirim 3 jam sebelum jam tayang)\n`;
+    msg += `\n⏰ *Jadwal 6 Slot Harian WIB:*\n• Slot 1: 07:15 WIB (Staging: 04:15 WIB)\n• Slot 2: 10:00 WIB (Staging: 07:00 WIB)\n• Slot 3: 12:30 WIB (Staging: 09:30 WIB)\n• Slot 4: 16:30 WIB (Staging: 13:30 WIB)\n• Slot 5: 19:30 WIB (Staging: 16:30 WIB)\n• Slot 6: 21:45 WIB (Staging: 18:45 WIB)`;
 
     safeReplyMarkdown(ctx, msg);
   } catch (err) {
@@ -1032,12 +1032,12 @@ bot.command('veto', async (ctx) => {
   const currentTimeVal = currentHour * 60 + currentMin;
 
   const SLOTS = [
-    { time: '07:15', vetoTime: '07:00', label: 'SLOT 1 - PAGI KOMUTER (07:15 WIB)' },
-    { time: '10:00', vetoTime: '09:45', label: 'SLOT 2 - COFFEE BREAK (10:00 WIB)' },
-    { time: '12:30', vetoTime: '12:15', label: 'SLOT 3 - MAKAN SIANG (12:30 WIB)' },
-    { time: '16:30', vetoTime: '16:15', label: 'SLOT 4 - SORE PULANG KANTOR (16:30 WIB)' },
-    { time: '19:30', vetoTime: '19:15', label: 'SLOT 5 - MALAM SANTAI (19:30 WIB)' },
-    { time: '21:45', vetoTime: '21:30', label: 'SLOT 6 - PEAK REBAHAN (21:45 WIB)' }
+    { time: '07:15', vetoTime: '04:15', label: 'SLOT 1 - PAGI KOMUTER (07:15 WIB)' },
+    { time: '10:00', vetoTime: '07:00', label: 'SLOT 2 - COFFEE BREAK (10:00 WIB)' },
+    { time: '12:30', vetoTime: '09:30', label: 'SLOT 3 - MAKAN SIANG (12:30 WIB)' },
+    { time: '16:30', vetoTime: '13:30', label: 'SLOT 4 - SORE PULANG KANTOR (16:30 WIB)' },
+    { time: '19:30', vetoTime: '16:30', label: 'SLOT 5 - MALAM SANTAI (19:30 WIB)' },
+    { time: '21:45', vetoTime: '18:45', label: 'SLOT 6 - PEAK REBAHAN (21:45 WIB)' }
   ];
 
   let targetSlot = null;
@@ -1309,12 +1309,12 @@ async function checkTokenExpiryReminder() {
 // 3. Fully Otomatis + Jitter Manusiawi (10-30 Menit Anti-Ban)
 // ==========================================
 const DAILY_SLOTS = [
-  { slotNumber: 1, time: '07:15', vetoTime: '07:00', label: 'SLOT 1 - PAGI KOMUTER (07:15 WIB)', defaultFormat: 'single_life_update', targetNicheType: 'locked', hasAffiliate: false },
-  { slotNumber: 2, time: '10:00', vetoTime: '09:45', label: 'SLOT 2 - COFFEE BREAK (10:00 WIB)', defaultFormat: 'financial_breakdown', targetNicheType: 'locked', hasAffiliate: false },
-  { slotNumber: 3, time: '12:30', vetoTime: '12:15', label: 'SLOT 3 - MAKAN SIANG (12:30 WIB)', defaultFormat: 'anonymous_curhat_story', targetNicheType: 'locked', hasAffiliate: false },
-  { slotNumber: 4, time: '16:30', vetoTime: '16:15', label: 'SLOT 4 - SORE PULANG KANTOR (16:30 WIB)', defaultFormat: 'menfess_spill', targetNicheType: 'explore', hasAffiliate: false },
-  { slotNumber: 5, time: '19:30', vetoTime: '19:15', label: 'SLOT 5 - MALAM SANTAI (19:30 WIB)', defaultFormat: 'story_affiliate', targetNicheType: 'locked', hasAffiliate: true },
-  { slotNumber: 6, time: '21:45', vetoTime: '21:30', label: 'SLOT 6 - PEAK REBAHAN (21:45 WIB)', defaultFormat: 'anonymous_curhat_story', targetNicheType: 'explore', hasAffiliate: false }
+  { slotNumber: 1, time: '07:15', vetoTime: '04:15', label: 'SLOT 1 - PAGI KOMUTER (07:15 WIB)', defaultFormat: 'single_life_update', targetNicheType: 'locked', hasAffiliate: false },
+  { slotNumber: 2, time: '10:00', vetoTime: '07:00', label: 'SLOT 2 - COFFEE BREAK (10:00 WIB)', defaultFormat: 'financial_breakdown', targetNicheType: 'locked', hasAffiliate: false },
+  { slotNumber: 3, time: '12:30', vetoTime: '09:30', label: 'SLOT 3 - MAKAN SIANG (12:30 WIB)', defaultFormat: 'anonymous_curhat_story', targetNicheType: 'locked', hasAffiliate: false },
+  { slotNumber: 4, time: '16:30', vetoTime: '13:30', label: 'SLOT 4 - SORE PULANG KANTOR (16:30 WIB)', defaultFormat: 'menfess_spill', targetNicheType: 'explore', hasAffiliate: false },
+  { slotNumber: 5, time: '19:30', vetoTime: '16:30', label: 'SLOT 5 - MALAM SANTAI (19:30 WIB)', defaultFormat: 'story_affiliate', targetNicheType: 'locked', hasAffiliate: true },
+  { slotNumber: 6, time: '21:45', vetoTime: '18:45', label: 'SLOT 6 - PEAK REBAHAN (21:45 WIB)', defaultFormat: 'anonymous_curhat_story', targetNicheType: 'explore', hasAffiliate: false }
 ];
 
 // Slot organik yang formatnya dipilih Bandit Allocator berdasarkan hit-rate target views
@@ -1439,7 +1439,7 @@ async function prepareAndNotifyVetoSlot(slotTime, label, slotNumber = null) {
     else if (formatType === 'financial_breakdown') formatBadge = '💸 Financial Breakdown (In This Economy)';
 
     const sent = await sendAdminAlert(
-      `⏳ *[15-MIN VETO WINDOW]* Draf Siap Tayang Jam *${slotTime} WIB*!\n\n` +
+      `⏳ *[3-HOUR DELIBERATION WINDOW]* Draf Siap Tayang Jam *${slotTime} WIB*!\n\n` +
       `⏰ *Slot*: ${label}\n` +
       `🏷️ *Format*: *${formatBadge}*\n` +
       `🎯 *Monetisasi*: *Tier ${adaptiveStatus.tier}* (${adaptiveStatus.quota} slot affiliate/hari)\n` +
@@ -1453,7 +1453,7 @@ async function prepareAndNotifyVetoSlot(slotTime, label, slotNumber = null) {
       `💡 *Catatan Adaptif*: _${adaptiveStatus.reason}_\n\n` +
       `⚠️ *Opsi Kontrol Owner:*\n` +
       `Bot akan otomatis menerbitkan post ini sekitar jam *${slotTime} WIB* (dengan random human jitter 10-30 menit).\n` +
-      `Ketik \`/veto\` untuk membatalkan tayang dalam 15 menit ke depan.`
+      `Ketik \`/veto\` untuk membatalkan tayang dalam 3 jam ke depan (sebelum jam ${slotTime} WIB).`
     );
 
     if (sent) {
@@ -1652,11 +1652,11 @@ async function executeScheduledPosting(slotTime, label, slotNumber = null) {
 }
 
 // ==========================================
-// ⏰ CRON 6 SLOT HARIAN DENGAN 15-MINUTE VETO WINDOW (WIB)
+// ⏰ CRON 6 SLOT HARIAN DENGAN 3-HOUR DELIBERATION WINDOW (WIB)
 // ==========================================
 
-// SLOT 1: PAGI KOMUTER (07:15 WIB) -> Veto 07:00 WIB
-cron.schedule('0 7 * * *', () => prepareAndNotifyVetoSlot('07:15', 'SLOT 1 - PAGI KOMUTER (07:15 WIB)', 1), {
+// SLOT 1: PAGI KOMUTER (07:15 WIB) -> Deliberation Staging 04:15 WIB
+cron.schedule('15 4 * * *', () => prepareAndNotifyVetoSlot('07:15', 'SLOT 1 - PAGI KOMUTER (07:15 WIB)', 1), {
   scheduled: true,
   timezone: 'Asia/Jakarta'
 });
@@ -1665,8 +1665,8 @@ cron.schedule('15 7 * * *', () => executeScheduledPosting('07:15', 'SLOT 1 - PAG
   timezone: 'Asia/Jakarta'
 });
 
-// SLOT 2: COFFEE BREAK (10:00 WIB) -> Veto 09:45 WIB
-cron.schedule('45 9 * * *', () => prepareAndNotifyVetoSlot('10:00', 'SLOT 2 - COFFEE BREAK (10:00 WIB)', 2), {
+// SLOT 2: COFFEE BREAK (10:00 WIB) -> Deliberation Staging 07:00 WIB
+cron.schedule('0 7 * * *', () => prepareAndNotifyVetoSlot('10:00', 'SLOT 2 - COFFEE BREAK (10:00 WIB)', 2), {
   scheduled: true,
   timezone: 'Asia/Jakarta'
 });
@@ -1675,8 +1675,8 @@ cron.schedule('0 10 * * *', () => executeScheduledPosting('10:00', 'SLOT 2 - COF
   timezone: 'Asia/Jakarta'
 });
 
-// SLOT 3: MAKAN SIANG (12:30 WIB) -> Veto 12:15 WIB [ORGANIK MURNI 0% LINK]
-cron.schedule('15 12 * * *', () => prepareAndNotifyVetoSlot('12:30', 'SLOT 3 - MAKAN SIANG (12:30 WIB)', 3), {
+// SLOT 3: MAKAN SIANG (12:30 WIB) -> Deliberation Staging 09:30 WIB [ORGANIK MURNI 0% LINK]
+cron.schedule('30 9 * * *', () => prepareAndNotifyVetoSlot('12:30', 'SLOT 3 - MAKAN SIANG (12:30 WIB)', 3), {
   scheduled: true,
   timezone: 'Asia/Jakarta'
 });
@@ -1685,8 +1685,8 @@ cron.schedule('30 12 * * *', () => executeScheduledPosting('12:30', 'SLOT 3 - MA
   timezone: 'Asia/Jakarta'
 });
 
-// SLOT 4: SORE PULANG KANTOR (16:30 WIB) -> Veto 16:15 WIB [ORGANIK MURNI 0% LINK]
-cron.schedule('15 16 * * *', () => prepareAndNotifyVetoSlot('16:30', 'SLOT 4 - SORE PULANG KANTOR (16:30 WIB)', 4), {
+// SLOT 4: SORE PULANG KANTOR (16:30 WIB) -> Deliberation Staging 13:30 WIB [ORGANIK MURNI 0% LINK]
+cron.schedule('30 13 * * *', () => prepareAndNotifyVetoSlot('16:30', 'SLOT 4 - SORE PULANG KANTOR (16:30 WIB)', 4), {
   scheduled: true,
   timezone: 'Asia/Jakarta'
 });
@@ -1695,8 +1695,8 @@ cron.schedule('30 16 * * *', () => executeScheduledPosting('16:30', 'SLOT 4 - SO
   timezone: 'Asia/Jakarta'
 });
 
-// SLOT 5: MALAM SANTAI (19:30 WIB) -> Veto 19:15 WIB [AFFILIATE TUNGGAL HARIAN 1X]
-cron.schedule('15 19 * * *', () => prepareAndNotifyVetoSlot('19:30', 'SLOT 5 - MALAM SANTAI (19:30 WIB)', 5), {
+// SLOT 5: MALAM SANTAI (19:30 WIB) -> Deliberation Staging 16:30 WIB [AFFILIATE TUNGGAL HARIAN 1X]
+cron.schedule('30 16 * * *', () => prepareAndNotifyVetoSlot('19:30', 'SLOT 5 - MALAM SANTAI (19:30 WIB)', 5), {
   scheduled: true,
   timezone: 'Asia/Jakarta'
 });
@@ -1705,8 +1705,8 @@ cron.schedule('30 19 * * *', () => executeScheduledPosting('19:30', 'SLOT 5 - MA
   timezone: 'Asia/Jakarta'
 });
 
-// SLOT 6: PEAK REBAHAN (21:45 WIB) -> Veto 21:30 WIB [ORGANIK MURNI 0% LINK]
-cron.schedule('30 21 * * *', () => prepareAndNotifyVetoSlot('21:45', 'SLOT 6 - PEAK REBAHAN (21:45 WIB)', 6), {
+// SLOT 6: PEAK REBAHAN (21:45 WIB) -> Deliberation Staging 18:45 WIB [ORGANIK MURNI 0% LINK]
+cron.schedule('45 18 * * *', () => prepareAndNotifyVetoSlot('21:45', 'SLOT 6 - PEAK REBAHAN (21:45 WIB)', 6), {
   scheduled: true,
   timezone: 'Asia/Jakarta'
 });
@@ -1758,10 +1758,10 @@ cron.schedule('0 4 * * *', async () => {
 });
 
 // ==========================================
-// 📦 AUTOMATED REMOTE DATABASE BACKUP (Tiap Hari jam 04:15 WIB)
+// 📦 AUTOMATED REMOTE DATABASE BACKUP (Tiap Hari jam 04:20 WIB)
 // Mengompresi SQLite DB & mengunggah langsung ke Telegram War Room Group
 // ==========================================
-cron.schedule('15 4 * * *', async () => {
+cron.schedule('20 4 * * *', async () => {
   console.log('[Scheduler] Menjalankan automated daily backup database ke Telegram...');
   try {
     await executeDatabaseBackup(bot);
