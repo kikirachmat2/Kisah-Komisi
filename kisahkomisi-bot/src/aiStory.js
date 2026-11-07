@@ -212,6 +212,22 @@ function sanitizeText(str) {
     .trim();
 }
 
+function determineAffiliateArchetype(product) {
+  if (!product) return 'the_setup_problem_solver';
+  const cat = (product.category || '').toLowerCase();
+  const name = (product.name || '').toLowerCase();
+  const text = `${cat} ${name}`;
+
+  if (text.includes('botol') || text.includes('tumbler') || text.includes('termos') || text.includes('kopi') || text.includes('makan') || text.includes('camilan') || text.includes('teh') || text.includes('lemon')) {
+    return 'financial_reality_hack';
+  }
+  if (text.includes('charger') || text.includes('kabel') || text.includes('power') || text.includes('audio') || text.includes('headset') || text.includes('speaker') || text.includes('tempered') || text.includes('kipas')) {
+    return 'price_spec_breakdown';
+  }
+  // Setup problem solver untuk perabot kosan, kerja, laptop, monitor light bar, mouse ergonomis, wrist rest, skincare/grooming
+  return 'the_setup_problem_solver';
+}
+
 /**
  * Membersihkan nama produk yang panjang / berantakan dari Shopee menjadi nama ringkas manusiawi
  */
@@ -524,6 +540,94 @@ Keluarkan HANYA JSON:
   ]
 }
 `;
+  } else if (withProductInSlides && product && trackedProductUrl) {
+    // FORMAT HIGH-CONVERSION AFFILIATE: 3 Arketipe Solutif Teruji (Bebas Curhat Fiktif Bait-and-Switch)
+    const affiliateArchetype = options.archetype || determineAffiliateArchetype(product);
+    const cleanProd = cleanProductName(product.name);
+
+    if (affiliateArchetype === 'price_spec_breakdown') {
+      prompt = `
+Kamu adalah Kiki Rachmat (@kikipunyacerita), pekerja tech/media di Jakarta (usia 26 thn, realistis & hemat).
+Tuliskan SATU UTAS PANDUAN PINTAR & CEGAH BELI BARANG ZONK TEPAT 3 PART (PERSIS 3 SLIDE).
+${cognitiveContext}
+PRODUK REKOMENDASI: "${cleanProd}" (${product.category})
+LINK REKOMENDASI: "${trackedProductUrl}"
+
+STRUKTUR 3 SLIDE (BAHASA WARGANET THREADS, LOWERCASE SEMUA, 0% IKLAN KAKU):
+1. PART 1 (Jebakan Barang Abal-Abal):
+   Peringatkan bahaya beli printilan/gadget KW murahan 20-30 ribuan yang sering bikin boncos, panas, atau rusak cepat. Mulai langsung dari pengamatan jujur (120-190 karakter).
+2. PART 2 (Bongkar Kualitas / Spesifikasi Riil):
+   Jelaskan kenapa selisih harga sedikit itu penting (proteksi arus listrik, sertifikasi daya, kabel braided, atau chip proteksi) (140-240 karakter).
+3. PART 3 (Rekomendasi Teruji & Tautan):
+   Rekomendasikan "${cleanProd}" sebagai opsi paling worth it yang awet dipakai tempur harian. Cantumkan link di akhir kalimat: ${trackedProductUrl} (140-240 karakter).
+
+Keluarkan HANYA JSON:
+{
+  "title": "Panduan Cerdas: ${cleanProd}",
+  "topic": "Smart Buying: ${cleanProd}",
+  "story_parts": [
+    "Part 1 jebakan barang abal-abal...",
+    "Part 2 pembeda kualitas teknis...",
+    "Part 3 rekomendasi barang teruji ${trackedProductUrl}"
+  ]
+}
+`;
+    } else if (affiliateArchetype === 'financial_reality_hack') {
+      prompt = `
+Kamu adalah Kiki Rachmat (@kikipunyacerita), pekerja korporat di Jakarta (usia 26 thn, melek hitung-hitungan finansial).
+Tuliskan SATU UTAS SIMULASI HEMAT BIAYA HIDUP TEPAT 3 PART (PERSIS 3 SLIDE).
+${cognitiveContext}
+PRODUK PENDUKUNG: "${cleanProd}" (${product.category})
+LINK REKOMENDASI: "${trackedProductUrl}"
+
+STRUKTUR 3 SLIDE (BAHASA WARGANET THREADS, LOWERCASE SEMUA, 0% IKLAN KAKU):
+1. PART 1 (Bocor Halus Pengeluaran Harian):
+   Bongkar pengeluaran harian kecil yang bikin boncos (beli es kopi 35rb tiap hari atau jajan di luar boros) (120-190 karakter).
+2. PART 2 (Hitungan Matematika Riil):
+   Hitung angka konkretnya (misal 35rb x 22 hari kerja = 770rb sebulan vs seduh/bawa sendiri cuma 80rb, sisa 600rb+ utuh buat tabungan) (140-240 karakter).
+3. PART 3 (Gear Pendukung Praktis & Tautan):
+   Rekomendasikan "${cleanProd}" sebagai alat bantu praktis biar gak ribet dan es tetap tahan seharian di meja kerja. Cantumkan link di akhir kalimat: ${trackedProductUrl} (140-240 karakter).
+
+Keluarkan HANYA JSON:
+{
+  "title": "Simulasi Hemat: ${cleanProd}",
+  "topic": "Financial Hack: ${cleanProd}",
+  "story_parts": [
+    "Part 1 bocor halus harian...",
+    "Part 2 simulasi matematika riil...",
+    "Part 3 gear pendukung praktis ${trackedProductUrl}"
+  ]
+}
+`;
+    } else {
+      // the_setup_problem_solver
+      prompt = `
+Kamu adalah Kiki Rachmat (@kikipunyacerita), pekerja tech/media di Jakarta (usia 26 thn).
+Tuliskan SATU UTAS BEDAH MASALAH & SOLUSI SETUP KERJA/KOSAN TEPAT 3 PART (PERSIS 3 SLIDE).
+${cognitiveContext}
+PRODUK SOLUSI: "${cleanProd}" (${product.category})
+LINK REKOMENDASI: "${trackedProductUrl}"
+
+STRUKTUR 3 SLIDE (BAHASA WARGANET THREADS, LOWERCASE SEMUA, 0% IKLAN KAKU):
+1. PART 1 (Pain Point Fisik / Setup Meja):
+   Ungkap keluhan fisik atau meja kerja yang bikin jompo (punggung pegal, pergelangan tangan kram, mata perih silau lampu, atau meja sempit kabel ruwet) (120-190 karakter).
+2. PART 2 (Kenapa Solusi Biasa Gagal):
+   Jelaskan kenapa trik biasa (ganjel buku, tahan sakit, beli barang non-ergonomis murahan) gak nyelesaiin masalah (140-240 karakter).
+3. PART 3 (Solusi Teruji & Tautan):
+   Jelaskan kenapa pakai "${cleanProd}" ini terbukti nyata ngebantu kenyamanan kerja jangka panjang. Cantumkan link di akhir kalimat: ${trackedProductUrl} (140-240 karakter).
+
+Keluarkan HANYA JSON:
+{
+  "title": "Solusi Setup: ${cleanProd}",
+  "topic": "Workplace Setup: ${cleanProd}",
+  "story_parts": [
+    "Part 1 keluhan fisik atau meja kerja...",
+    "Part 2 kenapa trik biasa gagal...",
+    "Part 3 solusi teruji dengan link ${trackedProductUrl}"
+  ]
+}
+`;
+    }
   } else {
     // FORMAT B: Micro-Thread Tepat 3 Part (Persis 3 slide)
     prompt = `
@@ -677,18 +781,15 @@ Keluarkan HANYA JSON:
     cleanParts = cleanParts.slice(0, 3);
   }
 
-  // SEMATKAN REKOMENDASI PRODUK KONTEKSTUAL SHOPEE (Hanya bila withProductInSlides aktif)
+  // SEMATKAN REKOMENDASI PRODUK SHOPEE DALAM SLIDE SOLUSI (Tanpa Insert Slide Tambahan Zonk)
   if (product && trackedProductUrl && withProductInSlides) {
-    const contextualAd = generateContextualAd(product, trackedProductUrl);
-    // Masukkan sebelum slide pertanyaan penutup
     if (cleanParts.length >= 3) {
-      cleanParts = [
-        cleanParts[0],
-        cleanParts[1],
-        contextualAd,
-        cleanParts[2]
-      ];
+      const lastIdx = cleanParts.length - 1;
+      if (!cleanParts[lastIdx].includes(trackedProductUrl)) {
+        cleanParts[lastIdx] = cleanParts[lastIdx].trim() + `: ${trackedProductUrl}`;
+      }
     } else {
+      const contextualAd = generateContextualAd(product, trackedProductUrl);
       cleanParts.push(contextualAd);
     }
   }
@@ -954,6 +1055,7 @@ Keluarkan HANYA JSON:
 module.exports = {
   generateStory,
   processAnonymousStory,
+  determineAffiliateArchetype,
   appendSubId,
   getThematicVibe,
   getAutoTopicTag,

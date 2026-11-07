@@ -874,13 +874,15 @@ async function generateMixedPost(formatType, options = {}) {
     case FORMAT_TYPES.FINANCIAL_BREAKDOWN:
       return await generateFinancialBreakdown(options);
     case FORMAT_TYPES.STORY_AFFILIATE:
-    default:
-      // Panggil aiStory dengan afiliasi aktif + price anchoring + 2-kubu dilemma
-      const story = await generateStory({ variant: 'B', ...options });
+    default: {
+      // Panggil aiStory dengan afiliasi aktif & arketipe High-Conversion Honest Problem Solver
+      const withProduct = options.withProduct !== false;
+      const story = await generateStory({ variant: 'B', withProduct, ...options });
       return {
         ...story,
         format_type: FORMAT_TYPES.STORY_AFFILIATE
       };
+    }
   }
 }
 
