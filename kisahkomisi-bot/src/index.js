@@ -219,7 +219,7 @@ bot.command('status', async (ctx) => {
     msg += `🔑 *Terakhir Token Di-refresh*: ${lastRefresh}\n`;
     msg += `🛡️ *Jitter Posting*: Dinonaktifkan (0s - Presisi Waktu Eksperimen Paired A/B)\n`;
     msg += `⏳ *Deliberation Window*: Aktif (Preview draf staging dikirim 3 jam sebelum jam tayang)\n`;
-    msg += `\n⏰ *Jadwal 6 Slot Harian WIB:*\n• Slot 1: 07:15 WIB (Staging: 04:15 WIB)\n• Slot 2: 10:00 WIB (Staging: 07:00 WIB)\n• Slot 3: 12:30 WIB (Staging: 09:30 WIB)\n• Slot 4: 16:30 WIB (Staging: 13:30 WIB)\n• Slot 5: 19:30 WIB (Staging: 16:30 WIB)\n• Slot 6: 21:45 WIB (Staging: 18:45 WIB)`;
+    msg += `\n⏰ *Jadwal 3 Slot Harian + Delayed Cliffhanger (WIB):*\n• Slot 1: 07:30 WIB (Pagi Punchy - Staging: 04:30 WIB)\n• Slot 2: 12:15 WIB (Siang Financial - Staging: 09:15 WIB)\n• Slot 3: 19:45 WIB (Malam Cliffhanger - Staging: 16:45 WIB)\n• Fase 2: 21:00 WIB (Payoff Ending + Shopee Chained Reply)`;
 
     safeReplyMarkdown(ctx, msg);
   } catch (err) {
@@ -359,6 +359,60 @@ bot.command('card_preview', async (ctx) => {
     });
   } catch (e) {
     ctx.reply(`❌ Gagal render visual card: ${e.message}`);
+  }
+});
+
+// Command: /render_card [id] (Render kartu visual SVG berdasarkan ID cerita atau draf finansial terbaru)
+bot.command('render_card', async (ctx) => {
+  try {
+    const text = ctx.message.text || '';
+    const args = text.split(/\s+/).slice(1);
+    let storyId = args[0] ? parseInt(args[0], 10) : null;
+    let story = null;
+
+    if (storyId && !isNaN(storyId)) {
+      story = db.getStoryById(storyId);
+    } else {
+      const allStories = db.getAllStories ? db.getAllStories(10) : [];
+      story = allStories.find(s => s.financial_items_json || (s.format && s.format.includes('financial'))) || allStories[0];
+    }
+
+    let cardData = {
+      title: story ? story.title : 'Breakdown Realita Gaji Jakarta',
+      salaryText: 'Gaji Bersih Rp 6.000.000 / Bulan',
+      city: 'Jakarta Pusat',
+      items: [
+        { label: 'Kosan & Listrik', amount: 'Rp 1.800.000', pct: 30 },
+        { label: 'Makan & Minum', amount: 'Rp 2.000.000', pct: 33 },
+        { label: 'Transport KRL/Ojol', amount: 'Rp 500.000', pct: 8 },
+        { label: 'Kirim Orang Tua', amount: 'Rp 1.000.000', pct: 17 },
+        { label: 'Sisa Tabungan / Darurat', amount: 'Rp 700.000', pct: 12 }
+      ],
+      dilemaNote: 'Sisa 700rb buat bertahan hidup atau masih bisa mikirin investasi?'
+    };
+
+    if (story && story.financial_items_json) {
+      try {
+        const parsed = JSON.parse(story.financial_items_json);
+        if (parsed.items && Array.isArray(parsed.items)) cardData.items = parsed.items;
+        if (parsed.salaryText) cardData.salaryText = parsed.salaryText;
+        if (parsed.city) cardData.city = parsed.city;
+        if (parsed.dilemaNote) cardData.dilemaNote = parsed.dilemaNote;
+      } catch (e) {}
+    }
+
+    const cardRes = saveFinancialCard(cardData);
+    await ctx.replyWithDocument({
+      source: cardRes.path,
+      filename: `financial_card_${story ? story.id : 'preview'}.svg`
+    }, {
+      caption: `🎨 *Visual Card Rendered (1080x1080)*\n` +
+               `📖 *Story*: #${story ? story.id : 'Demo'} - ${cardData.title}\n` +
+               `💰 *Salary*: ${cardData.salaryText}\n` +
+               `📍 *City*: ${cardData.city}`
+    });
+  } catch (err) {
+    ctx.reply(`❌ Gagal render card: ${err.message}`);
   }
 });
 
@@ -1032,12 +1086,9 @@ bot.command('veto', async (ctx) => {
   const currentTimeVal = currentHour * 60 + currentMin;
 
   const SLOTS = [
-    { time: '07:15', vetoTime: '04:15', label: 'SLOT 1 - PAGI KOMUTER (07:15 WIB)' },
-    { time: '10:00', vetoTime: '07:00', label: 'SLOT 2 - COFFEE BREAK (10:00 WIB)' },
-    { time: '12:30', vetoTime: '09:30', label: 'SLOT 3 - MAKAN SIANG (12:30 WIB)' },
-    { time: '16:30', vetoTime: '13:30', label: 'SLOT 4 - SORE PULANG KANTOR (16:30 WIB)' },
-    { time: '19:30', vetoTime: '16:30', label: 'SLOT 5 - MALAM SANTAI (19:30 WIB)' },
-    { time: '21:45', vetoTime: '18:45', label: 'SLOT 6 - PEAK REBAHAN (21:45 WIB)' }
+    { time: '07:30', vetoTime: '04:30', label: 'SLOT 1 - PAGI PUNCHY (07:30 WIB)' },
+    { time: '12:15', vetoTime: '09:15', label: 'SLOT 2 - SIANG FINANCIAL (12:15 WIB)' },
+    { time: '19:45', vetoTime: '16:45', label: 'SLOT 3 - MALAM CLIFFHANGER (19:45 WIB)' }
   ];
 
   let targetSlot = null;
@@ -1297,33 +1348,24 @@ async function checkTokenExpiryReminder() {
 }
 
 // ==========================================
-// 📅 JADWAL 6 KONTEN HARIAN (RUNDOWN 50/50 SEIMBANG - HARD-TUNED VIRAL FORMULA)
-// 1. 50% Gedein Insight (Organik 0% Link):
-//    - Slot 1 (07:15): Single Life Update Kiki (Realita pagi, KRL, cuaca, atau callback)
-//    - Slot 2 (10:00): Financial Breakdown (Mesin Viral #1: Bedah gaji & pengeluaran riil angka konkret)
-//    - Slot 4 (16:30): Hot Take / Menfess Spill (Reaksi tajam & pancingan diskusi sore)
-// 2. 50% Jualan Affiliate (Shopee Contextual):
-//    - Slot 3 (12:30): Anonymous Curhat Story + Shopee Anchor Under 50k
-//    - Slot 5 (19:30): Story Affiliate (Dilema kantor/kosan/uang dengan angka konkret)
-//    - Slot 6 (21:45): Anonymous Curhat Story + Shopee Anchor Under 50k
-// 3. Fully Otomatis + Jitter Manusiawi (10-30 Menit Anti-Ban)
+// 📅 JADWAL 3 SLOT HARIAN BERDAMPAK TINGGI + DELAYED CLIFFHANGER (ANTI-SPAM & MAKSIMALKAN REACH)
+// 1. Slot 1 (07:30 WIB): Short Punchy Morning Bait (1 Post Pendek, 0% Link, Pemicu Debat Pagi)
+// 2. Slot 2 (12:15 WIB): Compact Financial Breakdown / Dilema Kantor (1 Post Padat, 0% Link)
+// 3. Slot 3 (19:45 WIB - Fase 1): Cliffhanger Story Hook (Slide 1 & 2 Menggantung)
+//    -> Dilanjutkan Jam 21:00 WIB (Fase 2): Payoff Ending + Solusi Shopee (Chained Reply)
+// 4. Fully Otomatis + Jitter Manusiawi (10-30 Menit Anti-Ban)
 // ==========================================
 const DAILY_SLOTS = [
-  { slotNumber: 1, time: '07:15', vetoTime: '04:15', label: 'SLOT 1 - PAGI KOMUTER (07:15 WIB)', defaultFormat: 'single_life_update', targetNicheType: 'locked', hasAffiliate: false },
-  { slotNumber: 2, time: '10:00', vetoTime: '07:00', label: 'SLOT 2 - COFFEE BREAK (10:00 WIB)', defaultFormat: 'financial_breakdown', targetNicheType: 'locked', hasAffiliate: false },
-  { slotNumber: 3, time: '12:30', vetoTime: '09:30', label: 'SLOT 3 - MAKAN SIANG (12:30 WIB)', defaultFormat: 'anonymous_curhat_story', targetNicheType: 'locked', hasAffiliate: false },
-  { slotNumber: 4, time: '16:30', vetoTime: '13:30', label: 'SLOT 4 - SORE PULANG KANTOR (16:30 WIB)', defaultFormat: 'menfess_spill', targetNicheType: 'explore', hasAffiliate: false },
-  { slotNumber: 5, time: '19:30', vetoTime: '16:30', label: 'SLOT 5 - MALAM SANTAI (19:30 WIB)', defaultFormat: 'story_affiliate', targetNicheType: 'locked', hasAffiliate: true },
-  { slotNumber: 6, time: '21:45', vetoTime: '18:45', label: 'SLOT 6 - PEAK REBAHAN (21:45 WIB)', defaultFormat: 'anonymous_curhat_story', targetNicheType: 'explore', hasAffiliate: false }
+  { slotNumber: 1, time: '07:30', vetoTime: '04:30', label: 'SLOT 1 - PAGI PUNCHY (07:30 WIB)', defaultFormat: 'single_life_update', targetNicheType: 'locked', hasAffiliate: false },
+  { slotNumber: 2, time: '12:15', vetoTime: '09:15', label: 'SLOT 2 - SIANG FINANCIAL (12:15 WIB)', defaultFormat: 'financial_breakdown', targetNicheType: 'locked', hasAffiliate: false },
+  { slotNumber: 3, time: '19:45', vetoTime: '16:45', label: 'SLOT 3 - MALAM CLIFFHANGER (19:45 WIB)', defaultFormat: 'cliffhanger_story', targetNicheType: 'locked', hasAffiliate: true }
 ];
 
 // Slot organik yang formatnya dipilih Bandit Allocator berdasarkan hit-rate target views
 const ADAPTIVE_SLOT_CANDIDATES = {
   1: ['single_life_update', 'menfess_spill', 'hot_take'],
   2: ['financial_breakdown', 'hot_take', 'menfess_spill'],
-  3: ['anonymous_curhat_story', 'menfess_spill', 'hot_take', 'financial_breakdown'],
-  4: ['menfess_spill', 'hot_take', 'financial_breakdown', 'single_life_update'],
-  6: ['anonymous_curhat_story', 'menfess_spill', 'hot_take', 'serialized_story']
+  3: ['cliffhanger_story', 'story_affiliate', 'anonymous_curhat_story']
 };
 
 /**
@@ -1340,8 +1382,10 @@ function resolveSlotFormat(dateStr, slotConf) {
   slotConf.hasAffiliate = isAffiliateActive;
 
   let fmt = slotConf.defaultFormat;
-  if (isAffiliateActive) {
-    fmt = slotConf.slotNumber === 5 ? 'story_affiliate' : (slotConf.defaultFormat || 'anonymous_curhat_story');
+  if (slotConf.slotNumber === 3) {
+    fmt = 'cliffhanger_story';
+  } else if (isAffiliateActive) {
+    fmt = 'story_affiliate';
   } else {
     const candidates = ADAPTIVE_SLOT_CANDIDATES[slotConf.slotNumber] || ['single_life_update', 'menfess_spill', 'hot_take'];
     try {
@@ -1582,11 +1626,26 @@ async function executeScheduledPosting(slotTime, label, slotNumber = null) {
     try {
       const cleanStory = sanitizeStoryBeforePublish(story);
       const slides = cleanStory.slides;
+      const isCliffhangerCandidate = (slotConf.slotNumber === 3 || story.format_type === 'cliffhanger_story') && slides.length > 2;
+
+      let publishSlides = slides;
+      let remainingSlides = [];
+
+      if (isCliffhangerCandidate) {
+        // Phase 1: Publish Slide 1 & 2 only, stopping at cliffhanger
+        let slide2 = slides[1] || '';
+        if (!slide2.includes('lanjut') && !slide2.includes('spill') && !slide2.includes('bawah')) {
+          slide2 += '\n\n(lanjutan cerita gue spill di bawah ya, lagi nunggu krl jalan...)';
+        }
+        publishSlides = [slides[0], slide2];
+        remainingSlides = slides.slice(2);
+      }
+
       const publishResult = await publishStoryToThreads(userId, token, {
         title: cleanStory.title,
-        slides: slides,
-        product_name: cleanStory.product_name,
-        product_url: cleanStory.product_url,
+        slides: publishSlides,
+        product_name: isCliffhangerCandidate ? null : cleanStory.product_name,
+        product_url: isCliffhangerCandidate ? null : cleanStory.product_url,
         topic_tag: cleanStory.topic_tag || null
       });
 
@@ -1595,6 +1654,14 @@ async function executeScheduledPosting(slotTime, label, slotNumber = null) {
       const permalink = typeof publishResult === 'object' ? publishResult.permalink : `https://www.threads.net/@${THREADS_USERNAME}`;
 
       db.markStoryPublished(story.id, postId, lastId, permalink);
+
+      if (isCliffhangerCandidate && remainingSlides.length > 0) {
+        if (db.savePendingCliffhanger) {
+          db.savePendingCliffhanger(story.id, lastId, remainingSlides, '21:00');
+        }
+        console.log(`[Scheduler] 🎣 Fase 1 Cliffhanger tersimpan untuk #${story.id}. Sisa ${remainingSlides.length} slide akan tayang jam 21:00 WIB.`);
+      }
+
       console.log(`[Scheduler] Sukses terbit postingan #${story.id} (${label}, Format ${story.format_type || 'story'}): ${postId}`);
 
       const formatType = story.format_type || (story.product_url ? 'story_affiliate' : 'hot_take');
@@ -1604,19 +1671,32 @@ async function executeScheduledPosting(slotTime, label, slotNumber = null) {
       else if (formatType === 'hot_take') formatBadge = '🔥 Hot Take (1-Liner Sarcasm & Relatable Truth)';
       else if (formatType === 'menfess_spill') formatBadge = '🗣️ Menfess Spill (Crowdsourcing Reply Magnet)';
       else if (formatType === 'financial_breakdown') formatBadge = '💸 Financial Breakdown (In This Economy)';
+      else if (formatType === 'cliffhanger_story') formatBadge = '🎣 Delayed Cliffhanger Story (2-Phase Drip Feed)';
 
-      await sendAdminAlert(
-        `🎉 *BERHASIL TAYANG DI THREADS!*\n\n` +
-        `⏰ *Slot*: ${label}\n` +
-        `⏱️ *Random Jitter*: +${jitterMin} menit (${jitterSec}s)\n` +
-        `🏷️ *Format*: *${formatBadge}*\n` +
-        `📖 *Judul*: ${story.title}\n` +
-        (story.product_name ? `🛍️ *Produk Shopee*: ${story.product_name}\n` : `✨ *Organik*: 0% Link (Growth Magnet)\n`) +
-        `🔖 *Topic Tag*: \`#${story.topic_tag || 'threads'}\`\n` +
-        `🆔 *Post ID*: \`${postId}\`\n\n` +
-        `🔗 [Buka Postingan Threads](${permalink})\n` +
-        `Akun: *@${THREADS_USERNAME}*`
-      );
+      if (isCliffhangerCandidate) {
+        await sendAdminAlert(
+          `⏳ *[FASE 1 CLIFFHANGER TAYANG]* Draf Malam (@${THREADS_USERNAME})!\n\n` +
+          `⏰ *Slot*: ${label}\n` +
+          `📖 *Judul*: ${story.title}\n` +
+          `🎣 *Hook Terbit*: 2 Slide awal telah tayang memancing rasa penasaran netizen.\n` +
+          `⏰ *Fase 2*: Sisa ${remainingSlides.length} slide + solusi produk otomatis disambung jam *21:00 WIB*!\n` +
+          `🆔 *Post ID*: \`${postId}\`\n\n` +
+          `🔗 [Buka Postingan Threads](${permalink})`
+        );
+      } else {
+        await sendAdminAlert(
+          `🎉 *BERHASIL TAYANG DI THREADS!*\n\n` +
+          `⏰ *Slot*: ${label}\n` +
+          `⏱️ *Random Jitter*: +${jitterMin} menit (${jitterSec}s)\n` +
+          `🏷️ *Format*: *${formatBadge}*\n` +
+          `📖 *Judul*: ${story.title}\n` +
+          (story.product_name ? `🛍️ *Produk Shopee*: ${story.product_name}\n` : `✨ *Organik*: 0% Link (Growth Magnet)\n`) +
+          `🔖 *Topic Tag*: \`#${story.topic_tag || 'threads'}\`\n` +
+          `🆔 *Post ID*: \`${postId}\`\n\n` +
+          `🔗 [Buka Postingan Threads](${permalink})\n` +
+          `Akun: *@${THREADS_USERNAME}*`
+        );
+      }
 
       // Auto shadow sync to Supabase Cloud
       syncStoriesToSupabase(20).catch(se => console.warn('[Scheduler] Supabase auto-sync failed:', se.message));
@@ -1652,65 +1732,105 @@ async function executeScheduledPosting(slotTime, label, slotNumber = null) {
 }
 
 // ==========================================
-// ⏰ CRON 6 SLOT HARIAN DENGAN 3-HOUR DELIBERATION WINDOW (WIB)
+// 🧵 FASE 2: EXECUTE DELAYED CLIFFHANGER CONTINUATION (21:00 WIB)
+// Melanjutkan slide 3 & 4 (ending + solusi produk) sebagai chained reply ke Fase 1
+// ==========================================
+async function executeDelayedCliffhangerContinuation() {
+  const pendingList = db.getPendingCliffhangers ? db.getPendingCliffhangers() : [];
+  if (pendingList.length === 0) {
+    console.log('[Cliffhanger] Tidak ada pending cliffhanger continuation malam ini.');
+    return;
+  }
+
+  const userId = process.env.THREADS_USER_ID;
+  const token = getActiveAccessToken();
+  if (!userId || !token) {
+    console.warn('[Cliffhanger] Kredensial Threads tidak tersedia.');
+    return;
+  }
+
+  for (const item of pendingList) {
+    try {
+      console.log(`[Cliffhanger] Memproses lanjutan Fase 2 untuk cerita #${item.id} ("${item.title}")...`);
+      let remainingSlides = [];
+      try {
+        remainingSlides = JSON.parse(item.continuation_slides_json);
+      } catch (e) {
+        remainingSlides = [];
+      }
+
+      if (!remainingSlides || remainingSlides.length === 0) {
+        if (db.markCliffhangerCompleted) db.markCliffhangerCompleted(item.id);
+        continue;
+      }
+
+      let parentPostId = item.continuation_parent_media_id || item.last_media_id || item.threads_media_id;
+      let lastChainedId = parentPostId;
+
+      for (let i = 0; i < remainingSlides.length; i++) {
+        await new Promise(r => setTimeout(r, 6000));
+        const slideText = remainingSlides[i];
+        const resId = await publishTextPost(userId, token, slideText, lastChainedId);
+        lastChainedId = resId;
+        console.log(`[Cliffhanger] Chained Part ${i + 3} terbit ID: ${resId} (reply to ID: ${lastChainedId})`);
+      }
+
+      if (db.markCliffhangerCompleted) {
+        db.markCliffhangerCompleted(item.id, lastChainedId);
+      }
+
+      const permalink = item.permalink || `https://www.threads.net/@${THREADS_USERNAME}`;
+      await sendAdminAlert(
+        `🚀 *[FASE 2 SELESAI TAYANG]* Cerita Bersambung Terbit Sempurna!\n\n` +
+        `📖 *Judul*: ${item.title}\n` +
+        `🧵 *Lanjutan*: ${remainingSlides.length} slide penutup + solusi produk telah tersambung ke post utama.\n` +
+        (item.product_name ? `🛍️ *Rekomendasi Shopee*: ${item.product_name}\n` : '') +
+        `🔗 [Cek Utas Lengkap di Threads](${permalink})\n\n` +
+        `_Algoritma Threads akan merekomendasikan ulang postingan ini ke feed warganet yang tadi meninggalkan komentar._`
+      );
+    } catch (err) {
+      console.error(`[Cliffhanger] Gagal menerbitkan lanjutan cerita #${item.id}:`, err.message);
+      if (db.markCliffhangerCanceled) db.markCliffhangerCanceled(item.id, err.message);
+    }
+  }
+}
+
+// ==========================================
+// ⏰ CRON 3 SLOT HARIAN BERDAMPAK TINGGI + FASE 2 CONTINUATION (WIB)
 // ==========================================
 
-// SLOT 1: PAGI KOMUTER (07:15 WIB) -> Deliberation Staging 04:15 WIB
-cron.schedule('15 4 * * *', () => prepareAndNotifyVetoSlot('07:15', 'SLOT 1 - PAGI KOMUTER (07:15 WIB)', 1), {
+// SLOT 1: PAGI PUNCHY (07:30 WIB) -> Deliberation Staging 04:30 WIB
+cron.schedule('30 4 * * *', () => prepareAndNotifyVetoSlot('07:30', 'SLOT 1 - PAGI PUNCHY (07:30 WIB)', 1), {
   scheduled: true,
   timezone: 'Asia/Jakarta'
 });
-cron.schedule('15 7 * * *', () => executeScheduledPosting('07:15', 'SLOT 1 - PAGI KOMUTER (07:15 WIB)', 1), {
-  scheduled: true,
-  timezone: 'Asia/Jakarta'
-});
-
-// SLOT 2: COFFEE BREAK (10:00 WIB) -> Deliberation Staging 07:00 WIB
-cron.schedule('0 7 * * *', () => prepareAndNotifyVetoSlot('10:00', 'SLOT 2 - COFFEE BREAK (10:00 WIB)', 2), {
-  scheduled: true,
-  timezone: 'Asia/Jakarta'
-});
-cron.schedule('0 10 * * *', () => executeScheduledPosting('10:00', 'SLOT 2 - COFFEE BREAK (10:00 WIB)', 2), {
+cron.schedule('30 7 * * *', () => executeScheduledPosting('07:30', 'SLOT 1 - PAGI PUNCHY (07:30 WIB)', 1), {
   scheduled: true,
   timezone: 'Asia/Jakarta'
 });
 
-// SLOT 3: MAKAN SIANG (12:30 WIB) -> Deliberation Staging 09:30 WIB [ORGANIK MURNI 0% LINK]
-cron.schedule('30 9 * * *', () => prepareAndNotifyVetoSlot('12:30', 'SLOT 3 - MAKAN SIANG (12:30 WIB)', 3), {
+// SLOT 2: SIANG FINANCIAL (12:15 WIB) -> Deliberation Staging 09:15 WIB
+cron.schedule('15 9 * * *', () => prepareAndNotifyVetoSlot('12:15', 'SLOT 2 - SIANG FINANCIAL (12:15 WIB)', 2), {
   scheduled: true,
   timezone: 'Asia/Jakarta'
 });
-cron.schedule('30 12 * * *', () => executeScheduledPosting('12:30', 'SLOT 3 - MAKAN SIANG (12:30 WIB)', 3), {
-  scheduled: true,
-  timezone: 'Asia/Jakarta'
-});
-
-// SLOT 4: SORE PULANG KANTOR (16:30 WIB) -> Deliberation Staging 13:30 WIB [ORGANIK MURNI 0% LINK]
-cron.schedule('30 13 * * *', () => prepareAndNotifyVetoSlot('16:30', 'SLOT 4 - SORE PULANG KANTOR (16:30 WIB)', 4), {
-  scheduled: true,
-  timezone: 'Asia/Jakarta'
-});
-cron.schedule('30 16 * * *', () => executeScheduledPosting('16:30', 'SLOT 4 - SORE PULANG KANTOR (16:30 WIB)', 4), {
+cron.schedule('15 12 * * *', () => executeScheduledPosting('12:15', 'SLOT 2 - SIANG FINANCIAL (12:15 WIB)', 2), {
   scheduled: true,
   timezone: 'Asia/Jakarta'
 });
 
-// SLOT 5: MALAM SANTAI (19:30 WIB) -> Deliberation Staging 16:30 WIB [AFFILIATE TUNGGAL HARIAN 1X]
-cron.schedule('30 16 * * *', () => prepareAndNotifyVetoSlot('19:30', 'SLOT 5 - MALAM SANTAI (19:30 WIB)', 5), {
+// SLOT 3: MALAM CLIFFHANGER FASE 1 (19:45 WIB) -> Deliberation Staging 16:45 WIB
+cron.schedule('45 16 * * *', () => prepareAndNotifyVetoSlot('19:45', 'SLOT 3 - MALAM CLIFFHANGER (19:45 WIB)', 3), {
   scheduled: true,
   timezone: 'Asia/Jakarta'
 });
-cron.schedule('30 19 * * *', () => executeScheduledPosting('19:30', 'SLOT 5 - MALAM SANTAI (19:30 WIB)', 5), {
+cron.schedule('45 19 * * *', () => executeScheduledPosting('19:45', 'SLOT 3 - MALAM CLIFFHANGER (19:45 WIB)', 3), {
   scheduled: true,
   timezone: 'Asia/Jakarta'
 });
 
-// SLOT 6: PEAK REBAHAN (21:45 WIB) -> Deliberation Staging 18:45 WIB [ORGANIK MURNI 0% LINK]
-cron.schedule('45 18 * * *', () => prepareAndNotifyVetoSlot('21:45', 'SLOT 6 - PEAK REBAHAN (21:45 WIB)', 6), {
-  scheduled: true,
-  timezone: 'Asia/Jakarta'
-});
-cron.schedule('45 21 * * *', () => executeScheduledPosting('21:45', 'SLOT 6 - PEAK REBAHAN (21:45 WIB)', 6), {
+// FASE 2 CONTINUATION (21:00 WIB)
+cron.schedule('0 21 * * *', () => executeDelayedCliffhangerContinuation(), {
   scheduled: true,
   timezone: 'Asia/Jakarta'
 });

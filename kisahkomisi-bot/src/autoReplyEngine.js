@@ -488,12 +488,25 @@ async function runAutoEngagementScan(userId) {
       // Jika warganet bertanya link produk (Buying Intent) dan postingan punya metadata produk Shopee:
       if (comment.archetype === 'PRODUCT_INQUIRY' && story.product_url) {
         console.log(`[AutoReply] 🛍️ Closing Affiliate Aktif! Menjawab pertanyaan link dari @${comment.username}...`);
-        const closingOptions = [
-          `kemarin gue belinya di official store ini kak, mumpung dapet diskon ongkir: ${story.product_url}`,
-          `ini link produk yang kemarin gue pake kak, awet bgt barangnya: ${story.product_url}`,
-          `beli di toko ini kak kemarin, pengirimannya cepet bgt: ${story.product_url}`
-        ];
-        replyText = closingOptions[Math.floor(Math.random() * closingOptions.length)];
+        const existingLinkCount = db.getAutoReplyCountWithLink ? db.getAutoReplyCountWithLink(story.threads_media_id) : 0;
+        
+        if (existingLinkCount >= 1) {
+          // Anti-Spam Guardrail: Max 1 direct link per post thread, subsequent inquiries get contextual pointer to prevent Meta spam penalty
+          const pointerOptions = [
+            `udah gue sematin link produknya di balasan paling atas ya kak, atau bisa langsung klik nomor barang di bio gue!`,
+            `link tokonya udah gue taro di balasan komentar pertama di atas ya kak, biar rapi gak kena spam`,
+            `bisa cek balasan paling atas ya kak buat link lengkapnya, atau langsung buka link di bio gue no #${story.id}`
+          ];
+          replyText = pointerOptions[Math.floor(Math.random() * pointerOptions.length)];
+        } else {
+          // First buyer inquiry gets direct high-conversion link
+          const closingOptions = [
+            `kemarin gue belinya di official store ini kak, mumpung dapet diskon ongkir: ${story.product_url}`,
+            `ini link produk yang kemarin gue pake kak, awet bgt barangnya: ${story.product_url}`,
+            `beli di toko ini kak kemarin, pengirimannya cepet bgt: ${story.product_url}`
+          ];
+          replyText = closingOptions[Math.floor(Math.random() * closingOptions.length)];
+        }
       } else {
         const draftReply = await generateEngagementReply(story.title, comment.text, comment.username, {
           name: story.product_name,

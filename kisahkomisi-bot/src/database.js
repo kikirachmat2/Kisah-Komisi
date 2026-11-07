@@ -155,6 +155,21 @@ function initSchema() {
   try {
     db.exec(`ALTER TABLE stories ADD COLUMN format_type TEXT DEFAULT 'story';`);
   } catch (e) {}
+  try {
+    db.exec(`ALTER TABLE stories ADD COLUMN is_cliffhanger INTEGER DEFAULT 0;`);
+  } catch (e) {}
+  try {
+    db.exec(`ALTER TABLE stories ADD COLUMN continuation_status TEXT DEFAULT 'none';`);
+  } catch (e) {}
+  try {
+    db.exec(`ALTER TABLE stories ADD COLUMN continuation_slides_json TEXT;`);
+  } catch (e) {}
+  try {
+    db.exec(`ALTER TABLE stories ADD COLUMN continuation_scheduled_at DATETIME;`);
+  } catch (e) {}
+  try {
+    db.exec(`ALTER TABLE stories ADD COLUMN continuation_parent_media_id TEXT;`);
+  } catch (e) {}
 
   try {
     db.exec(`ALTER TABLE post_snapshots ADD COLUMN external_replies INTEGER DEFAULT 0;`);
@@ -464,6 +479,49 @@ module.exports = {
       SET last_media_id = ? 
       WHERE id = ?
     `).run(lastMediaId, id);
+  },
+
+  savePendingCliffhanger: (id, parentMediaId, remainingSlides, continuationScheduledAt) => {
+    return db.prepare(`
+      UPDATE stories
+      SET is_cliffhanger = 1,
+          continuation_status = 'pending',
+          continuation_parent_media_id = ?,
+          continuation_slides_json = ?,
+          continuation_scheduled_at = ?
+      WHERE id = ?
+    `).run(
+      parentMediaId,
+      typeof remainingSlides === 'string' ? remainingSlides : JSON.stringify(remainingSlides),
+      continuationScheduledAt,
+      id
+    );
+  },
+
+  getPendingCliffhangers: () => {
+    return db.prepare(`
+      SELECT * FROM stories
+      WHERE is_cliffhanger = 1 AND continuation_status = 'pending'
+      ORDER BY id ASC
+    `).all();
+  },
+
+  markCliffhangerCompleted: (id, continuationMediaId = null) => {
+    return db.prepare(`
+      UPDATE stories
+      SET continuation_status = 'completed',
+          last_media_id = COALESCE(?, last_media_id)
+      WHERE id = ?
+    `).run(continuationMediaId, id);
+  },
+
+  markCliffhangerCanceled: (id, reason = '') => {
+    return db.prepare(`
+      UPDATE stories
+      SET continuation_status = 'canceled',
+          error_message = COALESCE(error_message || ' | ', '') || 'Cliffhanger canceled: ' || ?
+      WHERE id = ?
+    `).run(reason, id);
   },
 
   getRecentStoryTopics: (limit = 10) => {
@@ -837,6 +895,15 @@ module.exports = {
       SELECT COUNT(*) as cnt 
       FROM auto_replies 
       WHERE threads_media_id = ?
+    `).get(mediaId);
+    return row ? row.cnt : 0;
+  },
+
+  getAutoReplyCountWithLink: (mediaId) => {
+    const row = db.prepare(`
+      SELECT COUNT(*) as cnt 
+      FROM auto_replies 
+      WHERE threads_media_id = ? AND (reply_text LIKE '%http://%' OR reply_text LIKE '%https://%' OR reply_text LIKE '%shope%')
     `).get(mediaId);
     return row ? row.cnt : 0;
   },
