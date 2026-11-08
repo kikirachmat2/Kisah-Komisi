@@ -791,7 +791,7 @@ function getAdaptiveAffiliateStatus() {
     const manualQuota = db.getSetting('MANUAL_AFFILIATE_QUOTA');
     if (manualQuota && ['1', '2', '3'].includes(String(manualQuota))) {
       const q = parseInt(manualQuota, 10);
-      const allowed = q === 3 ? [3, 5, 6] : (q === 2 ? [3, 5] : [5]);
+      const allowed = q === 3 ? [1, 2, 3] : (q === 2 ? [2, 3] : [3]);
       return {
         tier: 'MANUAL_OVERRIDE',
         quota: q,

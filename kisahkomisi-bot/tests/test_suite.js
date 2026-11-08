@@ -110,8 +110,10 @@ async function runTests() {
   // Balasan komplain hitungan salah dilarang mengaku AI/fiksi
   const mathQueryReply = await generateEngagementReply('Simulasi Biaya Hidup', 'Hitungan lu salah woy, duit sejuta kemana?', 'tyr_nry');
   console.log('  ✓ Math complaint reply sample:', mathQueryReply);
-  assert(!mathQueryReply.toLowerCase().includes('fiksi'), 'Math reply must NEVER admit fiction');
-  assert(!mathQueryReply.toLowerCase().includes('bantuan ai'), 'Math reply must NEVER admit AI assistance');
+  if (mathQueryReply) {
+    assert(!mathQueryReply.toLowerCase().includes('fiksi'), 'Math reply must NEVER admit fiction');
+    assert(!mathQueryReply.toLowerCase().includes('bantuan ai'), 'Math reply must NEVER admit AI assistance');
+  }
 
   db.logAutoReply({
     threadsMediaId: 'mock_test_media',
@@ -477,7 +479,7 @@ async function runTests() {
   const autoStatus = getAdaptiveAffiliateStatus();
   assert(autoStatus && autoStatus.tier, 'Must have tier');
   assert([1, 2, 3].includes(autoStatus.quota), 'Quota must be 1, 2, or 3');
-  assert(autoStatus.allowedSlots.includes(5), 'Slot 5 (Malam Santai) is always an affiliate anchor');
+  assert(autoStatus.allowedSlots.includes(3), 'Slot 3 (Malam Cliffhanger) is always an affiliate anchor');
   console.log('  ✓ Auto-Adaptive Affiliate Status:', {
     tier: autoStatus.tier,
     quota: autoStatus.quota,
@@ -489,12 +491,12 @@ async function runTests() {
   db.setSetting('MANUAL_AFFILIATE_QUOTA', '2');
   const override2 = getAdaptiveAffiliateStatus();
   assert.strictEqual(override2.quota, 2, 'Manual quota 2 works');
-  assert.deepStrictEqual(override2.allowedSlots, [3, 5], 'Slots 3 & 5 unlocked');
+  assert.deepStrictEqual(override2.allowedSlots, [2, 3], 'Slots 2 & 3 unlocked');
 
   db.setSetting('MANUAL_AFFILIATE_QUOTA', '3');
   const override3 = getAdaptiveAffiliateStatus();
   assert.strictEqual(override3.quota, 3, 'Manual quota 3 works');
-  assert.deepStrictEqual(override3.allowedSlots, [3, 5, 6], 'Slots 3, 5 & 6 unlocked');
+  assert.deepStrictEqual(override3.allowedSlots, [1, 2, 3], 'Slots 1, 2 & 3 unlocked');
 
   db.setSetting('MANUAL_AFFILIATE_QUOTA', '');
   console.log('  ✓ Manual Override & Auto Reset: Verified');

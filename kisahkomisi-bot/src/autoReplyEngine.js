@@ -356,6 +356,15 @@ PANDUAN MUTLAK SUPAYA 100% PERSIS GAYA ASLI KIKI:
     return affReplies[Math.floor(Math.random() * affReplies.length)];
   }
 
+  if (archetype === 'MATH_COMPLAINT') {
+    const mathReplies = [
+      'anjir bener juga, salah input angka gue wkwk maap bang',
+      'haha maap typo ngitungnya bang, maklum ngetik buru-buru wkwk',
+      'wkwk iya selip sejuta bang, teliti banget lu thanks koreksinya'
+    ];
+    return mathReplies[Math.floor(Math.random() * mathReplies.length)];
+  }
+
   return null;
 }
 
