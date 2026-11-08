@@ -919,7 +919,7 @@ module.exports = {
   },
 
   // Thread Bumper Helpers
-  getLatestPublishedStoryUnbumped: (minHoursAgo = 2.5, maxHoursAgo = 6) => {
+  getLatestPublishedStoryUnbumped: (minHoursAgo = 1.5, maxHoursAgo = 24) => {
     return db.prepare(`
       SELECT 
         s.id, s.title, s.topic, s.slides_json, s.product_name, s.product_url,
@@ -934,7 +934,7 @@ module.exports = {
         AND s.bumped_at IS NULL
         AND s.published_at >= datetime('now', '-' || ? || ' hours')
         AND s.published_at <= datetime('now', '-' || ? || ' hours')
-      ORDER BY s.id DESC
+      ORDER BY COALESCE(si.views, 0) DESC, s.id DESC
       LIMIT 1
     `).get(maxHoursAgo, minHoursAgo);
   },

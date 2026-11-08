@@ -1348,24 +1348,23 @@ async function checkTokenExpiryReminder() {
 }
 
 // ==========================================
-// 📅 JADWAL 3 SLOT HARIAN BERDAMPAK TINGGI + DELAYED CLIFFHANGER (ANTI-SPAM & MAKSIMALKAN REACH)
-// 1. Slot 1 (07:30 WIB): Short Punchy Morning Bait (1 Post Pendek, 0% Link, Pemicu Debat Pagi)
-// 2. Slot 2 (12:15 WIB): Compact Financial Breakdown / Dilema Kantor (1 Post Padat, 0% Link)
-// 3. Slot 3 (19:45 WIB - Fase 1): Cliffhanger Story Hook (Slide 1 & 2 Menggantung)
-//    -> Dilanjutkan Jam 21:00 WIB (Fase 2): Payoff Ending + Solusi Shopee (Chained Reply)
-// 4. Fully Otomatis + Jitter Manusiawi (10-30 Menit Anti-Ban)
+// 📅 JADWAL 3 SLOT HARIAN BERBASIS DATA EMPIRIS + TROJAN HORSE AFFILIATE
+// 1. Slot 1 (07:30 WIB): Hot Take / Sarkasme Pagi (1-Liner Tajam, 0% Link di Slide 1, Metadata Produk Trojan Horse)
+// 2. Slot 2 (12:15 WIB): Financial Breakdown 1-Slide Bullet (Mesin Viral #1 Avg 13.711 Views, Metadata Produk Trojan Horse)
+// 3. Slot 3 (19:45 WIB - Fase 1): Cliffhanger / Financial Breakdown Prime Time
+//    -> Disundul otomatis oleh ThreadBumper (10:45, 16:00, 23:00 WIB) & Fase 2 (21:00 WIB) dengan Solusi Shopee!
 // ==========================================
 const DAILY_SLOTS = [
-  { slotNumber: 1, time: '07:30', vetoTime: '04:30', label: 'SLOT 1 - PAGI PUNCHY (07:30 WIB)', defaultFormat: 'single_life_update', targetNicheType: 'locked', hasAffiliate: false },
+  { slotNumber: 1, time: '07:30', vetoTime: '04:30', label: 'SLOT 1 - PAGI PUNCHY (07:30 WIB)', defaultFormat: 'hot_take', targetNicheType: 'locked', hasAffiliate: false },
   { slotNumber: 2, time: '12:15', vetoTime: '09:15', label: 'SLOT 2 - SIANG FINANCIAL (12:15 WIB)', defaultFormat: 'financial_breakdown', targetNicheType: 'locked', hasAffiliate: false },
-  { slotNumber: 3, time: '19:45', vetoTime: '16:45', label: 'SLOT 3 - MALAM CLIFFHANGER (19:45 WIB)', defaultFormat: 'cliffhanger_story', targetNicheType: 'locked', hasAffiliate: true }
+  { slotNumber: 3, time: '19:45', vetoTime: '16:45', label: 'SLOT 3 - MALAM PRIME TIME (19:45 WIB)', defaultFormat: 'financial_breakdown', targetNicheType: 'locked', hasAffiliate: true }
 ];
 
 // Slot organik yang formatnya dipilih Bandit Allocator berdasarkan hit-rate target views
 const ADAPTIVE_SLOT_CANDIDATES = {
-  1: ['single_life_update', 'menfess_spill', 'hot_take'],
-  2: ['financial_breakdown', 'hot_take', 'menfess_spill'],
-  3: ['cliffhanger_story', 'story_affiliate', 'anonymous_curhat_story']
+  1: ['hot_take', 'financial_breakdown', 'menfess_spill'],
+  2: ['financial_breakdown', 'hot_take'],
+  3: ['financial_breakdown', 'hot_take', 'cliffhanger_story']
 };
 
 /**
@@ -1381,22 +1380,16 @@ function resolveSlotFormat(dateStr, slotConf) {
   const isAffiliateActive = adaptiveStatus.allowedSlots.includes(slotConf.slotNumber);
   slotConf.hasAffiliate = isAffiliateActive;
 
-  let fmt = slotConf.defaultFormat;
-  if (slotConf.slotNumber === 3) {
-    fmt = 'cliffhanger_story';
-  } else if (isAffiliateActive) {
-    fmt = 'story_affiliate';
-  } else {
-    const candidates = ADAPTIVE_SLOT_CANDIDATES[slotConf.slotNumber] || ['single_life_update', 'menfess_spill', 'hot_take'];
-    try {
-      fmt = chooseAdaptiveFormat(candidates, slotConf.defaultFormat || 'single_life_update');
-    } catch (e) {
-      fmt = slotConf.defaultFormat || 'single_life_update';
-    }
+  let fmt = slotConf.defaultFormat || 'financial_breakdown';
+  const candidates = ADAPTIVE_SLOT_CANDIDATES[slotConf.slotNumber] || ['financial_breakdown', 'hot_take', 'menfess_spill'];
+  try {
+    fmt = chooseAdaptiveFormat(candidates, slotConf.defaultFormat || 'financial_breakdown');
+  } catch (e) {
+    fmt = slotConf.defaultFormat || 'financial_breakdown';
   }
 
   db.setSetting(key, fmt);
-  console.log(`[BanditAllocator] Slot ${slotConf.slotNumber} (${dateStr}) → format "${fmt}" [Affiliate: ${isAffiliateActive ? 'YES (' + adaptiveStatus.tier + ')' : 'NO'}]`);
+  console.log(`[BanditAllocator] Slot ${slotConf.slotNumber} (${dateStr}) → format "${fmt}" [TrojanHorse Affiliate Ready]`);
   return fmt;
 }
 

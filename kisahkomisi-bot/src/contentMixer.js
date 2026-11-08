@@ -1,8 +1,51 @@
 const path = require('path');
 require('dotenv').config({ path: path.join(__dirname, '../.env') });
 const db = require('./database');
-const { generateStory, getAutoTopicTag } = require('./aiStory');
+const { generateStory, getAutoTopicTag, appendSubId, cleanProductName } = require('./aiStory');
 const { scanThreadsViralTrends } = require('./socialRadar');
+
+/**
+ * Trojan Horse Monetization Helper:
+ * Menyiapkan metadata produk Shopee kontekstual untuk postingan viral 1-slide (financial_breakdown, hot_take, menfess_spill).
+ * Slide 1 tetap 100% BEBAS LINK agar algoritma Meta Threads mendistribusikan ke For You (20rb-73rb views),
+ * sementara product_name & product_url disimpan di DB untuk ditembakkan oleh Thread Bumper ("Add to thread" Slide 2) saat views naik!
+ */
+function curateContextualProductMetadata(contextText = '', formatTag = 'viral') {
+  try {
+    const lower = String(contextText || '').toLowerCase();
+    let preferredCategories = ['Kantor', 'Kerja', 'Kosan', 'Rekomendasi'];
+    if (/kopi|jajan|makan|warteg|minum|tumbler|bekal|boncos/i.test(lower)) {
+      preferredCategories = ['Botol', 'Tumbler', 'Dapur', 'Kosan', 'Rekomendasi'];
+    } else if (/listrik|ac|gerah|panas|kamar|kos|tidur/i.test(lower)) {
+      preferredCategories = ['Kosan', 'Elektronik', 'Kamar', 'Rekomendasi'];
+    } else if (/laptop|kerja|lembur|coding|mata|meja|wfh|remote|kantor/i.test(lower)) {
+      preferredCategories = ['Kerja', 'Kantor', 'Elektronik', 'Meja', 'Rekomendasi'];
+    } else if (/krl|commute|stasiun|ojol|hujan|baterai|charger/i.test(lower)) {
+      preferredCategories = ['Elektronik', 'Gadget', 'Tas', 'Rekomendasi'];
+    }
+
+    const prod = db.getRandomProduct ? db.getRandomProduct(preferredCategories) : null;
+    if (!prod || !prod.affiliate_url) {
+      return { product_name: null, product_url: null };
+    }
+
+    const trackedUrl = appendSubId
+      ? appendSubId(prod.affiliate_url, {
+          sub_id1: 'threads_ceritakiki',
+          sub_id2: formatTag,
+          sub_id3: `prod_${prod.id || 0}`
+        })
+      : prod.affiliate_url;
+
+    const cleanName = cleanProductName ? cleanProductName(prod.name) : prod.name;
+    return {
+      product_name: cleanName,
+      product_url: trackedUrl
+    };
+  } catch (e) {
+    return { product_name: null, product_url: null };
+  }
+}
 
 const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
 const GROQ_API_KEY = process.env.GROQ_API_KEY;
@@ -253,13 +296,15 @@ ATURAN BIAR GAK KELIHATAN BOT AI:
   text = text.replace(/^["']|["']$/g, '').replace(/[*_~`]/g, '').replace(/#\w+/g, '').trim().toLowerCase();
   if (text.length > 480) text = text.substring(0, 475) + '...';
 
+  const prodMeta = curateContextualProductMetadata(`${theme} ${text}`, 'hot_take');
+
   return {
     title: `Sarkasme: ${theme.slice(0, 30)}...`,
     topic: theme,
     format_type: FORMAT_TYPES.HOT_TAKE,
     topic_tag: topicTag,
-    product_name: null,
-    product_url: null,
+    product_name: prodMeta.product_name,
+    product_url: prodMeta.product_url,
     slides: [text],
     variant: 'A',
     origin: 'opinion'
@@ -313,13 +358,15 @@ ATURAN BIAR GAK KELIHATAN BOT AI:
   text = text.replace(/^["']|["']$/g, '').replace(/[*_~`]/g, '').replace(/#\w+/g, '').trim().toLowerCase();
   if (text.length > 480) text = text.substring(0, 475) + '...';
 
+  const prodMeta = curateContextualProductMetadata(`${theme} ${text}`, 'menfess_spill');
+
   return {
     title: `Spill Warganet: ${theme.slice(0, 30)}...`,
     topic: theme,
     format_type: FORMAT_TYPES.MENFESS_SPILL,
     topic_tag: topicTag,
-    product_name: null,
-    product_url: null,
+    product_name: prodMeta.product_name,
+    product_url: prodMeta.product_url,
     slides: [text],
     variant: 'A',
     origin: 'crowdsource'
@@ -834,14 +881,15 @@ ATURAN KETAT ANTI-DUPLIKASI & LOGIKA REALITAS KOTA (ANTI-BEGO):
 
   // Bangun teks dengan kalkulasi matematika eksak via JavaScript
   const text = buildFinancialBreakdownText(budgetData);
+  const prodMeta = curateContextualProductMetadata(`${theme} ${text}`, 'financial_breakdown');
 
   return {
     title: `Finansial: ${theme.slice(0, 30)}...`,
     topic: theme,
     format_type: FORMAT_TYPES.FINANCIAL_BREAKDOWN,
     topic_tag: topicTag,
-    product_name: null,
-    product_url: null,
+    product_name: prodMeta.product_name,
+    product_url: prodMeta.product_url,
     slides: [text],
     variant: 'A',
     origin: 'opinion'
@@ -887,45 +935,32 @@ async function generateMixedPost(formatType, options = {}) {
 }
 
 /**
- * Menentukan format ideal untuk setiap dari 6 slot harian (Rundown 50/50 Seimbang):
- * 50% SINGLE POST (Slot 1, 2, 4): Life update Kiki, real-time date/calendar, berita/demo, viral callback (0% Ad).
- * 50% CERITA PANJANG / DM (Slot 3, 5, 6): Utas curhat DM anonim ("hari ini ada dm cerita anonim nih...") + Shopee Affiliate.
+ * Menentukan format ideal untuk setiap slot harian berbasis DATA EMPIRIS:
+ * Fokus pada 3 format pemenang views tertinggi:
+ * - FINANCIAL_BREAKDOWN (Avg 13.711 views, Max 73.280 views)
+ * - HOT_TAKE (Avg 630 views, Max 3.506 views)
+ * - MENFESS_SPILL (Reply & Debat Komunitas)
+ * Semua memiliki metadata produk Trojan Horse (Slide 1 bebas link, Slide 2 disundul ThreadBumper).
  */
 function getFormatForSlotNumber(slotNumber) {
-  let winningFormats = [];
-  try {
-    const raw = db.getSetting('WINNING_FORMATS_RANK');
-    if (raw) {
-      const parsed = JSON.parse(raw);
-      if (Array.isArray(parsed)) winningFormats = parsed;
-    }
-  } catch (e) {}
-
   switch (Number(slotNumber)) {
     case 1:
-      // Slot 1 (07:15 Pagi Komuter): Life update pagi, KRL, cuaca, atau callback
-      return FORMAT_TYPES.SINGLE_LIFE_UPDATE;
+      // Slot 1 (07:30 Pagi Komuter): Hot Take / Sarkasme Realitas Pagi
+      return FORMAT_TYPES.HOT_TAKE;
     case 2:
-      // Slot 2 (10:00 Coffee Break): Mesin Viral #1 - Bedah Gaji & Finansial Angka Konkret
+      // Slot 2 (12:15 Makan Siang): Mesin Viral #1 - Bedah Gaji & Finansial Angka Konkret (1-Slide Bullet)
       return FORMAT_TYPES.FINANCIAL_BREAKDOWN;
     case 3:
-      // Slot 3 (12:30 Makan Siang): Curhat DM Anonim + Shopee Affiliate #1
-      return FORMAT_TYPES.ANONYMOUS_CURHAT_STORY;
-    case 4: {
-      // Slot 4 (16:30 Sore Pulang): Adaptive Organic Slot - utamakan format organik terkuat dari data nyata
-      const organicPool = [FORMAT_TYPES.MENFESS_SPILL, FORMAT_TYPES.HOT_TAKE, FORMAT_TYPES.FINANCIAL_BREAKDOWN];
-      const topOrganic = winningFormats.find(f => organicPool.includes(f) && f !== FORMAT_TYPES.FINANCIAL_BREAKDOWN);
-      if (topOrganic && Math.random() < 0.7) return topOrganic;
-      return Math.random() > 0.4 ? FORMAT_TYPES.MENFESS_SPILL : FORMAT_TYPES.HOT_TAKE;
-    }
+      // Slot 3 (19:45 Malam Prime Time): Bedah Finansial / Menfess Debat Malam
+      return Math.random() < 0.65 ? FORMAT_TYPES.FINANCIAL_BREAKDOWN : FORMAT_TYPES.MENFESS_SPILL;
+    case 4:
+      return FORMAT_TYPES.HOT_TAKE;
     case 5:
-      // Slot 5 (19:30 Malam Santai): Story Affiliate dengan angka konkret #2
-      return FORMAT_TYPES.STORY_AFFILIATE;
+      return FORMAT_TYPES.FINANCIAL_BREAKDOWN;
     case 6:
-      // Slot 6 (21:45 Peak Rebahan): Curhat mendalam warganet anonim + Shopee Affiliate #3
-      return FORMAT_TYPES.ANONYMOUS_CURHAT_STORY;
+      return FORMAT_TYPES.MENFESS_SPILL;
     default:
-      return FORMAT_TYPES.SINGLE_LIFE_UPDATE;
+      return FORMAT_TYPES.FINANCIAL_BREAKDOWN;
   }
 }
 

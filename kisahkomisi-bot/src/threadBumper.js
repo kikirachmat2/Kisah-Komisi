@@ -17,8 +17,8 @@ function isValidBump(text) {
   if (clean.length < 50 || clean.length > 450) return false;
   // Wajib punya minimal 8 kata
   if (clean.split(/\s+/).length < 8) return false;
-  // Wajib diakhiri tanda baca lengkap (tidak boleh terpotong di tengah jalan)
-  if (!/[.!?]$/.test(clean)) return false;
+  // Wajib diakhiri tanda baca lengkap ATAU URL Shopee Affiliate di akhir kalimat
+  if (!/([.!?]|https?:\/\/\S+)$/i.test(clean)) return false;
   // Tidak boleh cuma kalimat awalan
   if (/^(update dikit|btw ada|barusan dapet|banyak yang salfok)\s*:?\s*$/i.test(clean)) return false;
   return true;
@@ -47,7 +47,7 @@ async function generateBumpUpdate(story) {
       } catch (e) {}
     }
 
-    const isSurgeAffiliate = Number(story.views || 0) >= 500 && Boolean(story.product_url);
+    const isSurgeAffiliate = Number(story.views || 0) >= 50 && Boolean(story.product_url);
     if (isSurgeAffiliate) {
       console.log(`[ThreadBumper] 🚀 SURGE AFFILIATE AKTIF! Thread tembus ${story.views} views. Menyiapkan rekomendasi solusi kontekstual Shopee...`);
     }
@@ -69,7 +69,7 @@ async function generateBumpUpdate(story) {
     console.warn('[ThreadBumper] Zura bump error, fallback ke LLM generator:', e.message);
   }
 
-  const isSurge = Number(story.views || 0) >= 500 && Boolean(story.product_url);
+  const isSurge = Number(story.views || 0) >= 50 && Boolean(story.product_url);
 
   const prompt = isSurge ? `
 Kamu adalah Kiki Rachmat (@kikipunyacerita), kurator dan warganet di Threads (pekerja media 26 tahun di Jakpus).
@@ -201,8 +201,8 @@ async function executeThreadBump(userId) {
     return null;
   }
 
-  // Cari cerita yang terbit antara 2.0 s/d 6 jam yang lalu dan belum pernah di-bump
-  const targetStory = db.getLatestPublishedStoryUnbumped(2.0, 6.0);
+  // Cari cerita yang terbit antara 1.5 s/d 24 jam yang lalu dan belum pernah di-bump (diurutkan dari views tertinggi)
+  const targetStory = db.getLatestPublishedStoryUnbumped(1.5, 24.0);
   if (!targetStory) {
     console.log('[ThreadBumper] Tidak ada thread yang memenuhi kriteria cooldown untuk di-bump saat ini.');
     return null;

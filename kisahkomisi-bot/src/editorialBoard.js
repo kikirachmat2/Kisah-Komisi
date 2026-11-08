@@ -697,22 +697,22 @@ async function replenishStockBuffer(targetBuffer = 18) {
       (breakdown['serialized_story'] || 0) + 
       (breakdown['financial_breakdown'] || 0);
 
-    // Kumpulan format 50/50 Seimbang (Life Update & Curhat Multi-Slide)
-    const baseViralFormats = [
-      'single_life_update'
+    // Rotasi format berbasis DATA EMPIRIS:
+    // 1. financial_breakdown (Avg 13.711 views, Max 73.280 views) - 50% alokasi
+    // 2. hot_take (Avg 630 views, Max 3.506 views) - 25% alokasi
+    // 3. menfess_spill (Debat komunitas) - 25% alokasi
+    const provenViralRotation = [
+      'financial_breakdown',
+      'hot_take',
+      'financial_breakdown',
+      'menfess_spill'
     ];
 
     const inMemoryBatch = [];
     let addedCount = 0;
     for (let i = 0; i < toCreate; i++) {
       try {
-        // Jaga keseimbangan 50% affiliate, 50% pilar viral insight
-        let chosenFormat;
-        if (affiliateCount + (addedCount > 0 ? 1 : 0) <= viralCount) {
-          chosenFormat = 'anonymous_curhat_story';
-        } else {
-          chosenFormat = 'single_life_update';
-        }
+        const chosenFormat = provenViralRotation[(currentCount + i) % provenViralRotation.length];
 
         // Seimbangkan 50% pilar viral terkunci & 50% pilar eksplorasi gelombang baru
         const targetNicheType = (i % 2 === 0) ? 'locked' : 'explore';

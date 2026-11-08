@@ -175,7 +175,7 @@ async function consultZuraForStory(storyData) {
 
   return {
     isApproved: true,
-    slides: hasRevisedSlides ? verdict.revised_slides : storyData.slides,
+    slides: storyData.slides,
     notes: verdict.critique || 'Disetujui Zura',
     logicFlaws: verdict.logic_flaws || []
   };
