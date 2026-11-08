@@ -670,7 +670,7 @@ Keluarkan HANYA JSON:
 `;
   }
 
-  const models = ['gemini-2.5-flash', 'gemini-3-flash-preview'];
+  const models = [process.env.GEMINI_MODEL || 'gemini-3.1-flash-lite', 'gemini-3-flash-preview'];
   let data = null;
 
   if (apiKey) {
@@ -902,7 +902,7 @@ Keluarkan HANYA JSON:
   // 1. Coba Gemini
   const apiKey = process.env.GEMINI_API_KEY || GEMINI_API_KEY;
   if (apiKey) {
-    const models = ['gemini-2.5-flash', 'gemini-3-flash-preview'];
+    const models = [process.env.GEMINI_MODEL || 'gemini-3.1-flash-lite', 'gemini-3-flash-preview'];
     for (const m of models) {
       try {
         const url = `https://generativelanguage.googleapis.com/v1beta/models/${m}:generateContent?key=${apiKey}`;

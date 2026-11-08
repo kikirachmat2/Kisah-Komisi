@@ -205,7 +205,7 @@ async function callAiWithFallback(prompt, temperature = 0.7) {
   // 1. Coba Gemini 2.5 Flash
   if (GEMINI_API_KEY) {
     try {
-      const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${GEMINI_API_KEY}`, {
+      const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${process.env.GEMINI_MODEL || 'gemini-3.1-flash-lite'}:generateContent?key=${GEMINI_API_KEY}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         signal: AbortSignal.timeout(12000),
@@ -214,7 +214,6 @@ async function callAiWithFallback(prompt, temperature = 0.7) {
           generationConfig: {
             maxOutputTokens: 800,
             temperature,
-            thinkingConfig: { thinkingBudget: 0 }
           }
         })
       });

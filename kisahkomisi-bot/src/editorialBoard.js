@@ -330,7 +330,7 @@ Syarat Lolos (approved = true): total_score >= 6.8 dan human_tone >= 6.5. Berika
   // 3. Fallback QC via Gemini Flash (Cadangan handal jika Groq & OpenRouter limit)
   if (GEMINI_API_KEY) {
     try {
-      const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${GEMINI_API_KEY}`;
+      const url = `https://generativelanguage.googleapis.com/v1beta/models/${process.env.GEMINI_MODEL || 'gemini-3.1-flash-lite'}:generateContent?key=${GEMINI_API_KEY}`;
       const geminiRes = await fetch(url, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
