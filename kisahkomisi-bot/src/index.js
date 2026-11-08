@@ -1887,16 +1887,51 @@ cron.schedule('20 4 * * *', async () => {
 });
 
 // ==========================================
-// 📊 COGNITIVE SELF-TUNING & INSIGHT SYNC (Siang 13:30 WIB & Malam 21:00 WIB)
-// Menarik analitik Meta Threads, membandingkan Winner vs Flop, & memperbarui instruksi prompt AI otomatis
+// 📊 COGNITIVE SELF-TUNING & ZURA EXECUTIVE GOVERNOR LOOP (Tiap 4 Jam & Malam 21:00 WIB)
+// Menarik analitik Meta Threads, membandingkan Winner vs Flop, memicu Zura Autonomous Pivot/Takeout,
+// serta mengekstrak intelijen AI Self-Upgrade dari radar akun first (@kikiirch).
 // ==========================================
-cron.schedule('30 13 * * *', async () => {
-  console.log('[Scheduler] Menjalankan Mid-Day Cognitive Self-Tuning & Insight Sync (13:30 WIB)...');
+async function runZuraExecutiveGovernorLoop() {
+  try {
+    const { execFile } = require('child_process');
+    const scriptCandidates = [
+      '/home/ubuntu/zura-core/scripts/zura_executive_governor_loop.py',
+      path.join(__dirname, '../../../Personal AI/scripts/zura_executive_governor_loop.py')
+    ];
+    const targetScript = scriptCandidates.find(p => fs.existsSync(p));
+    if (!targetScript) return null;
+
+    return await new Promise((resolve) => {
+      execFile('python3', [targetScript, '--json'], { timeout: 25000 }, async (err, stdout) => {
+        if (err || !stdout) return resolve(null);
+        try {
+          const parsed = JSON.parse(stdout.trim());
+          if (Array.isArray(parsed.actions_taken) && parsed.actions_taken.length > 0) {
+            await sendAdminAlert(
+              `👑 *[ZURA AUTONOMOUS EXECUTIVE ACTION]*\n\n` +
+              parsed.actions_taken.map(a => `• ${a}`).join('\n') +
+              `\n\n_Semua parameter adaptif di \`zura_adaptive_config.json\` telah diperbarui otomatis oleh Zura._`
+            );
+          }
+          resolve(parsed);
+        } catch (e) {
+          resolve(null);
+        }
+      });
+    });
+  } catch (e) {
+    return null;
+  }
+}
+
+cron.schedule('30 9,13,17 * * *', async () => {
+  console.log('[Scheduler] Menjalankan Periodic Cognitive Self-Tuning & Zura Executive Loop...');
   try {
     await trackAllInsights();
     await analyzePerformanceAndStrategize();
+    await runZuraExecutiveGovernorLoop();
   } catch (err) {
-    console.warn('[Scheduler] Mid-day self-tuning warning:', err.message);
+    console.warn('[Scheduler] Periodic self-tuning warning:', err.message);
   }
 }, {
   scheduled: true,
@@ -1908,6 +1943,7 @@ cron.schedule('0 21 * * *', async () => {
   try {
     await trackAllInsights();
     await analyzePerformanceAndStrategize();
+    await runZuraExecutiveGovernorLoop();
     const report = await generateInsightReportMarkdown();
     await sendAdminAlert(report);
     // Auto shadow sync to Supabase Cloud

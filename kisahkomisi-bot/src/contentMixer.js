@@ -1,8 +1,41 @@
 const path = require('path');
+const fs = require('fs');
 require('dotenv').config({ path: path.join(__dirname, '../.env') });
 const db = require('./database');
 const { generateStory, getAutoTopicTag, appendSubId, cleanProductName } = require('./aiStory');
 const { scanThreadsViralTrends } = require('./socialRadar');
+
+/**
+ * Membaca konfigurasi adaptif Zura (`zura_adaptive_config.json`) secara real-time (Hot-Reload)
+ * Jika insight turun, Zura otomatis mengubah persona_takeout_active, format, dan prompt directives di file JSON ini.
+ */
+function loadZuraAdaptiveConfig() {
+  const candidates = [
+    '/home/ubuntu/zura-core/data/zura_adaptive_config.json',
+    path.join(__dirname, '../../../Personal AI/data/zura_adaptive_config.json'),
+    path.join(__dirname, '../data/zura_adaptive_config.json')
+  ];
+  for (const p of candidates) {
+    try {
+      if (fs.existsSync(p)) {
+        return JSON.parse(fs.readFileSync(p, 'utf8'));
+      }
+    } catch (e) {}
+  }
+  return null;
+}
+
+function getZuraPersonaDirective() {
+  const cfg = loadZuraAdaptiveConfig();
+  const sec = cfg?.second_account;
+  if (sec?.persona_takeout_active && sec?.persona_directive) {
+    const extraRules = Array.isArray(sec.dynamic_prompt_directives)
+      ? '\nATURAN ADAPTIF ZURA:\n' + sec.dynamic_prompt_directives.map((r, i) => `${i + 1}. ${r}`).join('\n')
+      : '';
+    return `MODE ZURA FULL CONTROL (PERSONA TAKEOUT AKTIF):\n${sec.persona_directive}${extraRules}`;
+  }
+  return 'Kamu adalah warganet aktif Indonesia (@kikipunyacerita) yang tajam, realistis, dan bebas membahas topik viral apa saja demi memancing diskusi tertinggi.';
+}
 
 /**
  * Trojan Horse Monetization Helper:
@@ -271,7 +304,7 @@ Samber langsung isu ini dengan gaya warga Threads asli (jangan merangkum berita 
 ` : '';
 
   const prompt = `
-Kamu adalah Kiki Rachmat (@kikipunyacerita), anak muda Jakarta umur 26 thn yang aktif di Threads.
+${getZuraPersonaDirective()}
 ${cognitiveContext}
 ${waveContext}
 Gaya ngetik: Ketikan manusia asli warga Threads Indonesia. Huruf kecil semua (lowercase), kalimat pendek mengalir (1-2 kalimat, 80-170 karakter).
@@ -333,7 +366,7 @@ Lempar pancingan diskusi/debat santai soal isu ini supaya warganet ramai-ramai c
 ` : '';
 
   const prompt = `
-Kamu adalah Kiki Rachmat (@kikipunyacerita), anak muda Jakarta umur 26 thn yang aktif di Threads.
+${getZuraPersonaDirective()}
 ${cognitiveContext}
 ${waveContext}
 Tuliskan SATU (1) POSTINGAN PANCINGAN DISKUSI PENDEK (panjang 90-175 karakter) untuk memancing warganet Threads berdebat atau berbagi cerita di reply.
@@ -781,7 +814,7 @@ WAJIB: Selipkan 1 pos pengeluaran atau punchline yang mencerminkan realitas isu 
 ` : '';
 
   const prompt = `
-Kamu adalah Kiki Rachmat (@kikipunyacerita), pekerja media di Jakarta (usia 26 thn, ngekos di Jakpus, sandwich generation).
+${getZuraPersonaDirective()}
 ${cognitiveContext}
 ${waveContext}
 Tugas: Buat rincian data pengeluaran bulanan yang realistis dan relatable untuk ${chosenArchetype.role} (${chosenArchetype.focus}).
