@@ -813,41 +813,41 @@ function getAdaptiveAffiliateStatus() {
     const latestPostViews = latestPost ? Number(latestPost.views || 0) : 0;
     const latestPostReplies = latestPost ? Number(latestPost.replies || 0) : 0;
 
-    // TIER 3: VIRAL SURGE (3 Slot: Slot 3 Makan Siang, Slot 5 Malam Santai, Slot 6 Peak Rebahan)
+    // TIER 3: VIRAL SURGE (Semua slot diperbolehkan affiliate Trojan Horse)
     if (maxRecentViews >= 1000 || accountDailyViews >= 1000) {
       return {
         tier: 'SURGE',
         quota: 3,
-        allowedSlots: [3, 5, 6],
+        allowedSlots: [1, 2, 3],
         reason: `Viral surge aktif! Postingan tembus >= 1.000 views (Max: ${maxRecentViews}, Akun: ${accountDailyViews}). Kuota maksimal 3 slot affiliate dibuka!`,
         metrics: { maxRecentViews, avgRecentViews, maxRecentReplies, accountDailyViews, latestPostViews }
       };
     }
 
-    // TIER 2: MOMENTUM (2 Slot: Slot 3 Makan Siang + Slot 5 Malam Santai)
+    // TIER 2: MOMENTUM (2 Slot: Slot 2 Siang + Slot 3 Malam)
     if (maxRecentViews >= 250 || avgRecentViews >= 100 || maxRecentReplies >= 5 || latestPostViews >= 75 || latestPostReplies >= 3 || accountDailyViews >= 200) {
       return {
         tier: 'MOMENTUM',
         quota: 2,
-        allowedSlots: [3, 5],
-        reason: `Traksi momentum sehat! (Max views: ${maxRecentViews}, Post terbaru: ${latestPostViews} views, Replies: ${maxRecentReplies}). Kuota dinaikkan menjadi 2 slot affiliate (Slot 3 & 5).`,
+        allowedSlots: [2, 3],
+        reason: `Traksi momentum sehat! (Max views: ${maxRecentViews}, Post terbaru: ${latestPostViews} views, Replies: ${maxRecentReplies}). Kuota dinaikkan menjadi 2 slot affiliate (Slot 2 & 3).`,
         metrics: { maxRecentViews, avgRecentViews, maxRecentReplies, accountDailyViews, latestPostViews }
       };
     }
 
-    // TIER 1: BASELINE (1 Slot: Slot 5 Malam Santai)
+    // TIER 1: BASELINE (1 Slot: Slot 3 Malam Prime Time)
     return {
       tier: 'BASELINE',
       quota: 1,
-      allowedSlots: [5],
-      reason: `Fase pelindung algoritma (Views masih < 250). Mengunci 1 slot affiliate harian di jam malam (Slot 5), 5 slot lainnya 100% organik link-free untuk membuka distribusi For You.`,
+      allowedSlots: [3],
+      reason: `Fase pelindung algoritma (Views masih < 250). Mengunci 1 slot affiliate harian di jam malam (Slot 3 Prime Time), slot lainnya 100% organik link-free untuk membuka distribusi For You.`,
       metrics: { maxRecentViews, avgRecentViews, maxRecentReplies, accountDailyViews, latestPostViews }
     };
   } catch (err) {
     return {
       tier: 'BASELINE',
       quota: 1,
-      allowedSlots: [5],
+      allowedSlots: [3],
       reason: `Fallback pengaman: ${err.message}`,
       metrics: {}
     };
