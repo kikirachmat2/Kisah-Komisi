@@ -147,21 +147,27 @@ function checkContentDeduplication(draft, recentStories = []) {
     }
 
     // Rule C: Opening Hook Overlap (Tolak jika kalimat/frasa pembuka mirip >= 38%)
-    const newHook = (newSlides[0] || '').slice(0, 65).toLowerCase();
-    const prevHook = (prevSlides[0] || '').slice(0, 65).toLowerCase();
-    if (newHook.length > 20 && prevHook.length > 20) {
-      const hookSim = calculateJaccardSimilarity(newHook, prevHook);
-      if (hookSim.combined >= 0.35 || hookSim.unigram >= 0.38) {
-        return {
-          passed: false,
-          reason: `Hook pembuka mirip (${(hookSim.unigram * 100).toFixed(0)}%) dengan postingan #${prev.id || 'antrean'}. Wajib variasi angle pembuka.`
-        };
+    // Pengecualian untuk financial_breakdown: pola header terbukti menang ("Gaji X di Y:") diizinkan selama nominal gaji/kota berbeda (sudah dijaga Rule A).
+    const isFinancial = (draft.format_type === 'financial_breakdown') || (prev.format_type === 'financial_breakdown');
+    if (!isFinancial) {
+      const newHook = (newSlides[0] || '').slice(0, 65).toLowerCase();
+      const prevHook = (prevSlides[0] || '').slice(0, 65).toLowerCase();
+      if (newHook.length > 20 && prevHook.length > 20) {
+        const hookSim = calculateJaccardSimilarity(newHook, prevHook);
+        if (hookSim.combined >= 0.35 || hookSim.unigram >= 0.38) {
+          return {
+            passed: false,
+            reason: `Hook pembuka mirip (${(hookSim.unigram * 100).toFixed(0)}%) dengan postingan #${prev.id || 'antrean'}. Wajib variasi angle pembuka.`
+          };
+        }
       }
     }
 
     // Rule D: Jaccard Text Similarity (Tolak jika kemiripan kata >= 38% atau bigram >= 22% atau combined >= 28%)
     const sim = calculateJaccardSimilarity(newFullText, prevFullText);
-    if (sim.combined >= 0.28 || sim.unigram >= 0.38 || sim.bigram >= 0.22) {
+    const unigramThreshold = isFinancial ? 0.55 : 0.38;
+    const combinedThreshold = isFinancial ? 0.42 : 0.28;
+    if (sim.combined >= combinedThreshold || sim.unigram >= unigramThreshold || (!isFinancial && sim.bigram >= 0.22)) {
       return {
         passed: false,
         reason: `Tingkat kemiripan teks terlalu tinggi (Unigram ${(sim.unigram * 100).toFixed(0)}%, Bigram ${(sim.bigram * 100).toFixed(0)}%) dengan postingan #${prev.id || 'antrean'} ("${prev.title}"). Potensi duplikasi konten.`
