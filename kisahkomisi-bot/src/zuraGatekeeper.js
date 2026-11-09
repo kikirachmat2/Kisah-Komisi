@@ -84,7 +84,6 @@ function invokeZuraCLI(mode, payload) {
       console.warn('[ZuraGatekeeper] Kill-switch aktif (system_paused = true). Eksekusi ditolak.');
       return resolve(null);
     }
-  return new Promise((resolve) => {
     const { pythonBin, scriptPath } = resolveZuraEnv();
     if (!scriptPath) {
       console.warn('[ZuraGatekeeper] Script zura_advisory.py tidak ditemukan, lewati advisory.');
