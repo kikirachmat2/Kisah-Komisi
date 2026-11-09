@@ -1554,6 +1554,12 @@ async function executeScheduledPosting(slotTime, label, slotNumber = null) {
     const userId = process.env.THREADS_USER_ID;
     const token = getActiveAccessToken();
 
+    const { isSystemPaused } = require('./zuraGatekeeper');
+    if (isSystemPaused()) {
+      console.warn(`[Scheduler] Zura Kill-Switch aktif (system_paused = true). Eksekusi slot #${slotNumber || 1} dibatalkan.`);
+      return;
+    }
+
     if (!userId || !token) {
       console.warn('[Scheduler] Threads credentials missing.');
       await sendAdminAlert(`⚠️ *[Scheduler] Gagal Posting (${label})*: Kredensial Threads API belum lengkap di server.`);

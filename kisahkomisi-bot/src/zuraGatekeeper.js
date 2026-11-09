@@ -56,10 +56,34 @@ function resolveZuraEnv() {
   return { pythonBin, scriptPath };
 }
 
+function isSystemPaused() {
+  const candidatePaths = [
+    process.env.ZURA_ADAPTIVE_CONFIG_PATH,
+    '/home/ubuntu/zura-core/data/zura_adaptive_config.json',
+    path.join(__dirname, '../../Personal AI/data/zura_adaptive_config.json'),
+    path.join(__dirname, '../data/zura_adaptive_config.json')
+  ].filter(Boolean);
+
+  for (const p of candidatePaths) {
+    try {
+      if (fs.existsSync(p)) {
+        const data = JSON.parse(fs.readFileSync(p, 'utf8'));
+        if (data.system_paused) return true;
+      }
+    } catch (e) {}
+  }
+  return false;
+}
+
 /**
  * Menjalankan zura_advisory.py secara asinkron
  */
 function invokeZuraCLI(mode, payload) {
+  return new Promise((resolve) => {
+    if (isSystemPaused()) {
+      console.warn('[ZuraGatekeeper] Kill-switch aktif (system_paused = true). Eksekusi ditolak.');
+      return resolve(null);
+    }
   return new Promise((resolve) => {
     const { pythonBin, scriptPath } = resolveZuraEnv();
     if (!scriptPath) {
@@ -269,6 +293,7 @@ module.exports = {
   consultZuraForReply,
   consultZuraForBump,
   reportStoryOutcome,
-  resolveZuraEnv
+  resolveZuraEnv,
+  isSystemPaused
 };
 
