@@ -1409,7 +1409,7 @@ async function prepareAndNotifyVetoSlot(slotTime, label, slotNumber = null) {
     };
 
     const { getAdaptiveAffiliateStatus } = require('./growthEngine');
-    const adaptiveStatus = getAdaptiveAffiliateStatus ? getAdaptiveAffiliateStatus() : { allowedSlots: [5], quota: 1, tier: 'BASELINE' };
+    const adaptiveStatus = getAdaptiveAffiliateStatus ? getAdaptiveAffiliateStatus() : { allowedSlots: [1, 2, 3], quota: 1, tier: 'BASELINE' };
     const isAffiliateActive = adaptiveStatus.allowedSlots.includes(slotConf.slotNumber);
     slotConf.hasAffiliate = isAffiliateActive;
 
@@ -1567,7 +1567,7 @@ async function executeScheduledPosting(slotTime, label, slotNumber = null) {
     };
 
     const { getAdaptiveAffiliateStatus } = require('./growthEngine');
-    const adaptiveStatus = getAdaptiveAffiliateStatus ? getAdaptiveAffiliateStatus() : { allowedSlots: [5], quota: 1, tier: 'BASELINE' };
+    const adaptiveStatus = getAdaptiveAffiliateStatus ? getAdaptiveAffiliateStatus() : { allowedSlots: [1, 2, 3], quota: 1, tier: 'BASELINE' };
     const isAffiliateActive = adaptiveStatus.allowedSlots.includes(slotConf.slotNumber);
     slotConf.hasAffiliate = isAffiliateActive;
 

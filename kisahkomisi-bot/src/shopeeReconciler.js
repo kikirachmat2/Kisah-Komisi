@@ -121,6 +121,15 @@ function processShopeeConversionReport(csvContent) {
     // Agregasi Produk
     const prodKey = itemName || (sub4 ? `Product #${sub4}` : 'Produk Shopee');
     productEarnings[prodKey] = (productEarnings[prodKey] || 0) + cleanComm;
+
+    // Update langsung ke database product_bank bila sub4 (product_id) atau nama produk cocok
+    try {
+      if (sub4 && /^\d+$/.test(sub4)) {
+        db.db.prepare(`UPDATE product_bank SET total_commission = COALESCE(total_commission, 0) + ? WHERE id = ?`).run(cleanComm, parseInt(sub4, 10));
+      } else if (itemName) {
+        db.db.prepare(`UPDATE product_bank SET total_commission = COALESCE(total_commission, 0) + ? WHERE name LIKE ?`).run(cleanComm, `%${itemName}%`);
+      }
+    } catch (e) {}
   }
 
   // Format produk terlaris (Top 5)

@@ -150,6 +150,9 @@ function initSchema() {
     db.exec(`ALTER TABLE stories ADD COLUMN topic_tag TEXT;`);
   } catch (e) {}
   try {
+    db.exec(`ALTER TABLE product_bank ADD COLUMN total_commission REAL DEFAULT 0;`);
+  } catch (e) {}
+  try {
     db.exec(`ALTER TABLE stories ADD COLUMN variant TEXT;`);
   } catch (e) {}
   try {
@@ -550,14 +553,14 @@ module.exports = {
       prod = db.prepare(`
         SELECT * FROM product_bank 
         WHERE active = 1 AND (${placeholders})
-        ORDER BY times_used ASC, RANDOM() 
+        ORDER BY COALESCE(total_commission, 0) DESC, times_used ASC, RANDOM() 
         LIMIT 1
       `).get(...params);
     } else if (typeof categoriesOrTopic === 'string' && categoriesOrTopic.trim()) {
       prod = db.prepare(`
         SELECT * FROM product_bank 
         WHERE active = 1 AND category LIKE ? 
-        ORDER BY times_used ASC, RANDOM() 
+        ORDER BY COALESCE(total_commission, 0) DESC, times_used ASC, RANDOM() 
         LIMIT 1
       `).get(`%${categoriesOrTopic}%`);
     }
@@ -566,7 +569,7 @@ module.exports = {
       prod = db.prepare(`
         SELECT * FROM product_bank 
         WHERE active = 1 
-        ORDER BY times_used ASC, RANDOM() 
+        ORDER BY COALESCE(total_commission, 0) DESC, times_used ASC, RANDOM() 
         LIMIT 1
       `).get();
     }

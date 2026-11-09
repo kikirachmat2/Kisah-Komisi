@@ -126,11 +126,11 @@ async function consultZuraForStory(storyData) {
 
   const verdict = await advisoryPromise;
   if (!verdict) {
-    console.warn('[ZuraGatekeeper] Zura tidak merespons, fallback ke draf original.');
+    console.warn('[ZuraGatekeeper] Rule 0 Fail-Closed: Zura tidak merespons atau timeout. Menahan draf cerita demi integritas narasi.');
     return {
-      isApproved: true,
-      slides: storyData.slides,
-      notes: 'Zura advisory offline, fallback original.'
+      isApproved: false,
+      slides: [],
+      notes: 'Zura advisory offline/timeout - Fail-Closed enforced'
     };
   }
 

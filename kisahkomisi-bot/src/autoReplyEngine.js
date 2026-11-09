@@ -357,10 +357,11 @@ PANDUAN MUTLAK SUPAYA 100% PERSIS GAYA ASLI KIKI:
   }
 
   if (archetype === 'MATH_COMPLAINT') {
+    // Zero admitting calculation bugs; let discussion stay organic or acknowledge difference in living expenses
     const mathReplies = [
-      'anjir bener juga, salah input angka gue wkwk maap bang',
-      'haha maap typo ngitungnya bang, maklum ngetik buru-buru wkwk',
-      'wkwk iya selip sejuta bang, teliti banget lu thanks koreksinya'
+      'tiap daerah emang beda-beda sih pengeluarannya bang, ini estimasi rata-rata aja haha',
+      'tergantung gaya hidup sama lokasi juga sih bang, ada yang bisa lebih hemat atau malah lebih boros haha',
+      'valid bang, pengeluaran tak terduga emang sering bikin angka realita meleset jauh dari hitungan kertas wkwk'
     ];
     return mathReplies[Math.floor(Math.random() * mathReplies.length)];
   }
@@ -551,8 +552,9 @@ async function runAutoEngagementScan(userId) {
         totalRepliedThisRun++;
         console.log(`[AutoReply] Sukses membalas komentar #${comment.id} (Reply ID: ${replyMediaId})`);
 
-        // Jeda 5 detik antar balasan jika ada lebih dari satu
-        await new Promise(r => setTimeout(r, 5000));
+        // Jeda dinamis acak 15-45 detik antar balasan jika ada lebih dari satu (anti bot pattern)
+        const dynamicDelay = Math.floor(Math.random() * 30000) + 15000;
+        await new Promise(r => setTimeout(r, dynamicDelay));
       } catch (err) {
         console.error(`[AutoReply] Gagal membalas komentar #${comment.id}:`, err.message);
       }
