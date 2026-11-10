@@ -674,6 +674,13 @@ async function produceCuratedStory(options = null) {
  * Default 18 konten (~3 hari buffer untuk 6x posting sehari).
  */
 async function replenishStockBuffer(targetBuffer = 18) {
+  // Configurable ownership: default to 'zura' to prevent Node bot rogue generation
+  const generationOwner = process.env.STORY_GENERATION_OWNER || 'zura';
+  if (generationOwner !== 'node') {
+    console.log(`[EditorialBoard] Autonomous story generation delegated to '${generationOwner}'. Node generation bypassed.`);
+    return { status: 'delegated_to_zura', added: 0, currentCount: db.getQueuedStoriesCount() };
+  }
+
   if (isReplenishing) {
     console.log('[EditorialBoard] Proses replenish sedang berjalan di background, skip panggilan ganda.');
     return { status: 'busy', added: 0, currentCount: db.getQueuedStoriesCount() };

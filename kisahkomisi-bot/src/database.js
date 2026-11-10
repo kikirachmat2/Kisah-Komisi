@@ -125,6 +125,19 @@ function initSchema() {
     CREATE INDEX IF NOT EXISTS idx_auto_replies_comment ON auto_replies(comment_id);
     CREATE INDEX IF NOT EXISTS idx_auto_replies_media ON auto_replies(threads_media_id);
     CREATE INDEX IF NOT EXISTS idx_hot_takes_created ON hot_takes(created_at);
+
+    -- Ensure tripwire trigger against banned 4-slide carousel format (Blok C6)
+    CREATE TRIGGER IF NOT EXISTS trg_prevent_banned_4_slides
+    BEFORE INSERT ON stories
+    FOR EACH ROW
+    WHEN (
+        NEW.slides_json IS NOT NULL 
+        AND json_valid(NEW.slides_json) = 1 
+        AND json_array_length(NEW.slides_json) = 4
+    )
+    BEGIN
+        SELECT RAISE(ABORT, 'TRIPWIRE_TRIGGER: 4-slide carousel format is permanently banned by Zura Governance.');
+    END;
   `);
 
   // Migrasi aman untuk kolom qc_score, qc_notes, bumped_at, dan last_media_id jika belum ada
