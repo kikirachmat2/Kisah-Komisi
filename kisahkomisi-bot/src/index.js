@@ -20,7 +20,7 @@ async function processInboxCandidates() {
         const raw = fs.readFileSync(filePath, "utf8");
         const candidate = JSON.parse(raw);
         if (candidate.title && candidate.slides) {
-          const storyId = db.createStory({
+          const storyId = db.addStoryToQueue({
             title: candidate.title,
             topic: candidate.topic || "Finansial & Karier",
             slides: candidate.slides,
