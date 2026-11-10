@@ -4,6 +4,47 @@ const fs = require('fs');
 const { Telegraf } = require('telegraf');
 const cron = require('node-cron');
 const db = require('./database');
+
+// ==========================================
+// INBOX WATCHER: SINGLE WRITER PATTERN FOR ZURA
+// ==========================================
+async function processInboxCandidates() {
+  const inboxDir = path.resolve(__dirname, "../inbox");
+  if (!fs.existsSync(inboxDir)) return;
+
+  try {
+    const files = fs.readdirSync(inboxDir).filter(f => f.endsWith(".json"));
+    for (const file of files) {
+      const filePath = path.join(inboxDir, file);
+      try {
+        const raw = fs.readFileSync(filePath, "utf8");
+        const candidate = JSON.parse(raw);
+        if (candidate.title && candidate.slides) {
+          const storyId = db.createStory({
+            title: candidate.title,
+            topic: candidate.topic || "Finansial & Karier",
+            slides: candidate.slides,
+            productName: candidate.productName || null,
+            productUrl: candidate.productUrl || null,
+            scheduledFor: candidate.scheduledFor || "Slot Terjadwal",
+            qcScore: candidate.qcScore || 95.0,
+            qcNotes: candidate.qcNotes || "Ingested from Zura inbox candidate",
+            origin: candidate.origin || "ZURA_AUTO",
+            formatType: candidate.formatType || "financial_breakdown"
+          });
+          console.log(`[InboxWatcher] Sukses memindahkan kandidat cerita ${file} ke database sebagai Story #${storyId}`);
+          fs.unlinkSync(filePath);
+        }
+      } catch (err) {
+        console.error(`[InboxWatcher] Gagal memproses file ${file}:`, err.message);
+        try { fs.renameSync(filePath, filePath + ".bad"); } catch (e) {}
+      }
+    }
+  } catch (err) {
+    console.error("[InboxWatcher] Error saat membaca inbox:", err.message);
+  }
+}
+
 const { generateStory, processAnonymousStory } = require('./aiStory');
 const { replenishStockBuffer, produceCuratedStory, auditAffiliateLinks } = require('./editorialBoard');
 const { 
@@ -1835,6 +1876,11 @@ cron.schedule('0 21 * * *', () => executeDelayedCliffhangerContinuation(), {
 });
 
 // Polling Snapshot Views berkala tiap 10 menit (Memastikan jendela presisi ±15 menit tercapai)
+// Poll inbox Zura Autonomous Engine tiap 2 menit
+cron.schedule('*/2 * * * *', () => {
+  processInboxCandidates().catch(e => console.warn('[InboxWatcher Cron Error]:', e.message));
+});
+
 cron.schedule('*/10 * * * *', () => {
   recordPeriodicSnapshots().catch(e => console.warn('[Snapshot Cron Error]:', e.message));
 });
@@ -2134,6 +2180,7 @@ bot.catch((err, ctx) => {
 bot.launch().then(() => {
   console.log('🚀 Kisah Komisi Autopilot Engine AKTIF (Timezone: Asia/Jakarta)!');
   console.log('[Autopilot] Mode Just-in-Time (JIT) aktif: Konten diproduksi fresh 15 menit sebelum slot tayang.');
+  processInboxCandidates().catch(e => console.warn('[InboxWatcher Initial Error]:', e.message));
 }).catch(err => {
   console.error('FATAL bot.launch:', err);
   process.exit(1);
