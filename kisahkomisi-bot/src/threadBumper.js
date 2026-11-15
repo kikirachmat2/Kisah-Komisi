@@ -1,8 +1,30 @@
+const fs = require('fs');
 const path = require('path');
 require('dotenv').config({ path: path.join(__dirname, '../.env') });
 const db = require('./database');
 const { publishTextPost, getActiveAccessToken } = require('./threads');
 const { consultZuraForBump } = require('./zuraGatekeeper');
+
+function getUrgentBumpIds() {
+  const candidates = [
+    '/home/ubuntu/zura-core/data/zura_adaptive_config.json',
+    path.join(__dirname, '../../../Personal AI/data/zura_adaptive_config.json'),
+    path.join(__dirname, '../../Personal AI/data/zura_adaptive_config.json'),
+    path.join(__dirname, '../data/zura_adaptive_config.json')
+  ];
+  for (const cfgPath of candidates) {
+    try {
+      if (fs.existsSync(cfgPath)) {
+        const parsed = JSON.parse(fs.readFileSync(cfgPath, 'utf8'));
+        const ids = parsed?.second_account?.urgent_bump_story_ids;
+        if (Array.isArray(ids)) {
+          return ids.map(Number).filter(Number.isFinite);
+        }
+      }
+    } catch (e) {}
+  }
+  return [];
+}
 
 const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
 const GROQ_API_KEY = process.env.GROQ_API_KEY;
@@ -201,8 +223,24 @@ async function executeThreadBump(userId) {
     return null;
   }
 
-  // Cari cerita yang terbit antara 1.5 s/d 24 jam yang lalu dan belum pernah di-bump (diurutkan dari views tertinggi)
-  const targetStory = db.getLatestPublishedStoryUnbumped(1.5, 24.0);
+  // Real-time Viral Spike Override (>= 150 views atau flagged Zura -> bypass cooldown jadi 15 menit / 0.25 jam)
+  const urgentIds = getUrgentBumpIds();
+  const earlyCandidate = db.getLatestPublishedStoryUnbumped(0.25, 24.0);
+  let targetStory = null;
+
+  if (
+    earlyCandidate &&
+    (Number(earlyCandidate.views || 0) >= 150 || urgentIds.includes(Number(earlyCandidate.id)))
+  ) {
+    console.log(
+      `[ThreadBumper] 🚀 VIRAL SPIKE OVERRIDE! Cerita #${earlyCandidate.id} (${earlyCandidate.views} views) disundul cepat (<1.5h wait bypassed)!`
+    );
+    targetStory = earlyCandidate;
+  } else {
+    // Normal cooldown: terbit antara 1.5 s/d 24 jam yang lalu dan belum pernah di-bump
+    targetStory = db.getLatestPublishedStoryUnbumped(1.5, 24.0);
+  }
+
   if (!targetStory) {
     console.log('[ThreadBumper] Tidak ada thread yang memenuhi kriteria cooldown untuk di-bump saat ini.');
     return null;
