@@ -23,6 +23,9 @@ try {
 
 // Kandidat path Python virtualenv Zura
 const CANDIDATE_PYTHONS = [
+  '/home/ubuntu/zura-core/.venv/bin/python3',
+  path.join(__dirname, '../../../Personal AI/.venv/bin/python3'),
+  path.join(process.env.HOME || '', 'Documents/Web Develop/Personal AI/.venv/bin/python3'),
   '/home/ubuntu/zura-core/venv/bin/python3',
   path.join(process.env.HOME || '', 'Documents/Web Develop/Personal AI/venv/bin/python3'),
   '/usr/local/bin/python3',

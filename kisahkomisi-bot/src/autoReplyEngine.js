@@ -204,10 +204,11 @@ async function generateEngagementReply(storyTitle, netizenComment, authorUsernam
   let archetypeGuideline = '';
   switch (archetype) {
     case 'PRODUCT_INQUIRY':
-      if (productInfo && productInfo.url) {
-        return `kemarin gue checkout di toko resminya di sini kak: ${productInfo.url}`;
+      if (productInfo && productInfo.name) {
+        const cleanName = productInfo.name.split(/\s+/).slice(0, 5).join(' ');
+        return `kemarin gue ambil yang ${cleanName} kak, link toko resminya udah gue taruh di web katalog bio gue ya (jualan-gue.vercel.app) biar gampang dicari`;
       }
-      archetypeGuideline = 'Netizen bertanya link/toko/merk produk yang dibahas. Jawab santai dan ramah khas anak tongkrongan yang ngasih rekomendasi jujur.';
+      archetypeGuideline = 'Netizen bertanya link/toko/merk produk yang dibahas. Jawab santai dan ramah khas anak tongkrongan, arahkan ke web katalog di bio (jualan-gue.vercel.app) tanpa menebar link mentah Shopee.';
       break;
     case 'AFFILIATE_CRITIC':
       archetypeGuideline = 'Netizen sinis/nyindir "ujung-ujungnya jualan/promo Shopee/affiliate". Bales cuek santai tapi gak songong, jujur butuh duit khas Kiki budak media & sandwich gen (contoh: "ya maap butuh duit wkwk", "namanya juga anak rantau bang butuh nambah bayar kosan wkwk", "ya maap namanya juga usaha cari sesuap nasi wkwk"). DILARANG marah, songong, atau defensif!';
@@ -517,19 +518,26 @@ async function runAutoEngagementScan(userId) {
           replyText = closingOptions[Math.floor(Math.random() * closingOptions.length)];
         }
       } else {
-        const draftReply = await generateEngagementReply(story.title, comment.text, comment.username, {
-          name: story.product_name,
-          url: story.product_url
-        });
+        for (let attempt = 1; attempt <= 2; attempt++) {
+          const draftReply = await generateEngagementReply(story.title, comment.text, comment.username, {
+            name: story.product_name,
+            url: story.product_url
+          });
 
-        // 5b. Otorisasi Eksekutif Zura: Pastikan 100% kontekstual, nyambung, dan bebas template bot
-        replyText = await consultZuraForReply({
-          postTitle: story.title,
-          postContent: postContent,
-          commenter: comment.username,
-          commentText: comment.text,
-          draftReply: draftReply || ''
-        });
+          // 5b. Otorisasi Eksekutif Zura (tektokan sampai 2x jika ditolak, revisi/regenerate)
+          const zuraApproved = await consultZuraForReply({
+            postTitle: story.title,
+            postContent: postContent,
+            commenter: comment.username,
+            commentText: comment.text,
+            draftReply: draftReply || ''
+          });
+          if (zuraApproved) {
+            replyText = zuraApproved;
+            break;
+          }
+          console.log(`[AutoReply] 🔄 Balasan ke @${comment.username} ditolak Zura (Attempt ${attempt}/2), regenerate ulang...`);
+        }
       }
 
       if (!replyText) continue;

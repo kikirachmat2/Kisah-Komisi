@@ -813,34 +813,34 @@ function getAdaptiveAffiliateStatus() {
     const latestPostViews = latestPost ? Number(latestPost.views || 0) : 0;
     const latestPostReplies = latestPost ? Number(latestPost.replies || 0) : 0;
 
-    // TIER 3: VIRAL SURGE (Semua slot diperbolehkan affiliate Trojan Horse)
-    if (maxRecentViews >= 1000 || accountDailyViews >= 1000) {
+    // TIER 3: VIRAL SURGE (Slot 2 & 3 diarahkan ke web katalog jualan-gue.vercel.app)
+    if (maxRecentViews >= 1000) {
       return {
         tier: 'SURGE',
-        quota: 3,
-        allowedSlots: [1, 2, 3],
-        reason: `Viral surge aktif! Postingan tembus >= 1.000 views (Max: ${maxRecentViews}, Akun: ${accountDailyViews}). Kuota maksimal 3 slot affiliate dibuka!`,
-        metrics: { maxRecentViews, avgRecentViews, maxRecentReplies, accountDailyViews, latestPostViews }
-      };
-    }
-
-    // TIER 2: MOMENTUM (2 Slot: Slot 2 Siang + Slot 3 Malam)
-    if (maxRecentViews >= 250 || avgRecentViews >= 100 || maxRecentReplies >= 5 || latestPostViews >= 75 || latestPostReplies >= 3 || accountDailyViews >= 200) {
-      return {
-        tier: 'MOMENTUM',
         quota: 2,
         allowedSlots: [2, 3],
-        reason: `Traksi momentum sehat! (Max views: ${maxRecentViews}, Post terbaru: ${latestPostViews} views, Replies: ${maxRecentReplies}). Kuota dinaikkan menjadi 2 slot affiliate (Slot 2 & 3).`,
+        reason: `Viral surge aktif! Postingan terbaru tembus >= 1.000 views (Max: ${maxRecentViews}, Akun: ${accountDailyViews}). Slot 2 & 3 dibuka untuk giring opini ke web katalog jualan-gue.vercel.app (Slot 1 tetap 100% organik kejar insight).`,
         metrics: { maxRecentViews, avgRecentViews, maxRecentReplies, accountDailyViews, latestPostViews }
       };
     }
 
-    // TIER 1: BASELINE (1 Slot: Slot 3 Malam Prime Time)
+    // TIER 2: MOMENTUM (1 Slot: Slot 3 Malam Prime Time)
+    if (maxRecentViews >= 500 || avgRecentViews >= 250 || maxRecentReplies >= 8) {
+      return {
+        tier: 'MOMENTUM',
+        quota: 1,
+        allowedSlots: [3],
+        reason: `Traksi momentum mulai kebentuk (Max views: ${maxRecentViews}, Avg: ${avgRecentViews}, Replies: ${maxRecentReplies}). Kuota 1 slot (Slot 3 Malam) untuk giring opini halus ke web katalog jualan-gue.vercel.app.`,
+        metrics: { maxRecentViews, avgRecentViews, maxRecentReplies, accountDailyViews, latestPostViews }
+      };
+    }
+
+    // TIER 1: BASELINE (Insight-First Mode: 0 slot jualan di utas utama)
     return {
       tier: 'BASELINE',
-      quota: 1,
-      allowedSlots: [3],
-      reason: `Fase pelindung algoritma (Views masih < 250). Mengunci 1 slot affiliate harian di jam malam (Slot 3 Prime Time), slot lainnya 100% organik link-free untuk membuka distribusi For You.`,
+      quota: 0,
+      allowedSlots: [],
+      reason: `Mode Kejar Insight Dulu (Max views: ${maxRecentViews} < 500). 100% slot fokus kejar views & interaksi organik tanpa jualan di utas utama. Produk tetap disiapkan untuk susulan (bump/reply) kalau views naik menuju web katalog jualan-gue.vercel.app.`,
       metrics: { maxRecentViews, avgRecentViews, maxRecentReplies, accountDailyViews, latestPostViews }
     };
   } catch (err) {

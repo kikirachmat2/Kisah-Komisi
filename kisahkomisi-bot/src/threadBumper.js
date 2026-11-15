@@ -47,9 +47,9 @@ async function generateBumpUpdate(story) {
       } catch (e) {}
     }
 
-    const isSurgeAffiliate = Number(story.views || 0) >= 50 && Boolean(story.product_url);
+    const isSurgeAffiliate = Number(story.views || 0) >= 150 && Boolean(story.product_name);
     if (isSurgeAffiliate) {
-      console.log(`[ThreadBumper] 🚀 SURGE AFFILIATE AKTIF! Thread tembus ${story.views} views. Menyiapkan rekomendasi solusi kontekstual Shopee...`);
+      console.log(`[ThreadBumper] 🚀 SURGE KATALOG WEB AKTIF! Thread tembus ${story.views} views. Menyiapkan balasan pengarah opini ke jualan-gue.vercel.app...`);
     }
 
     const zuraBump = await consultZuraForBump({
@@ -69,18 +69,19 @@ async function generateBumpUpdate(story) {
     console.warn('[ThreadBumper] Zura bump error, fallback ke LLM generator:', e.message);
   }
 
-  const isSurge = Number(story.views || 0) >= 50 && Boolean(story.product_url);
+  const isSurge = Number(story.views || 0) >= 150 && Boolean(story.product_name);
+  const cleanProd = String(story.product_name || '').split(/\s+/).slice(0, 6).join(' ');
 
   const prompt = isSurge ? `
 Kamu adalah Kiki Rachmat (@kikipunyacerita), kurator dan warganet di Threads (pekerja media 26 tahun di Jakpus).
 DILARANG memanggil diri sendiri "Ki". Tulis layaknya warganet biasa mengetik di kolom reply Threads (huruf kecil santai).
 Utas sebelumnya berjudul: "${story.title}" (Topik: ${story.topic}) dan sedang viral tembus ${story.views} views!
 
-Tugas: Tuliskan SATU (1) balasan susulan santai sebagai problem solver yang menjawab keresahan netizen di thread dengan merekomendasikan solusi: "${story.product_name}" (Link: ${story.product_url}).
-ATURAN SURGE AFFILIATE:
-1. Hubungkan solusi produk secara 100% masuk akal dengan masalah utama cerita.
-2. Gunakan gaya obrolan santai ("btw ada yg nanya solusinya...", "buat yg ngalamin hal serupa, kmrn gue pake ini lumayan ngebantu: [link]").
-3. Panjang: 100 - 220 karakter. Huruf kecil santai.
+Tugas: Tuliskan SATU (1) balasan susulan santai sebagai problem solver yang menggiring opini pembaca agar sadar perlunya solusi praktis "${cleanProd}" dan mengarahkan ke web katalog bio: jualan-gue.vercel.app (JANGAN taruh link Shopee mentah supaya algoritma tidak nge-drop reach).
+ATURAN SURGE KATALOG WEB:
+1. Hubungkan solusi produk secara 100% masuk akal dengan masalah utama cerita (bandingin borosnya vs hematnya).
+2. Gunakan gaya obrolan santai ("btw ada yg nanya biar gak boros terus...", "buat yg ngalamin hal serupa, kemarin gue pakai ${cleanProd} lumayan kebantu banget, link resminya gue taruh di web bio ya: jualan-gue.vercel.app").
+3. Panjang: 110 - 230 karakter. Huruf kecil santai.
 4. Output HANYA teks balasan langsung tanpa tanda kutip.
 ` : `
 Kamu adalah Kiki Rachmat (@kikipunyacerita), kurator dan warganet di Threads. Bio: "Dialy Life Update | In this economy mau nulis cerita orang-orang aja lah | dm aja yak yg mau share cerita anonimnya".

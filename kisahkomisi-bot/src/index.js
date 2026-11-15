@@ -1946,6 +1946,15 @@ cron.schedule('20 4 * * *', async () => {
 async function runZuraExecutiveGovernorLoop() {
   try {
     const { execFile } = require('child_process');
+    const pythonCandidates = [
+      '/home/ubuntu/zura-core/.venv/bin/python3',
+      path.join(__dirname, '../../../Personal AI/.venv/bin/python3'),
+      path.join(process.env.HOME || '', 'Documents/Web Develop/Personal AI/.venv/bin/python3'),
+      '/home/ubuntu/zura-core/venv/bin/python3',
+      path.join(process.env.HOME || '', 'Documents/Web Develop/Personal AI/venv/bin/python3'),
+      'python3'
+    ];
+    const pythonBin = pythonCandidates.find(p => p === 'python3' || fs.existsSync(p)) || 'python3';
     const scriptCandidates = [
       '/home/ubuntu/zura-core/scripts/zura_executive_governor_loop.py',
       path.join(__dirname, '../../../Personal AI/scripts/zura_executive_governor_loop.py')
@@ -1954,7 +1963,7 @@ async function runZuraExecutiveGovernorLoop() {
     if (!targetScript) return null;
 
     return await new Promise((resolve) => {
-      execFile('python3', [targetScript, '--json'], { timeout: 25000 }, async (err, stdout) => {
+      execFile(pythonBin, [targetScript, '--json'], { timeout: 45000 }, async (err, stdout) => {
         if (err || !stdout) return resolve(null);
         try {
           const parsed = JSON.parse(stdout.trim());

@@ -3,6 +3,7 @@ require('dotenv').config({ path: path.join(__dirname, '../.env') });
 const db = require('./database');
 
 const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
+const WEB_CATALOG_URL = process.env.WEB_CATALOG_URL || 'jualan-gue.vercel.app';
 
 // Kategori Topik Nyata Berbobot (Berdasarkan Pola Viral Threads Indonesia)
 const TOPICS_CORPORATE = [
@@ -248,7 +249,7 @@ function cleanProductName(rawName) {
  * Produk diposisikan murni sebagai alat bertahan hidup (antidote) dari penderitaan/isu di slide sebelumnya.
  */
 function generateContextualAd(product, trackedUrl) {
-  if (!product || !trackedUrl) return '';
+  if (!product || (!product.name && !trackedUrl)) return '';
   const cat = (product.category || '').toLowerCase();
   const name = cleanProductName(product.name);
   const fullName = `${cat} ${name}`.toLowerCase();
@@ -257,21 +258,21 @@ function generateContextualAd(product, trackedUrl) {
   if (cat.includes('kerja') || cat.includes('kantor') || fullName.includes('monitor') || fullName.includes('mouse') || fullName.includes('wrist') || fullName.includes('keyboard') || fullName.includes('meja') || fullName.includes('organizer')) {
     if (fullName.includes('light') || fullName.includes('lampu') || fullName.includes('bar')) {
       const templates = [
-        `pas lembur marathon depan laptop malam-malam lampu kamar bikin silau ke layar, penyelamat mata gue biar ga migrain cuma screenbar ${name} ini: ${trackedUrl}`,
-        `daripada mata perih dan silau ngetik sampai subuh modal lampu plafon, kebantu banget pas masang monitor light bar ini di meja: ${trackedUrl}`
+        `pas lembur marathon depan laptop lampu kamar bikin silau ke layar. penyelamat mata biar gak migrain cuma screenbar ${name}, tokonya udah gue kumpulin di web bio (${WEB_CATALOG_URL})`,
+        `daripada mata perih ngetik sampai subuh modal lampu plafon, mending pasang monitor light bar ${name}. link resminya udah gue taruh di web bio (${WEB_CATALOG_URL})`
       ];
       return templates[Math.floor(Math.random() * templates.length)];
     }
     if (fullName.includes('mouse') || fullName.includes('wrist') || fullName.includes('pad')) {
       const templates = [
-        `tiap hari ngetik dan coding berjam-jam bikin pergelangan tangan kram, penyelamat punggung sama urat tangan gue cuma ganti pake ${name} ini: ${trackedUrl}`,
-        `daripada tangan pegel ngilu tiap buka laptop seharian, bantalan/mouse ergonomis ini beneran nahan urat tangan biar gak mati rasa: ${trackedUrl}`
+        `tiap hari ngetik dan ngoding berjam-jam bikin pergelangan tangan kram. biar aman jangka panjang ganti pakai ${name}, cek aja di web katalog bio gue (${WEB_CATALOG_URL})`,
+        `daripada tangan pegel ngilu tiap buka laptop seharian, modal ${name} jauh lebih awet buat kerja harian. linknya ada di web bio (${WEB_CATALOG_URL})`
       ];
       return templates[Math.floor(Math.random() * templates.length)];
     }
     const templates = [
-      `biar meja kerja gak bikin makin stres liat kabel kusut pas kerja, kebantu rapi pake ${name} ini di meja: ${trackedUrl}`,
-      `buat nahan beban kerja marathon depan laptop seharian, setup printilan ${name} ini yang bikin meja tetep waras: ${trackedUrl}`
+      `biar meja kerja gak bikin stres liat kabel kusut pas dikejar deadline, rapihin pakai ${name}. detail barangnya ada di web katalog bio (${WEB_CATALOG_URL})`,
+      `buat nahan beban kerja marathon depan laptop seharian, ${name} ini bikin meja tetap waras. tinggal cari namanya di web bio gue (${WEB_CATALOG_URL})`
     ];
     return templates[Math.floor(Math.random() * templates.length)];
   }
@@ -279,8 +280,8 @@ function generateContextualAd(product, trackedUrl) {
   // 2. Kategori: Botol Minum / Tumbler / Anti Boncos Kopi
   if (cat.includes('botol') || cat.includes('tumbler') || fullName.includes('tumbler') || fullName.includes('termos')) {
     const templates = [
-      `daripada boncos beli es kopi susu 35rb tiap sore demi melek lembur, mending seduh sendiri bawa tumbler dingin ${name} ini ke meja: ${trackedUrl}`,
-      `buat nahan kantuk seharian di kantor tanpa bikin dompet bocor beli minum luar, gue selalu andelin tumbler tahan dingin ini: ${trackedUrl}`
+      `daripada boncos beli es kopi susu 35rb tiap sore, mending seduh sendiri bawa ${name} ke meja kerja. yang awet dingin udah gue list di web bio (${WEB_CATALOG_URL})`,
+      `hitungannya jauh lebih hemat bawa minum sendiri pakai ${name} daripada jajan luar tiap hari. link tokonya ada di web bio gue (${WEB_CATALOG_URL})`
     ];
     return templates[Math.floor(Math.random() * templates.length)];
   }
@@ -289,14 +290,14 @@ function generateContextualAd(product, trackedUrl) {
   if (cat.includes('elektronik') || cat.includes('gadget') || fullName.includes('charger') || fullName.includes('kabel') || fullName.includes('kipas')) {
     if (fullName.includes('kipas')) {
       const templates = [
-        `hawa kosan gerah parah kayak di oven pas siang bolong, untung ada kipas hening ${name} ini yang nyelametin tidur tanpa jebolin token listrik: ${trackedUrl}`,
-        `pas AC kamar kosan mati atau gerah lembur di meja sempit, penyelamat darurat gue cuma kipas portable adem ini: ${trackedUrl}`
+        `hawa kosan gerah parah siang bolong tanpa jebolin token listrik, penyelamat tidur cuma ${name}. cek aja speknya di web katalog bio (${WEB_CATALOG_URL})`,
+        `daripada boros AC pas kamar kosan gerah lembur, ${name} ini adem banget tapi irit daya. udah gue taruh di web bio (${WEB_CATALOG_URL})`
       ];
       return templates[Math.floor(Math.random() * templates.length)];
     }
     const templates = [
-      `daripada panik baterai sekarat pas lagi commuting atau ngerjain tugas di luar, charger/kabel bandel ${name} ini wajib standby di tas: ${trackedUrl}`,
-      `buat yang sering keteteran cari colokan pas jam kerja, kepala charger/kabel ini lumayan awet buat tempur harian: ${trackedUrl}`
+      `daripada beli kabel abal-abal 20 ribuan yang gampang putus dan bikin baterai panas, mending sekalian ${name}. toko resminya gue kumpulin di web bio (${WEB_CATALOG_URL})`,
+      `buat yang sering panik baterai sekarat pas commuting, ${name} ini bandel buat tempur harian. tinggal ketik namanya di web bio (${WEB_CATALOG_URL})`
     ];
     return templates[Math.floor(Math.random() * templates.length)];
   }
@@ -304,8 +305,8 @@ function generateContextualAd(product, trackedUrl) {
   // 4. Kategori: Skincare & Grooming / Perawatan Diri
   if (cat.includes('skincare') || cat.includes('grooming') || cat.includes('perawatan') || fullName.includes('wash') || fullName.includes('deodorant') || fullName.includes('serum')) {
     const templates = [
-      `seharian kena debu polusi jalanan sama ac kantor bikin muka kusam, cuci muka pake ${name} ini lumayan bikin seger lagi sebelum tepar: ${trackedUrl}`,
-      `buat ngerawat muka biar gak keliatan kuyu abis lembur marathon tapi tetep hemat, sabun/perawatan ini andalan harian gue: ${trackedUrl}`
+      `seharian kena debu polusi sama ac kantor bikin muka kusam, rutin pakai ${name} lumayan bikin seger lagi. link toko resminya ada di web katalog bio (${WEB_CATALOG_URL})`,
+      `daripada asal coba produk abal-abal, ${name} ini andalan harian yang masuk akal harganya. cek aja di web bio (${WEB_CATALOG_URL})`
     ];
     return templates[Math.floor(Math.random() * templates.length)];
   }
@@ -313,8 +314,8 @@ function generateContextualAd(product, trackedUrl) {
   // 5. Kategori: Parfum & Wewangian
   if (cat.includes('parfum') || cat.includes('wewangian')) {
     const templates = [
-      `buat parfum harian ngantor yang wanginya kalem dan gak bikin enek pas desak-desakan komuter, gue andelin aroma ${name} ini: ${trackedUrl}`,
-      `daripada bau apek abis kena asap jalanan sebelum masuk ruangan meeting, semprotan ${name} ini lumayan tahan lama nemenin kerja: ${trackedUrl}`
+      `buat parfum harian ngantor yang kalem dan gak bikin enek pas desak-desakan komuter, ${name} ini awet banget. detailnya ada di web bio (${WEB_CATALOG_URL})`,
+      `daripada bau apek kena asap jalanan sebelum masuk meeting, ${name} ini penyelamat paling praktis. udah gue taruh di web bio (${WEB_CATALOG_URL})`
     ];
     return templates[Math.floor(Math.random() * templates.length)];
   }
@@ -322,8 +323,8 @@ function generateContextualAd(product, trackedUrl) {
   // 6. Kategori: Camilan & Minuman
   if (cat.includes('camilan') || cat.includes('makanan') || cat.includes('teh') || cat.includes('lemon')) {
     const templates = [
-      `stok cemilan murah di meja kerja biar gak jajan kopi mahal terus tiap sore, ${name} ini lumayan nemenin lembur: ${trackedUrl}`,
-      `buat ganjel perut pas dikejar deadline malam depan laptop, cemilan ${name} ini andalan murah meriah: ${trackedUrl}`
+      `stok di meja kerja biar gak jajan kopi mahal terus tiap sore, ${name} ini lumayan banget nahan lapar lembur. linknya ada di web bio (${WEB_CATALOG_URL})`,
+      `buat ganjel perut pas dikejar deadline malam tanpa boros gofood, ${name} ini andalan hemat gue. cek di web bio (${WEB_CATALOG_URL})`
     ];
     return templates[Math.floor(Math.random() * templates.length)];
   }
@@ -331,14 +332,14 @@ function generateContextualAd(product, trackedUrl) {
   // 7. Kategori: Rumah Tangga & Kosan
   if (cat.includes('kosan') || cat.includes('rumah')) {
     const templates = [
-      `printilan kosan praktis yang bener-bener kepake biar kamar sempit gak makin sumpek, ${name} ini ngebantu banget: ${trackedUrl}`,
-      `buat anak kosan yang butuh barang awet harga miring buat nata kamar, kemarin nemu ${name} ini: ${trackedUrl}`
+      `printilan kosan praktis biar kamar sempit gak makin sumpek dan berantakan, ${name} ini kepake banget. daftarnya ada di web katalog bio (${WEB_CATALOG_URL})`,
+      `buat anak kosan yang butuh barang awet harga miring buat nata kamar, kemarin nemu ${name}. link resminya udah gue taruh di web bio (${WEB_CATALOG_URL})`
     ];
     return templates[Math.floor(Math.random() * templates.length)];
   }
 
-  // Fallback kasual problem-solver
-  return `buat yang lagi ngalamin situasi serupa dan butuh solusi praktis harian, barang ${name} ini lumayan ngebantu banget: ${trackedUrl}`;
+  // Fallback kasual problem-solver + Funnel Web Catalog
+  return `daripada boncos terus tiap bulan, kemarin gue beralih ke ${name}. jauh lebih awet dan kepake harian, detailnya udah gue taruh di web bio (${WEB_CATALOG_URL}) tinggal cari namanya.`;
 }
 
 /**
@@ -551,15 +552,15 @@ Kamu adalah Kiki Rachmat (@kikipunyacerita), pekerja tech/media di Jakarta (usia
 Tuliskan SATU UTAS PANDUAN PINTAR & CEGAH BELI BARANG ZONK TEPAT 3 PART (PERSIS 3 SLIDE).
 ${cognitiveContext}
 PRODUK REKOMENDASI: "${cleanProd}" (${product.category})
-LINK REKOMENDASI: "${trackedProductUrl}"
+WEB KATALOG BIO: "${WEB_CATALOG_URL}"
 
-STRUKTUR 3 SLIDE (BAHASA WARGANET THREADS, LOWERCASE SEMUA, 0% IKLAN KAKU):
+STRUKTUR 3 SLIDE (BAHASA WARGANET THREADS, LOWERCASE SEMUA, 0% LINK SHOPEE MENTAH):
 1. PART 1 (Jebakan Barang Abal-Abal):
    Peringatkan bahaya beli printilan/gadget KW murahan 20-30 ribuan yang sering bikin boncos, panas, atau rusak cepat. Mulai langsung dari pengamatan jujur (120-190 karakter).
 2. PART 2 (Bongkar Kualitas / Spesifikasi Riil):
    Jelaskan kenapa selisih harga sedikit itu penting (proteksi arus listrik, sertifikasi daya, kabel braided, atau chip proteksi) (140-240 karakter).
-3. PART 3 (Rekomendasi Teruji & Tautan):
-   Rekomendasikan "${cleanProd}" sebagai opsi paling worth it yang awet dipakai tempur harian. Cantumkan link di akhir kalimat: ${trackedProductUrl} (140-240 karakter).
+3. PART 3 (Giring Opini & Arahkan ke Web Katalog Bio):
+   Giring opini bahwa "${cleanProd}" jauh lebih masuk akal buat dipakai tempur harian, lalu arahkan pembaca ke web katalog di bio (${WEB_CATALOG_URL}) sambil sebut kata kunci "${cleanProd}". DILARANG menaruh URL Shopee mentah! (140-240 karakter).
 
 Keluarkan HANYA JSON:
 {
@@ -568,7 +569,7 @@ Keluarkan HANYA JSON:
   "story_parts": [
     "Part 1 jebakan barang abal-abal...",
     "Part 2 pembeda kualitas teknis...",
-    "Part 3 rekomendasi barang teruji ${trackedProductUrl}"
+    "Part 3 giring opini ke ${cleanProd} dan arahkan cek web bio ${WEB_CATALOG_URL}"
   ]
 }
 `;
@@ -578,15 +579,15 @@ Kamu adalah Kiki Rachmat (@kikipunyacerita), pekerja korporat di Jakarta (usia 2
 Tuliskan SATU UTAS SIMULASI HEMAT BIAYA HIDUP TEPAT 3 PART (PERSIS 3 SLIDE).
 ${cognitiveContext}
 PRODUK PENDUKUNG: "${cleanProd}" (${product.category})
-LINK REKOMENDASI: "${trackedProductUrl}"
+WEB KATALOG BIO: "${WEB_CATALOG_URL}"
 
-STRUKTUR 3 SLIDE (BAHASA WARGANET THREADS, LOWERCASE SEMUA, 0% IKLAN KAKU):
+STRUKTUR 3 SLIDE (BAHASA WARGANET THREADS, LOWERCASE SEMUA, 0% LINK SHOPEE MENTAH):
 1. PART 1 (Bocor Halus Pengeluaran Harian):
    Bongkar pengeluaran harian kecil yang bikin boncos (beli es kopi 35rb tiap hari atau jajan di luar boros) (120-190 karakter).
 2. PART 2 (Hitungan Matematika Riil):
    Hitung angka konkretnya (misal 35rb x 22 hari kerja = 770rb sebulan vs seduh/bawa sendiri cuma 80rb, sisa 600rb+ utuh buat tabungan) (140-240 karakter).
-3. PART 3 (Gear Pendukung Praktis & Tautan):
-   Rekomendasikan "${cleanProd}" sebagai alat bantu praktis biar gak ribet dan es tetap tahan seharian di meja kerja. Cantumkan link di akhir kalimat: ${trackedProductUrl} (140-240 karakter).
+3. PART 3 (Giring Opini Gear Praktis & Arahkan ke Web Bio):
+   Yakinkan pembaca soal hematnya beralih ke "${cleanProd}" untuk harian di meja kerja, lalu arahkan cek link resminya di web katalog bio (${WEB_CATALOG_URL}). DILARANG menaruh URL Shopee mentah! (140-240 karakter).
 
 Keluarkan HANYA JSON:
 {
@@ -595,7 +596,7 @@ Keluarkan HANYA JSON:
   "story_parts": [
     "Part 1 bocor halus harian...",
     "Part 2 simulasi matematika riil...",
-    "Part 3 gear pendukung praktis ${trackedProductUrl}"
+    "Part 3 giring opini ke ${cleanProd} dan arahkan ke web bio ${WEB_CATALOG_URL}"
   ]
 }
 `;
@@ -606,15 +607,15 @@ Kamu adalah Kiki Rachmat (@kikipunyacerita), pekerja tech/media di Jakarta (usia
 Tuliskan SATU UTAS BEDAH MASALAH & SOLUSI SETUP KERJA/KOSAN TEPAT 3 PART (PERSIS 3 SLIDE).
 ${cognitiveContext}
 PRODUK SOLUSI: "${cleanProd}" (${product.category})
-LINK REKOMENDASI: "${trackedProductUrl}"
+WEB KATALOG BIO: "${WEB_CATALOG_URL}"
 
-STRUKTUR 3 SLIDE (BAHASA WARGANET THREADS, LOWERCASE SEMUA, 0% IKLAN KAKU):
+STRUKTUR 3 SLIDE (BAHASA WARGANET THREADS, LOWERCASE SEMUA, 0% LINK SHOPEE MENTAH):
 1. PART 1 (Pain Point Fisik / Setup Meja):
    Ungkap keluhan fisik atau meja kerja yang bikin jompo (punggung pegal, pergelangan tangan kram, mata perih silau lampu, atau meja sempit kabel ruwet) (120-190 karakter).
 2. PART 2 (Kenapa Solusi Biasa Gagal):
    Jelaskan kenapa trik biasa (ganjel buku, tahan sakit, beli barang non-ergonomis murahan) gak nyelesaiin masalah (140-240 karakter).
-3. PART 3 (Solusi Teruji & Tautan):
-   Jelaskan kenapa pakai "${cleanProd}" ini terbukti nyata ngebantu kenyamanan kerja jangka panjang. Cantumkan link di akhir kalimat: ${trackedProductUrl} (140-240 karakter).
+3. PART 3 (Giring Opini Solusi & Arahkan ke Web Bio):
+   Jelaskan kenapa pakai "${cleanProd}" ini investasi kecil yang bikin kerja jauh lebih nyaman, lalu arahkan pembaca cari namanya di web katalog bio (${WEB_CATALOG_URL}). DILARANG menaruh URL Shopee mentah! (140-240 karakter).
 
 Keluarkan HANYA JSON:
 {
@@ -623,7 +624,7 @@ Keluarkan HANYA JSON:
   "story_parts": [
     "Part 1 keluhan fisik atau meja kerja...",
     "Part 2 kenapa trik biasa gagal...",
-    "Part 3 solusi teruji dengan link ${trackedProductUrl}"
+    "Part 3 giring opini solusi ${cleanProd} dan arahkan ke web bio ${WEB_CATALOG_URL}"
   ]
 }
 `;
@@ -781,12 +782,17 @@ Keluarkan HANYA JSON:
     cleanParts = cleanParts.slice(0, 3);
   }
 
-  // SEMATKAN REKOMENDASI PRODUK SHOPEE DALAM SLIDE SOLUSI (Tanpa Insert Slide Tambahan Zonk)
-  if (product && trackedProductUrl && withProductInSlides) {
+  // SEMATKAN ARAHAN KE WEB KATALOG BIO (Bukan raw link Shopee agar jangkauan algoritma aman)
+  if (product && withProductInSlides) {
     if (cleanParts.length >= 3) {
       const lastIdx = cleanParts.length - 1;
-      if (!cleanParts[lastIdx].includes(trackedProductUrl)) {
-        cleanParts[lastIdx] = cleanParts[lastIdx].trim() + `: ${trackedProductUrl}`;
+      // Strip raw Shopee URLs if LLM hallucinated any
+      cleanParts[lastIdx] = cleanParts[lastIdx]
+        .replace(/https?:\/\/(?:s\.)?shope(?:e\.co\.id|\.ee)\/\S+/gi, '')
+        .trim();
+      const lowerLast = cleanParts[lastIdx].toLowerCase();
+      if (!lowerLast.includes(WEB_CATALOG_URL) && !lowerLast.includes('web bio') && !lowerLast.includes('katalog bio')) {
+        cleanParts[lastIdx] = `${cleanParts[lastIdx]} (link resminya udah gue taruh di web bio: ${WEB_CATALOG_URL}, tinggal cari "${cleanProductName(product.name)}")`;
       }
     } else {
       const contextualAd = generateContextualAd(product, trackedProductUrl);

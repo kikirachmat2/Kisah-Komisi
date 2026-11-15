@@ -1,3 +1,4 @@
+const fs = require('fs');
 const path = require('path');
 require('dotenv').config({ path: path.join(__dirname, '../.env') });
 const db = require('./database');
@@ -7,9 +8,27 @@ const GROQ_API_KEY = process.env.GROQ_API_KEY;
 const OPENROUTER_API_KEY = process.env.OPENROUTER_API_KEY;
 const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
 
+function loadZuraThreadsFypInsights() {
+  const candidatePaths = [
+    '/home/ubuntu/zura-core/data/threads_viral_insights.json',
+    path.join(__dirname, '../../../Personal AI/data/threads_viral_insights.json'),
+    path.join(__dirname, '../../Personal AI/data/threads_viral_insights.json')
+  ];
+  for (const p of candidatePaths) {
+    try {
+      if (fs.existsSync(p)) {
+        const data = JSON.parse(fs.readFileSync(p, 'utf8'));
+        const samples = Array.isArray(data?.samples) ? data.samples : [];
+        if (samples.length > 0) return samples;
+      }
+    } catch (e) {}
+  }
+  return [];
+}
+
 /**
  * Mengambil semua headline & tren yang lagi rame di Indonesia TANPA filter/guardrail pembatas topik.
- * Menggabungkan Google Trends ID, Berita Utama, Pop/Hiburan, Ekonomi, dan Nasional secara seimbang.
+ * PRIORITAS #1: 20+ postingan viral Threads FYP hasil pantauan browser Zura, lalu diperkaya Google Trends & RSS Berita.
  */
 async function fetchLiveTrendHeadlines() {
   const sources = [
@@ -29,6 +48,22 @@ async function fetchLiveTrendHeadlines() {
 
   const collectedHeadlines = [];
   const seenTitles = new Set();
+
+  // 0. Inject 20+ Zura Browser Threads FYP Viral Insights FIRST before RSS news
+  const zuraFypSamples = loadZuraThreadsFypInsights();
+  for (const s of zuraFypSamples.slice(0, 22)) {
+    const snippet = (s?.snippet || '').trim();
+    if (!snippet) continue;
+    const key = snippet.toLowerCase().slice(0, 80);
+    if (seenTitles.has(key)) continue;
+    seenTitles.add(key);
+    const likes = s.likes || 0;
+    const replies = s.replies || 0;
+    collectedHeadlines.push({
+      title: `[Threads FYP Rame - ${likes} likes, ${replies} replies] ${snippet}`,
+      source: 'Zura Threads Browser'
+    });
+  }
 
   const results = await Promise.allSettled(
     sources.map(async (src) => {
@@ -62,7 +97,7 @@ async function fetchLiveTrendHeadlines() {
     }
   }
 
-  return collectedHeadlines.slice(0, 14);
+  return collectedHeadlines.slice(0, 28);
 }
 
 /**
