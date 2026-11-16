@@ -59,8 +59,9 @@ async function fetchLiveTrendHeadlines() {
     seenTitles.add(key);
     const likes = s.likes || 0;
     const replies = s.replies || 0;
+    const estViews = s.actual_views || s.estimated_views || (likes * 35 + replies * 120);
     collectedHeadlines.push({
-      title: `[Threads FYP Rame - ${likes} likes, ${replies} replies] ${snippet}`,
+      title: `[Threads FYP Viral ~${estViews} views | ${likes} likes, ${replies} replies] ${snippet}`,
       source: 'Zura Threads Browser'
     });
   }
@@ -88,6 +89,7 @@ async function fetchLiveTrendHeadlines() {
         const lower = rawTitle.toLowerCase();
 
         if (rawTitle.length < 4 || lower === 'daily search trends' || lower.includes('rss feed')) continue;
+        if (/\b(dpr|ruu|komisi ii|menteri|partai|pilkada|politisi|capres|koalisi)\b/i.test(lower)) continue;
         if (seenTitles.has(lower)) continue;
         seenTitles.add(lower);
 

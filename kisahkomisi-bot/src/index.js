@@ -1595,9 +1595,37 @@ async function executeScheduledPosting(slotTime, label, slotNumber = null) {
     const userId = process.env.THREADS_USER_ID;
     const token = getActiveAccessToken();
 
+    // Cek kuota harian adaptif Zura (2-3 post/hari agar tidak overposting)
     const { isSystemPaused } = require('./zuraGatekeeper');
     if (isSystemPaused()) {
       console.warn(`[Scheduler] Zura Kill-Switch aktif (system_paused = true). Eksekusi slot #${slotNumber || 1} dibatalkan.`);
+      return;
+    }
+
+    let maxPostsPerDay = 3;
+    try {
+      const cfgPaths = [
+        '/home/ubuntu/zura-core/data/zura_adaptive_config.json',
+        path.join(__dirname, '../../../Personal AI/data/zura_adaptive_config.json')
+      ];
+      for (const cp of cfgPaths) {
+        if (fs.existsSync(cp)) {
+          const parsedCfg = JSON.parse(fs.readFileSync(cp, 'utf8'));
+          const cap = Number(parsedCfg?.second_account?.max_posts_per_day);
+          if (Number.isFinite(cap) && cap >= 1 && cap <= 3) maxPostsPerDay = cap;
+          break;
+        }
+      }
+    } catch (e) {}
+
+    const recentPubs = db.getRecentPublishedStories ? db.getRecentPublishedStories(10) : [];
+    const todayWibCount = recentPubs.filter(r => {
+      if (!r.published_at) return false;
+      const isoUtc = r.published_at.includes('T') ? r.published_at : r.published_at.replace(' ', 'T') + 'Z';
+      return new Date(isoUtc).toLocaleDateString('en-CA', { timeZone: 'Asia/Jakarta' }) === dateStr;
+    }).length;
+    if (todayWibCount >= maxPostsPerDay) {
+      console.warn(`[Scheduler] Kuota harian Zura tercapai (${todayWibCount}/${maxPostsPerDay} post hari ini). Slot ${label} dilewati agar feed fokus kualitas.`);
       return;
     }
 
@@ -1869,11 +1897,8 @@ cron.schedule('45 19 * * *', () => executeScheduledPosting('19:45', 'SLOT 3 - MA
   timezone: 'Asia/Jakarta'
 });
 
-// FASE 2 CONTINUATION (21:00 WIB)
-cron.schedule('0 21 * * *', () => executeDelayedCliffhangerContinuation(), {
-  scheduled: true,
-  timezone: 'Asia/Jakarta'
-});
+// FASE 2 CONTINUATION (21:00 WIB) - Dinonaktifkan agar tidak spam slot malam terpisah (ditangani ThreadBumper jika views >= 80)
+// cron.schedule('0 21 * * *', () => executeDelayedCliffhangerContinuation(), { ... });
 
 // Polling Snapshot Views berkala tiap 10 menit (Memastikan jendela presisi ±15 menit tercapai)
 // Poll inbox Zura Autonomous Engine tiap 2 menit
@@ -2170,15 +2195,8 @@ async function runScheduledHotTake(slotLabel) {
   }
 }
 
-cron.schedule('15 10 * * *', () => runScheduledHotTake('PAGI (10:15 WIB)'), {
-  scheduled: true,
-  timezone: 'Asia/Jakarta'
-});
-
-cron.schedule('30 15 * * *', () => runScheduledHotTake('SORE (15:30 WIB)'), {
-  scheduled: true,
-  timezone: 'Asia/Jakarta'
-});
+// Extra Hot Takes (10:15 & 15:30 WIB) dinonaktifkan agar akun fokus maksimal 2-3 konten berkualitas & terkurasi Zura per hari.
+// cron.schedule('15 10 * * *', ...) & cron.schedule('30 15 * * *', ...) disabled.
 
 // Global Error Catching untuk Telegraf
 bot.catch((err, ctx) => {

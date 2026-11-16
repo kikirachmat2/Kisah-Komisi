@@ -37,6 +37,17 @@ function getZuraPersonaDirective() {
   return 'Kamu adalah warganet aktif Indonesia (@kikipunyacerita) yang tajam, realistis, dan bebas membahas topik viral apa saja demi memancing diskusi tertinggi.';
 }
 
+function getHumanStyleExemplarsBlock() {
+  const cfg = loadZuraAdaptiveConfig();
+  const exemplars = cfg?.second_account?.human_style_exemplars;
+  if (!Array.isArray(exemplars) || exemplars.length === 0) return '';
+  const lines = exemplars.slice(0, 4).map((ex) => {
+    const views = Number(ex.actual_views || ex.estimated_views || 0).toLocaleString('id-ID');
+    return `- (~${views} views, ${ex.likes || 0} likes, ${ex.replies || 0} replies): "${String(ex.text || '').slice(0, 180)}"`;
+  });
+  return `\nCONTOH RITME TULISAN VIRAL MANUSIA THREADS INDONESIA (TIRU GAYA NGOBROLNYA, BUKAN FORMAT KAKU BOT):\n${lines.join('\n')}\n`;
+}
+
 /**
  * Trojan Horse Monetization Helper:
  * Menyiapkan metadata produk Shopee kontekstual untuk postingan viral 1-slide (financial_breakdown, hot_take, menfess_spill).
@@ -304,6 +315,7 @@ Samber langsung isu ini dengan gaya warga Threads asli (jangan merangkum berita 
 
   const prompt = `
 ${getZuraPersonaDirective()}
+${getHumanStyleExemplarsBlock()}
 ${cognitiveContext}
 ${waveContext}
 Gaya ngetik: Ketikan manusia asli warga Threads Indonesia. Huruf kecil semua (lowercase), kalimat pendek mengalir (1-2 kalimat, 80-170 karakter).
@@ -366,6 +378,7 @@ Lempar pancingan diskusi/debat santai soal isu ini supaya warganet ramai-ramai c
 
   const prompt = `
 ${getZuraPersonaDirective()}
+${getHumanStyleExemplarsBlock()}
 ${cognitiveContext}
 ${waveContext}
 Tuliskan SATU (1) POSTINGAN PANCINGAN DISKUSI PENDEK (panjang 90-175 karakter) untuk memancing warganet Threads berdebat atau berbagi cerita di reply.
@@ -812,8 +825,45 @@ KONTEKS EKONOMI / GELOMBANG VIRAL TERKINI:
 WAJIB: Selipkan 1 pos pengeluaran atau punchline yang mencerminkan realitas isu ini (misal kenaikan beras/listrik/tagihan/ongkos).
 ` : '';
 
+  const cfg = loadZuraAdaptiveConfig();
+  const enforcedSingleHuman = (cfg?.second_account?.enforced_slide_count || 1) === 1;
+
+  if (enforcedSingleHuman) {
+    const humanFinPrompt = `
+${getZuraPersonaDirective()}
+${getHumanStyleExemplarsBlock()}
+${cognitiveContext}
+${waveContext}
+Tugas: Tulis SATU (1) SLIDE pendek curhatan atau observasi realitas duit/kerja/harga sehari-hari (90 - 185 karakter, huruf kecil santai, TANPA format bullet list kalkulator kaku, TANPA sebut produk atau link).
+Konteks inspirasi: ${theme} (${chosenArchetype.focus}, kisaran biaya hidup di ${targetLocation}).
+Aturan keras:
+1. Huruf kecil semua (lowercase), bahasa ngobrol anak muda Jakarta di Threads ("gila sih...", "jujur baru sadar...", "perasaan dulu...", "kalian gini juga gak sih").
+2. JANGAN pakai bullet point ("•"), JANGAN awalan label ("Finansial:"), JANGAN bahas politik/pejabat.
+3. Tutup dengan celetukan atau pertanyaan pendek yang memicu warganet nimbrung di komentar.
+Output HANYA teks 1 postingan langsung tanpa tanda kutip.
+`;
+    let singleFinText = await callAiWithFallback(humanFinPrompt, 0.85);
+    if (singleFinText && singleFinText.length >= 50) {
+      singleFinText = singleFinText.replace(/^["']|["']$/g, '').replace(/[*_~`•]/g, '').replace(/#\w+/g, '').trim().toLowerCase();
+      if (singleFinText.length > 220) singleFinText = singleFinText.slice(0, 215) + '...';
+      const prodMetaSingle = curateContextualProductMetadata(`${theme} ${singleFinText}`, 'financial_breakdown');
+      return {
+        title: `Obrolan Duit: ${theme.slice(0, 32)}...`,
+        topic: theme,
+        format_type: FORMAT_TYPES.FINANCIAL_BREAKDOWN,
+        topic_tag: topicTag,
+        product_name: prodMetaSingle.product_name,
+        product_url: prodMetaSingle.product_url,
+        slides: [singleFinText],
+        variant: 'A',
+        origin: 'human_finance_observation'
+      };
+    }
+  }
+
   const prompt = `
 ${getZuraPersonaDirective()}
+${getHumanStyleExemplarsBlock()}
 ${cognitiveContext}
 ${waveContext}
 Tugas: Buat rincian data pengeluaran bulanan yang realistis dan relatable untuk ${chosenArchetype.role} (${chosenArchetype.focus}).
