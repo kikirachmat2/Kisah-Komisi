@@ -811,7 +811,11 @@ async function generateFinancialBreakdown(options = {}) {
   const chosenArchetype = ARCHETYPES[Math.floor(Math.random() * ARCHETYPES.length)];
 
   const viralWave = options.viralWave;
-  const theme = viralWave?.topic || options.theme || options.topic || `Realitas gaji ${targetIncome}jt di ${targetLocation} (${chosenArchetype.role})`;
+  const rawWaveText = `${viralWave?.headline || ''} ${viralWave?.title || ''} ${viralWave?.topic || ''}`.toLowerCase();
+  const isNoisyWave = /\b(dpr|ruu|komisi ii|menteri|partai|pilkada|politisi|capres|wapres|koalisi|tambang|napi|penjara|polisi|tersangka|korupsi|bencana|gubernur|bupati|walikota|kasus)\b/i.test(rawWaveText);
+  const safeViralWave = isNoisyWave ? null : viralWave;
+
+  const theme = safeViralWave?.topic || options.theme || options.topic || `Realitas gaji ${targetIncome}jt di ${targetLocation} (${chosenArchetype.role})`;
 
   let cognitiveContext = '';
   try {
@@ -819,47 +823,11 @@ async function generateFinancialBreakdown(options = {}) {
     if (buildCognitiveTuningContext) cognitiveContext = buildCognitiveTuningContext();
   } catch (e) {}
 
-  const waveContext = viralWave ? `
+  const waveContext = safeViralWave ? `
 KONTEKS EKONOMI / GELOMBANG VIRAL TERKINI:
-"${viralWave.headline || viralWave.title}": ${viralWave.topic}
+"${safeViralWave.headline || safeViralWave.title}": ${safeViralWave.topic}
 WAJIB: Selipkan 1 pos pengeluaran atau punchline yang mencerminkan realitas isu ini (misal kenaikan beras/listrik/tagihan/ongkos).
 ` : '';
-
-  const cfg = loadZuraAdaptiveConfig();
-  const enforcedSingleHuman = (cfg?.second_account?.enforced_slide_count || 1) === 1;
-
-  if (enforcedSingleHuman) {
-    const humanFinPrompt = `
-${getZuraPersonaDirective()}
-${getHumanStyleExemplarsBlock()}
-${cognitiveContext}
-${waveContext}
-Tugas: Tulis SATU (1) SLIDE pendek curhatan atau observasi realitas duit/kerja/harga sehari-hari (90 - 185 karakter, huruf kecil santai, TANPA format bullet list kalkulator kaku, TANPA sebut produk atau link).
-Konteks inspirasi: ${theme} (${chosenArchetype.focus}, kisaran biaya hidup di ${targetLocation}).
-Aturan keras:
-1. Huruf kecil semua (lowercase), bahasa ngobrol anak muda Jakarta di Threads ("gila sih...", "jujur baru sadar...", "perasaan dulu...", "kalian gini juga gak sih").
-2. JANGAN pakai bullet point ("•"), JANGAN awalan label ("Finansial:"), JANGAN bahas politik/pejabat.
-3. Tutup dengan celetukan atau pertanyaan pendek yang memicu warganet nimbrung di komentar.
-Output HANYA teks 1 postingan langsung tanpa tanda kutip.
-`;
-    let singleFinText = await callAiWithFallback(humanFinPrompt, 0.85);
-    if (singleFinText && singleFinText.length >= 50) {
-      singleFinText = singleFinText.replace(/^["']|["']$/g, '').replace(/[*_~`•]/g, '').replace(/#\w+/g, '').trim().toLowerCase();
-      if (singleFinText.length > 220) singleFinText = singleFinText.slice(0, 215) + '...';
-      const prodMetaSingle = curateContextualProductMetadata(`${theme} ${singleFinText}`, 'financial_breakdown');
-      return {
-        title: `Obrolan Duit: ${theme.slice(0, 32)}...`,
-        topic: theme,
-        format_type: FORMAT_TYPES.FINANCIAL_BREAKDOWN,
-        topic_tag: topicTag,
-        product_name: prodMetaSingle.product_name,
-        product_url: prodMetaSingle.product_url,
-        slides: [singleFinText],
-        variant: 'A',
-        origin: 'human_finance_observation'
-      };
-    }
-  }
 
   const prompt = `
 ${getZuraPersonaDirective()}

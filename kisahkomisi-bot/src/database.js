@@ -12,8 +12,9 @@ if (!fs.existsSync(dbDir)) {
 // Inisialisasi better-sqlite3
 const db = new Database(dbPath);
 
-// Konfigurasi performa & kehandalan (WAL mode + 5s busy timeout)
+// Konfigurasi performa & kehandalan (WAL mode + autocheckpoint + 5s busy timeout)
 db.pragma('journal_mode = WAL');
+db.pragma('wal_autocheckpoint = 100');
 db.pragma('synchronous = NORMAL');
 db.pragma('foreign_keys = ON');
 db.pragma('busy_timeout = 5000');
@@ -975,10 +976,10 @@ module.exports = {
     `).all(limit);
   },
 
-  // Database maintenance: checkpoint WAL to prevent file bloat on VPS
+  // Database maintenance: passive checkpoint WAL without unlinking open descriptors across processes
   runMaintenance: () => {
     try {
-      db.pragma('wal_checkpoint(TRUNCATE)');
+      db.pragma('wal_checkpoint(PASSIVE)');
       return true;
     } catch (e) {
       console.warn('[DB] Maintenance warning:', e.message);

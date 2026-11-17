@@ -89,7 +89,7 @@ async function fetchLiveTrendHeadlines() {
         const lower = rawTitle.toLowerCase();
 
         if (rawTitle.length < 4 || lower === 'daily search trends' || lower.includes('rss feed')) continue;
-        if (/\b(dpr|ruu|komisi ii|menteri|partai|pilkada|politisi|capres|koalisi)\b/i.test(lower)) continue;
+        if (/\b(dpr|ruu|komisi ii|menteri|partai|pilkada|politisi|capres|wapres|koalisi|tambang|napi|penjara|polisi|tersangka|korupsi|bencana|gubernur|bupati|walikota)\b/i.test(lower)) continue;
         if (seenTitles.has(lower)) continue;
         seenTitles.add(lower);
 
@@ -122,7 +122,7 @@ KOMENTAR NETIZEN YANG MASUK:
 ${netizenComments.slice(0, 4).map((c, i) => `- @${c.author_username}: "${c.comment_text}"`).join('\n') || '- Belum ada komentar'}
 
 ATURAN KUNCI BIAR VIRAL & GAK KELIHATAN BOT AI:
-1. BEBAS TANPA GUARDRAIL TOPIK & BAHASA: Apapun yang lagi rame (kebijakan pemerintah, kasus viral, seleb/gosip, sepakbola, konser, drama kerjaan, harga naik, kelakuan absurd), HAJAR AJA!
+1. TOPIK FOKUS KEHIDUPAN HARIAN & KERJA URBAN (ANTI-POLITIK & ANTI-KRIMINAL): Hajar isu biaya hidup, gaji, makanan mahal, kosan, drama kerja/atasan, hubungan, & lifestyle urban! DILARANG keras memilih berita politik, DPR, menteri, pilkada, kasus kriminal, napi, polisi, tambang, atau bencana.
 2. EKSPRESIF, CEPLAS-CEPLOS & BERANI: Jangan jaim, jangan sok bijak! Boleh ngedumel pedes, emosional, gregetan, sarkas, atau nyindir kelakuan pemerintah/korporat/atasan yang ngaco layaknya warga Threads yang lagi muak. Kalimatnya harus tegas, berani, dan kebaca jelas emosinya.
 3. JANGAN NULIS KAYAK BOT RANGKUMAN BERITA ATAU KALKULATOR:
    - SALAH (Gaya AI Bot): "Harga avtur naik ke Rp12.500/liter membuat gaji pilot turun 50% dari Rp25jt menjadi Rp12,5jt dan 200 orang di-PHK dalam 48 jam." (Terlalu kaku kayak laporan koran!).
