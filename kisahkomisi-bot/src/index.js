@@ -1408,13 +1408,36 @@ const ADAPTIVE_SLOT_CANDIDATES = {
   3: ['financial_breakdown', 'hot_take', 'cliffhanger_story']
 };
 
+function getSecondAccountAdaptiveLimits() {
+  let maxPostsPerDay = 2;
+  let enforcedSlideCount = 1;
+  try {
+    const cfgPaths = [
+      '/home/ubuntu/zura-core/data/zura_adaptive_config.json',
+      path.join(__dirname, '../../../Personal AI/data/zura_adaptive_config.json')
+    ];
+    for (const cp of cfgPaths) {
+      if (fs.existsSync(cp)) {
+        const parsedCfg = JSON.parse(fs.readFileSync(cp, 'utf8'));
+        const cap = Number(parsedCfg?.second_account?.max_posts_per_day);
+        if (Number.isFinite(cap) && cap >= 1 && cap <= 3) maxPostsPerDay = cap;
+        const slides = Number(parsedCfg?.second_account?.enforced_slide_count);
+        if (Number.isFinite(slides) && slides >= 1 && slides <= 5) enforcedSlideCount = slides;
+        break;
+      }
+    }
+  } catch (e) {}
+  return { maxPostsPerDay, enforcedSlideCount };
+}
+
 /**
  * Menentukan format slot sekali per hari (disimpan agar veto-preview & eksekusi konsisten)
  */
 function resolveSlotFormat(dateStr, slotConf) {
   const key = `SLOT_FORMAT_${dateStr}_${slotConf.time}`;
   const saved = db.getSetting(key);
-  if (saved) return saved;
+  const { enforcedSlideCount } = getSecondAccountAdaptiveLimits();
+  if (saved && !(enforcedSlideCount === 1 && saved === 'cliffhanger_story')) return saved;
 
   const { getAdaptiveAffiliateStatus } = require('./growthEngine');
   const adaptiveStatus = getAdaptiveAffiliateStatus ? getAdaptiveAffiliateStatus() : { allowedSlots: [5], quota: 1, tier: 'BASELINE' };
@@ -1422,9 +1445,24 @@ function resolveSlotFormat(dateStr, slotConf) {
   slotConf.hasAffiliate = isAffiliateActive;
 
   let fmt = slotConf.defaultFormat || 'financial_breakdown';
-  const candidates = ADAPTIVE_SLOT_CANDIDATES[slotConf.slotNumber] || ['financial_breakdown', 'hot_take', 'menfess_spill'];
+  let candidates = ADAPTIVE_SLOT_CANDIDATES[slotConf.slotNumber] || ['financial_breakdown', 'hot_take', 'menfess_spill'];
+  if (enforcedSlideCount === 1) {
+    candidates = candidates.filter(f => f !== 'cliffhanger_story');
+    if (candidates.length === 0) candidates = ['financial_breakdown', 'hot_take'];
+  }
+
+  // Cegah Slot 1 dan Slot 2 sama-sama memilih hot_take di hari yang sama
+  if (slotConf.slotNumber === 2) {
+    const slot1Format = db.getSetting(`SLOT_FORMAT_${dateStr}_07:30`);
+    if (slot1Format === 'hot_take') {
+      candidates = candidates.filter(f => f !== 'hot_take');
+      if (candidates.length === 0) candidates = ['financial_breakdown'];
+      fmt = 'financial_breakdown';
+    }
+  }
+
   try {
-    fmt = chooseAdaptiveFormat(candidates, slotConf.defaultFormat || 'financial_breakdown');
+    fmt = chooseAdaptiveFormat(candidates, fmt);
   } catch (e) {
     fmt = slotConf.defaultFormat || 'financial_breakdown';
   }
@@ -1448,6 +1486,18 @@ async function prepareAndNotifyVetoSlot(slotTime, label, slotNumber = null) {
       defaultFormat: 'single_life_update',
       targetNicheType: 'locked'
     };
+
+    const { maxPostsPerDay } = getSecondAccountAdaptiveLimits();
+    const recentPubs = db.getRecentPublishedStories ? db.getRecentPublishedStories(10) : [];
+    const todayWibCount = recentPubs.filter(r => {
+      if (!r.published_at) return false;
+      const isoUtc = r.published_at.includes('T') ? r.published_at : r.published_at.replace(' ', 'T') + 'Z';
+      return new Date(isoUtc).toLocaleDateString('en-CA', { timeZone: 'Asia/Jakarta' }) === dateStr;
+    }).length;
+    if (todayWibCount >= maxPostsPerDay || (maxPostsPerDay <= 2 && slotConf.slotNumber > maxPostsPerDay)) {
+      console.log(`[VetoWindow] Kuota harian Zura (${maxPostsPerDay} post/hari) sudah terpenuhi atau slot #${slotConf.slotNumber} dinonaktifkan di mode recovery. Skip produksi & veto alert.`);
+      return;
+    }
 
     const { getAdaptiveAffiliateStatus } = require('./growthEngine');
     const adaptiveStatus = getAdaptiveAffiliateStatus ? getAdaptiveAffiliateStatus() : { allowedSlots: [1, 2, 3], quota: 1, tier: 'BASELINE' };

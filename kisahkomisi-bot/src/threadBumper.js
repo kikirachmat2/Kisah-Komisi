@@ -246,6 +246,13 @@ async function executeThreadBump(userId) {
     return null;
   }
 
+  const bumpViews = Number(targetStory.views || 0);
+  const bumpReplies = Number(targetStory.replies || 0);
+  if (bumpViews < 25 && bumpReplies < 1 && !urgentIds.includes(Number(targetStory.id))) {
+    console.log(`[ThreadBumper] Skip bump Cerita #${targetStory.id} (views=${bumpViews}, replies=${bumpReplies} belum mencapai minimum traction 25 views / 1 reply).`);
+    return null;
+  }
+
   console.log(`[ThreadBumper] Mempersiapkan bump untuk Cerita #${targetStory.id}: "${targetStory.title}"...`);
 
   // Targetkan part terakhir agar Threads merendernya sebagai sambungan garis vertikal ("Add to thread")

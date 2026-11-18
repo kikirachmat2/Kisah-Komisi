@@ -1,3 +1,5 @@
+const fs = require('fs');
+const path = require('path');
 const db = require('./database');
 const { getAccountInsights, getMediaInsights, getActiveAccessToken } = require('./threads');
 const { TOPICS } = require('./aiStory');
@@ -265,8 +267,8 @@ TUGAS KOGNITIF KAMU (TARGET KPI: MINIMAL 1.000 VIEWS PER POSTINGAN):
 1. Bandingkan secara tajam: Kenapa Postingan Pemenang bisa tembus ribuan/puluhan ribu views sedangkan Postingan Flop cuma <15 views? (Perhatikan gaya ketikan manusia asli, hook yang memicu debat warganet, rincian gaji skimmable vs tulisan kaku khas AI yang merangkum berita atau menjejalkan angka kalkulator di kalimat biasa).
 2. Kunci Algoritma Meta Threads: REPLY DEPTH & DEBATE VELOCITY adalah sinyal #1 ranking feed For You. Postingan yang banjir komentar perdebatan/quote akan otomatis dilempar ke ribuan orang luar.
 3. Rumuskan TEPAT 3 aturan instruksi prompt konkret ("dynamic_prompt_rules") yang akan disuntikkan langsung ke otak penulis AI di siklus berikutnya supaya setiap postingan baru punya DNA yang sama dengan Postingan Pemenang dan 100% bebas dari kesan Bot AI.
-   PENTING: Jangan menyuruh AI menjejalkan jam/durasi/rupiah kaku di setiap kalimat biasa. Wajibkan ketikan lowercase santai warga Threads, punchline nyelekit/jujur, dan akhiri dengan pemicu debat/opini tajam yang memaksa netizen nimbrung.
-4. Ciptakan 5 TOPIK BARU SPESIFIK ("generated_new_topics") yang lagi rame / relatable banget buat memancing perdebatan sengit warga Threads Indonesia (bebas topik apa saja tanpa guardrail: isu viral pemerintah, dunia kerja toxic, finansial tertekan, drama hubungan, fenomena sosial).
+   PENTING: Untuk format financial_breakdown WAJIB pakai rincian angka Rupiah bullet yang skimmable ("Gaji X juta di [Kota]:\n• ..."). Untuk format menfess/hot_take WAJIB pakai kejadian konkret nyata (hindari klise curhat kosong) dan DILARANG memakai pertanyaan penutup template ("ada yang senasib gak sih?", "kalian tim mending...", "pilih mana...").
+4. Ciptakan 5 TOPIK BARU SPESIFIK ("generated_new_topics") yang relatable buat pekerja/anak kosan Indonesia (WAJIB fokus di gaji, kosan, harga makan, komuter, freelance, dan dinamika kantor/atasan. DILARANG keras isu politik, pemerintah, DPR, pejabat, atau kriminal).
 5. Pilih 3-5 "recommended_priority_topics" dari Daftar Bank Topik Statis di atas.
 6. Urutkan 3 format terbaik di "winning_formats" berdasarkan data performa di atas.
 
@@ -646,6 +648,23 @@ function getFormatHitRates(target = getViewTarget()) {
 function chooseAdaptiveFormat(candidates, fallback) {
   if (!Array.isArray(candidates) || candidates.length === 0) return fallback;
   const rates = getFormatHitRates();
+
+  // Boost proven winning format from Zura contrastive learner (learned_strategy.json)
+  let provenWinnerArm = '';
+  try {
+    const stratPaths = [
+      '/home/ubuntu/zura-core/data/learned_strategy.json',
+      path.join(__dirname, '../../../Personal AI/data/learned_strategy.json')
+    ];
+    for (const sp of stratPaths) {
+      if (fs.existsSync(sp)) {
+        const strat = JSON.parse(fs.readFileSync(sp, 'utf8'));
+        provenWinnerArm = String(strat?.best_feature_arms?.[0]?.arm || '');
+        break;
+      }
+    }
+  } catch (e) {}
+
   if (Math.random() < 0.2) {
     return candidates[Math.floor(Math.random() * candidates.length)];
   }
@@ -655,7 +674,8 @@ function chooseAdaptiveFormat(candidates, fallback) {
     const r = rates[f] || { score: 0.5, posts: 0 };
     // Noise sebanding ketidakpastian (sampel kecil = noise besar)
     const noise = (Math.random() - 0.5) * (1 / Math.sqrt((r.posts || 0) + 1)) * 0.3;
-    const s = r.score + noise;
+    const learnerBoost = (provenWinnerArm.startsWith('financial_breakdown') && f === 'financial_breakdown') ? 0.35 : 0;
+    const s = r.score + learnerBoost + noise;
     if (s > bestScore) {
       bestScore = s;
       best = f;
