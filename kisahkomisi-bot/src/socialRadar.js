@@ -19,7 +19,22 @@ function loadZuraThreadsFypInsights() {
       if (fs.existsSync(p)) {
         const data = JSON.parse(fs.readFileSync(p, 'utf8'));
         const samples = Array.isArray(data?.samples) ? data.samples : [];
-        if (samples.length > 0) return samples;
+        if (samples.length >= 5) return samples;
+      }
+    } catch (e) {}
+  }
+
+  // Fallback to rolling corpus when a recent scrape returned < 5 fresh samples
+  const corpusPaths = [
+    '/home/ubuntu/zura-core/data/viral_pattern_corpus.json',
+    path.join(__dirname, '../../../Personal AI/data/viral_pattern_corpus.json'),
+    path.join(__dirname, '../../Personal AI/data/viral_pattern_corpus.json')
+  ];
+  for (const cp of corpusPaths) {
+    try {
+      if (fs.existsSync(cp)) {
+        const corpus = JSON.parse(fs.readFileSync(cp, 'utf8'));
+        if (Array.isArray(corpus) && corpus.length > 0) return corpus.slice(0, 22);
       }
     } catch (e) {}
   }
@@ -89,7 +104,7 @@ async function fetchLiveTrendHeadlines() {
         const lower = rawTitle.toLowerCase();
 
         if (rawTitle.length < 4 || lower === 'daily search trends' || lower.includes('rss feed')) continue;
-        if (/\b(dpr|ruu|komisi ii|menteri|partai|pilkada|politisi|capres|wapres|koalisi|tambang|napi|penjara|polisi|tersangka|korupsi|bencana|gubernur|bupati|walikota)\b/i.test(lower)) continue;
+        if (/\b(dpr|ruu|komisi ii|menteri|partai|pilkada|politisi|capres|wapres|koalisi|tambang|napi|penjara|polisi|tersangka|korupsi|bencana|gubernur|bupati|walikota|prabs|prabowo|gibran|jokowi|ktt asean|istana|kabinet)\b/i.test(lower)) continue;
         if (seenTitles.has(lower)) continue;
         seenTitles.add(lower);
 

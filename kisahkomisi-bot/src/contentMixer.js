@@ -812,7 +812,7 @@ async function generateFinancialBreakdown(options = {}) {
 
   const viralWave = options.viralWave;
   const rawWaveText = `${viralWave?.headline || ''} ${viralWave?.title || ''} ${viralWave?.topic || ''}`.toLowerCase();
-  const isNoisyWave = /\b(dpr|ruu|komisi ii|menteri|partai|pilkada|politisi|capres|wapres|koalisi|tambang|napi|penjara|polisi|tersangka|korupsi|bencana|gubernur|bupati|walikota|kasus)\b/i.test(rawWaveText);
+  const isNoisyWave = /\b(dpr|ruu|komisi ii|menteri|partai|pilkada|politisi|capres|wapres|koalisi|tambang|napi|penjara|polisi|tersangka|korupsi|bencana|gubernur|bupati|walikota|kasus|prabs|prabowo|gibran|jokowi|ktt asean|istana|kabinet)\b/i.test(rawWaveText);
   const safeViralWave = isNoisyWave ? null : viralWave;
 
   const theme = safeViralWave?.topic || options.theme || options.topic || `Realitas gaji ${targetIncome}jt di ${targetLocation} (${chosenArchetype.role})`;
